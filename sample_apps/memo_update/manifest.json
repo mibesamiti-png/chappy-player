@@ -1,0 +1,9 @@
+{
+  "formatVersion": 1,
+  "id": "local.chappy.memo",
+  "name": "メモ帳",
+  "version": "0.1.1",
+  "minPlayerVersion": "0.1.0",
+  "entry": "index.html",
+  "permissions": []
+}

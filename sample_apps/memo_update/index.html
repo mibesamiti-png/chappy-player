@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>Chappy メモ帳</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <div class="header"><span class="logo">✎</span><div><small>CHAPPY MINI APP</small><h1>メモ帳</h1></div></div>
+    <div class="panel">
+      <div class="panel-title"><label for="notes">今日のメモ（更新版）</label><span id="length">0文字</span></div>
+      <textarea id="notes" rows="14" placeholder="ここにメモを書いてね…" spellcheck="false"></textarea>
+      <div class="footer"><span id="status">読み込み中…</span><button id="save" type="button">今すぐ保存</button></div>
+    </div>
+    <p class="hint">メモは0.1.1へ更新しても以前のメモが残るか試してね。</p>
+    <button id="test" type="button" class="ghost">バグ報告のテスト用エラーを発生させる</button>
+  </main>
+  <script src="main.js"></script>
+</body>
+</html>
