@@ -24,7 +24,8 @@ void main() {
 
     expect(logs.diagnosticSession!.isRecording, isTrue);
     await logs.add('local.chappy.memo', 'error', 'test', 'simulated failure');
-    await tester.pump();
+    await tester.tap(find.byTooltip('表示ログを更新'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('1件'), findsOneWidget);
 
     await tester.tap(find.text('記録終了'));
