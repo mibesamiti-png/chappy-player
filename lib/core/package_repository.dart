@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:chappy_player/core/data_backup_service.dart';
 import 'package:chappy_player/core/package_model.dart';
 import 'package:chappy_player/core/zip_preflight.dart';
 import 'package:path/path.dart' as p;
@@ -36,6 +37,7 @@ class PackageRepository {
     await appsRoot.create(recursive: true);
     await dataRoot.create(recursive: true);
     await stagingRoot.create(recursive: true);
+    await DataBackupService(dataRoot).recoverInterruptedRestore();
     // The on-disk manifest is authoritative. An interrupted rename can leave
     // library.json pointing at an older version or at a temporarily missing app.
     // Preserve a corrupt registry for diagnostics rather than silently erasing it.

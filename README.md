@@ -54,6 +54,45 @@ flutter build apk --debug
 
 将来的にはGitHub ActionsのSecretに固定署名鍵を安全に保管し、同一署名・単調増加するversionCodeで更新できるリリースAPKを作る予定です。この署名鍵はソースコードにコミットしません。なお、`.chappy` パッケージだけの更新にはAPK再署名は不要です。
 
+## 保存データのバックアップと復元（開発中）
+
+ホーム画面の「保存データをバックアップ」「保存データを復元」から利用する。
+
+- バックアップは `.chappybackup`（UTF-8 JSON）形式。最大12MiB／100アプリ、1アプリ当たり1MiB。
+- 保存するのはアプリ別のJSON保存データのみ。**`.chappy` 本体、旧版、デバッグログは含まない**。本体は別途保管すること。
+- Androidのファイル保存画面で、端末の外部ストレージやクラウドなどにバックアップを保存する。
+- 復元前にアプリID・件数・作成日時を確認してから実行。同じIDのデータは上書きする。
+- 強制終了に備え、復元中は旧データを一時的に退避し、次回起動時に中断された復元を取り消す。
+- **暗号化なし**。メモ本文などが含まれるため、バックアップファイルを他人へ公開しないこと。
+
+バックアップ→APKアンインストール→新APKインストール→復元→`.chappy` の再インポート、の順でデータ移行が可能（実機動作は未検証）。
+
+## 固定署名のAPKビルド（開発中）
+
+`.github/workflows/release-android.yml` に手動実行の `Build Signed Release APK` を用意。
+GitHubリポジトリの **Settings → Secrets and variables → Actions** に以下4件を登録するまで実行できない。
+
+| Secret | 内容 |
+|---|---|
+| `CHAPPY_KEYSTORE_B64` | 同じAndroid署名キーストアファイルをBase64化した値 |
+| `CHAPPY_STORE_PASSWORD` | キーストアのパスワード |
+| `CHAPPY_KEY_PASSWORD` | 鍵のパスワード |
+| `CHAPPY_KEY_ALIAS` | 署名鍵のエイリアス |
+
+署名鍵の生成例（手元の安全な環境）：
+
+```bash
+keytool -genkeypair -v -keystore chappy-release.jks -alias chappy -keyalg RSA -keysize 3072 -validity 10000
+# Base64 encoding example (macOS/Linux)
+base64 -w 0 chappy-release.jks
+```
+
+環境によってBase64のコマンドオプションは異なる。鍵とパスワードはGitHubのソースコードやチャットに貼り付けないこと。
+**署名鍵の紛失は同じアプリIDのAPKを上書き更新できなくなる原因になる**ため、秘密情報を安全な場所に控えておくこと。
+
+同じ署名鍵を使い、かつversionCodeを増やしたAPKなら上書き更新可能。GitHub Actionsではrun_numberをbuild-numberに指定している。
+なお、既存のデバッグAPKと新しいリリースAPKでは署名が異なるため、そのままの上書き更新は通常できない。最初の切替前に必ずバックアップを保存する。
+
 ## `.chappy` v1 仕様
 
 ZIPのルートに `manifest.json`, `index.html` を置く。`main.js`, `style.css`, `assets/` などを配置可能。
