@@ -41,7 +41,7 @@ class PackageRepository {
         final data = jsonDecode(await registryFile.readAsString()) as List<dynamic>;
         for (final entry in data) {
           final app = ChappyPackage.fromJson(Map<String, dynamic>.from(entry as Map));
-          if (await currentDir(app.id).exists()) _apps[app.id] = app;
+          if (await currentDir(app.id).exists()) { _apps[app.id] = app; }
         }
       } catch (_) {
         throw const FormatException('アプリ一覧のデータが破損しています。削除せず診断してください');
@@ -49,7 +49,7 @@ class PackageRepository {
     }
     // Clean only orphaned staging directories, never live app data.
     await for (final entry in stagingRoot.list()) {
-      if (entry is Directory) await entry.delete(recursive: true);
+      if (entry is Directory) { await entry.delete(recursive: true); }
     }
   }
 
@@ -65,7 +65,7 @@ class PackageRepository {
       for (final entry in archive) {
         final name = entry.name;
         // Path validation was performed before ZIP decoding too.
-        if (!isSafeArchivePath(name)) throw const FormatException('不正なZIP内パス');
+        if (!isSafeArchivePath(name)) { throw const FormatException('不正なZIP内パス'); }
         final target = p.join(stage.path, p.joinAll(name.split('/')));
         if (entry.isFile) {
           final file = File(target);
@@ -78,15 +78,15 @@ class PackageRepository {
       final current = currentDir(app.id);
       final previous = previousDir(app.id);
       await current.parent.create(recursive: true);
-      if (await previous.exists()) await previous.delete(recursive: true);
+      if (await previous.exists()) { await previous.delete(recursive: true); }
       final didHaveCurrent = await current.exists();
-      if (didHaveCurrent) await current.rename(previous.path);
+      if (didHaveCurrent) { await current.rename(previous.path); }
       try {
         await stage.rename(current.path);
         _apps[app.id] = app;
         await _saveRegistry();
       } catch (_) {
-        if (await current.exists()) await current.delete(recursive: true);
+        if (await current.exists()) { await current.delete(recursive: true); }
         if (didHaveCurrent && await previous.exists()) {
           await previous.rename(current.path);
         }
@@ -99,14 +99,14 @@ class PackageRepository {
       }
       return app;
     } finally {
-      if (await stage.exists()) await stage.delete(recursive: true);
+      if (await stage.exists()) { await stage.delete(recursive: true); }
     }
   }
 
   Future<void> rollback(String id) async {
     final current = currentDir(id);
     final previous = previousDir(id);
-    if (!await previous.exists()) throw const FormatException('戻せる旧バージョンがありません');
+    if (!await previous.exists()) { throw const FormatException('戻せる旧バージョンがありません'); }
     final old = ChappyPackage.parse(
       await File(p.join(previous.path, 'manifest.json')).readAsString(),
     );
@@ -127,10 +127,10 @@ class PackageRepository {
 
   Future<void> remove(String id, {required bool deleteData}) async {
     final rootDir = Directory(p.join(appsRoot.path, id));
-    if (await rootDir.exists()) await rootDir.delete(recursive: true);
+    if (await rootDir.exists()) { await rootDir.delete(recursive: true); }
     if (deleteData) {
       final data = File(p.join(dataRoot.path, '$id.json'));
-      if (await data.exists()) await data.delete();
+      if (await data.exists()) { await data.delete(); }
     }
     _apps.remove(id);
     await _saveRegistry();
