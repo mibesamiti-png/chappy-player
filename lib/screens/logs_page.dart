@@ -88,7 +88,7 @@ class _LogsPageState extends State<LogsPage> {
         ),
       );
       if (note == null) return;
-      widget.logs.addReproductionNote(note);
+      await widget.logs.addReproductionNote(note);
       if (mounted) setState(() {});
     } catch (error) {
       _notify('メモを追加できませんでした: $error');
@@ -153,25 +153,34 @@ class _LogsPageState extends State<LogsPage> {
                       : recording
                           ? '記録中｜対象: ${capture.appId ?? 'すべて'}｜${capture.eventCount}件'
                           : '記録終了｜${capture.eventCount}件'
-                              '${capture.truncated ? '（古いログを省略）' : ''}',
+                              '${capture.truncated ? '（古いログを省略）' : ''}'
+                              '${capture.recoveredAfterInterruption ? '（前回の異常終了から復旧）' : ''}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 10),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   if (!recording)
                     FilledButton.icon(
-                      onPressed: () {
-                        widget.logs.startDiagnosticSession(appId: widget.appId);
-                        setState(() {});
+                      onPressed: () async {
+                        try {
+                          await widget.logs.startDiagnosticSession(appId: widget.appId);
+                          if (mounted) setState(() {});
+                        } catch (error) {
+                          _notify('記録開始失敗: $error');
+                        }
                       },
                       icon: const Icon(Icons.fiber_manual_record),
                       label: const Text('記録開始'),
                     ),
                   if (recording)
                     FilledButton.icon(
-                      onPressed: () {
-                        widget.logs.stopDiagnosticSession();
-                        setState(() {});
+                      onPressed: () async {
+                        try {
+                          await widget.logs.stopDiagnosticSession();
+                          if (mounted) setState(() {});
+                        } catch (error) {
+                          _notify('記録終了失敗: $error');
+                        }
                       },
                       icon: const Icon(Icons.stop_circle_outlined),
                       label: const Text('記録終了'),
