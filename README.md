@@ -14,6 +14,13 @@
 - `.github/workflows/build-android.yml` — Flutter test/analyze とデバッグAPK作成
 - `tools/patch_android.py` — Androidマニフェストのループバック設定
 
+## 現在の検証状況（2026-11-04）
+
+- `main` のビルド #5 は **Flutter解析・ユニットテスト・debug APK生成が成功**。ただしAndroid実機は未検証。
+- PR #1 ではインポート前のアプリ情報プレビュー・異常終了後の復旧・回帰テストを追加。マージ前にPRのActionsが成功することを確認する。
+- JavaScriptブリッジのNodeスモークテストをActionsにも追加。
+- 現段階でカメラ・ネット通信・一般の非信頼パッケージ用サンドボックスは未対応。
+
 ## APKの作り方（GitHub Actions）
 
 1. **新しいプライベートGitHubリポジトリ**を作り、このプロジェクトのファイルとフォルダを配置する（ZIP単体をGitHubへ置いただけでは展開されません）。
@@ -87,6 +94,6 @@ await Chappy.log('diagnostic message');
 | JS↔Flutter 保存API | コード作成済、実機未検証 |
 | 更新・旧版復元 | コード作成済、異常終了リカバリー未実装 |
 | ログ収集・コピー | コード作成済、実機未検証 |
-| APKビルド | GitHub Actions設定済み、実行未確認 |
+| APKビルド | main #5 にてGitHub Actions成功、Android実機未検証 |
 
-この環境にはFlutter SDKがないため、`flutter analyze`, `flutter test`, Android実機検証は未実施。
+このチャットのローカル環境にはFlutter SDKがない。Flutter解析・ユニットテスト・APKビルドはGitHub Actionsで成功済み。Android実機検証は未実施。
