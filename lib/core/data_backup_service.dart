@@ -5,7 +5,8 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 
 /// Portable JSON backup of mini-app **user data only**.
-/// It intentionally contains no executable app packages or credentials.
+/// It contains no executable app packages, but stored data may include secrets.
+/// Treat exported backups as sensitive, unencrypted files.
 class BackupSnapshot {
   final Map<String, Map<String, dynamic>> apps;
   final String createdAt;
