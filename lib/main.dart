@@ -132,12 +132,23 @@ class _HomePageState extends State<HomePage> {
       if (bytes.length > 12 * 1024 * 1024) {
         throw const FormatException('ファイルサイズが上限（12MiB）を超えています');
       }
+      // Inspect before displaying the confirmation dialog. The source file
+      // name is not a trusted app identity.
+      final incoming = widget.repository.inspect(Uint8List.fromList(bytes));
+      final matches = widget.repository.apps.where((a) => a.id == incoming.id);
+      final installed = matches.isEmpty ? null : matches.first;
       if (!mounted) { return; }
       setState(() => busy = true);
-      // Validate and show package identity BEFORE overwriting? v0.1 asks user
-      // for permission to import, then install is applied once.
-      if (!await _confirm('アプリの追加・更新',
-          '${picked.name} をインポートしますか？\n同じIDのアプリがある場合、旧版を保持して更新します。')) {
+      final action = installed == null ? 'アプリを追加' : 'アプリを更新';
+      final versionChange = installed == null
+          ? '新規インストール'
+          : '${installed.version} → ${incoming.version}';
+      if (!await _confirm(action,
+          'アプリ名: ${incoming.name}\n'
+          'ID: ${incoming.id}\n'
+          'バージョン: $versionChange\n'
+          '権限: 追加権限なし\n\n'
+          '${installed == null ? 'インストールしますか？' : '保存データを残して更新しますか？'}')) {
         return;
       }
       final app = await widget.repository.install(Uint8List.fromList(bytes));
