@@ -90,13 +90,13 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
           }
         },
       ));
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => _controller = controller);
       await controller.loadRequest(server.url);
       await widget.logs.add(widget.app.id, 'info', 'runner', 'Started ${widget.app.version}');
     } catch (error, stack) {
       await widget.logs.add(widget.app.id, 'error', 'runner', '$error\n$stack');
-      if (mounted) setState(() { _fatal = error.toString(); _loading = false; });
+      if (mounted) { setState(() { _fatal = error.toString(); _loading = false; }); }
     }
   }
 
@@ -132,7 +132,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
           break;
         case 'log':
           final text = params['message'];
-          if (text is! String) throw const FormatException('message must be text');
+          if (text is! String) { throw const FormatException('message must be text'); }
           await widget.logs.add(widget.app.id, 'info', 'miniapp', text);
           value = true;
           break;
@@ -144,10 +144,10 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
         default:
           throw FormatException('Unsupported API: $method');
       }
-      if (requestId.isNotEmpty) await _respond(requestId, ok: true, value: value);
+      if (requestId.isNotEmpty) { await _respond(requestId, ok: true, value: value); }
     } catch (error) {
       await widget.logs.add(widget.app.id, 'error', 'bridge', '$error');
-      if (requestId.isNotEmpty) await _respond(requestId, ok: false, error: '$error');
+      if (requestId.isNotEmpty) { await _respond(requestId, ok: false, error: '$error'); }
     }
   }
 
@@ -161,7 +161,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
 
   Future<void> _respond(String requestId, {required bool ok, dynamic value, String? error}) async {
     final controller = _controller;
-    if (controller == null || !mounted) return;
+    if (controller == null || !mounted) { return; }
     final payload = jsonEncode({
       'requestId': requestId,
       'ok': ok,
@@ -177,7 +177,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
   @override
   void dispose() {
     final server = _server;
-    if (server != null) unawaited(server.close());
+    if (server != null) { unawaited(server.close()); }
     super.dispose();
   }
 
