@@ -46,6 +46,14 @@ flutter build apk --debug
 > このZIPにはFlutterが生成するAndroidランナーフォルダは含めていない。`flutter create` で生成する方式。
 > デバッグAPKは個人テスト用。正式配布では署名・更新キー管理を別途設計する。
 
+## APK更新と署名について（重要）
+
+現段階でActionsが生成する `app-debug.apk` は**使い捨ての個人テスト用**です。GitHub Actionsの別の実行で署名鍵が変わると、Androidは既存APKへの上書きインストールを拒否します。
+
+プレイヤーAPKをアンインストールすると、アプリ内に保存されたメモ等のデータも削除されます。固定署名とバックアップ/復元機能が完成するまでは、重要な実データを保存しないでください。
+
+将来的にはGitHub ActionsのSecretに固定署名鍵を安全に保管し、同一署名・単調増加するversionCodeで更新できるリリースAPKを作る予定です。この署名鍵はソースコードにコミットしません。なお、`.chappy` パッケージだけの更新にはAPK再署名は不要です。
+
 ## `.chappy` v1 仕様
 
 ZIPのルートに `manifest.json`, `index.html` を置く。`main.js`, `style.css`, `assets/` などを配置可能。
