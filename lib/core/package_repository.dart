@@ -50,7 +50,7 @@ class PackageRepository {
       }
     }
     await for (final entry in appsRoot.list(followLinks: false)) {
-      if (entry is! Directory) continue;
+      if (entry is! Directory) { continue; }
       final id = p.basename(entry.path);
       final current = currentDir(id);
       final previous = previousDir(id);
@@ -69,7 +69,7 @@ class PackageRepository {
       if (!await current.exists() && await previous.exists()) {
         await previous.rename(current.path);
       }
-      if (!await current.exists()) continue;
+      if (!await current.exists()) { continue; }
 
       final manifest = File(p.join(current.path, 'manifest.json'));
       final app = ChappyPackage.parse(await manifest.readAsString());
