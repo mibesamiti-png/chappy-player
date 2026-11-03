@@ -34,6 +34,8 @@ jobs:
         run: flutter analyze
       - name: Unit tests
         run: flutter test
+      - name: JavaScript bridge smoke test
+        run: node tools/test_bootstrap.js
       - name: Build installable APK (debug signed; personal test only)
         run: flutter build apk --debug
       - uses: actions/upload-artifact@v4
