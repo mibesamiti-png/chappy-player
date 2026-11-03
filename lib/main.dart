@@ -99,7 +99,7 @@ class _HomePageState extends State<HomePage> {
   bool busy = false;
 
   void _notify(String message) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))); }
   }
 
   Future<bool> _confirm(String title, String message) async {
@@ -117,10 +117,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _import() async {
-    if (busy) return;
+    if (busy) { return; }
     try {
       final result = await FilePicker.platform.pickFiles(type: FileType.any, withData: true);
-      if (result == null || result.files.isEmpty) return;
+      if (result == null || result.files.isEmpty) { return; }
       final picked = result.files.single;
       if (!picked.name.toLowerCase().endsWith('.chappy')) {
         _notify('.chappyファイルを選択してください');
@@ -128,11 +128,11 @@ class _HomePageState extends State<HomePage> {
       }
       final bytes = picked.bytes ?? (picked.path != null
           ? await FileBytes.read(picked.path!) : null);
-      if (bytes == null) throw const FormatException('選択したファイルを読み取れませんでした');
+      if (bytes == null) { throw const FormatException('選択したファイルを読み取れませんでした'); }
       if (bytes.length > 12 * 1024 * 1024) {
         throw const FormatException('ファイルサイズが上限（12MiB）を超えています');
       }
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => busy = true);
       // Validate and show package identity BEFORE overwriting? v0.1 asks user
       // for permission to import, then install is applied once.
@@ -142,13 +142,13 @@ class _HomePageState extends State<HomePage> {
       }
       final app = await widget.repository.install(Uint8List.fromList(bytes));
       await widget.logs.add(app.id, 'info', 'import', 'Installed version ${app.version}');
-      if (mounted) setState(() {});
+      if (mounted) { setState(() {}); }
       _notify('${app.name} を登録しました');
     } catch (error) {
       await widget.logs.add('player', 'error', 'import', error.toString());
       _notify('インポート失敗: $error');
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) { setState(() => busy = false); }
     }
   }
 
@@ -159,7 +159,7 @@ class _HomePageState extends State<HomePage> {
           _notify('旧バージョンがありません');
           return;
         }
-        if (!await _confirm('旧版に戻す', '保存データは残したまま、${app.name}の旧版へ切り替えますか？')) return;
+        if (!await _confirm('旧版に戻す', '保存データは残したまま、${app.name}の旧版へ切り替えますか？')) { return; }
         await widget.repository.rollback(app.id);
         await widget.logs.add(app.id, 'warning', 'rollback', 'Restored previous version');
         _notify('旧バージョンに戻しました');
@@ -167,13 +167,13 @@ class _HomePageState extends State<HomePage> {
         final deleteData = action == 'delete_all';
         if (!await _confirm('アプリ削除', deleteData
             ? '${app.name} と保存データを完全に削除します。よろしいですか？'
-            : '${app.name} の本体のみ削除します。保存データは残します。')) return;
+            : '${app.name} の本体のみ削除します。保存データは残します。')) { return; }
         await widget.repository.remove(app.id, deleteData: deleteData);
         await widget.logs.add(app.id, 'warning', 'delete',
             'Deleted package, deleteData=$deleteData');
         _notify('削除しました');
       }
-      if (mounted) setState(() {});
+      if (mounted) { setState(() {}); }
     } catch (error) {
       _notify('操作失敗: $error');
     }
