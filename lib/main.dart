@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:chappy_player/core/data_backup_service.dart';
 import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/core/package_model.dart';
 import 'package:chappy_player/core/package_repository.dart';
@@ -163,6 +164,75 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _backupData() async {
+    if (busy) { return; }
+    setState(() => busy = true);
+    try {
+      final backup = DataBackupService(widget.repository.dataRoot);
+      final bytes = await backup.exportData();
+      final count = backup.inspect(bytes).appCount;
+      if (!mounted) { return; }
+      if (!await _confirm('保存データをバックアップ',
+          '$count 個のアプリの保存データを端末外に保存しますか？\n'
+          'バックアップは暗号化されていません。安全な場所に保存してください。\n'
+          'アプリ本体（.chappy）は含まれません。')) { return; }
+      final date = DateTime.now().toIso8601String().substring(0, 10);
+      final result = await FilePicker.platform.saveFile(
+        dialogTitle: 'Chappy保存データを保存',
+        fileName: 'chappy-data-$date.chappybackup',
+        type: FileType.any,
+        bytes: bytes,
+      );
+      if (result != null) {
+        await widget.logs.add('player', 'info', 'backup', 'Exported $count app data entries');
+        _notify('保存データのバックアップを作成しました');
+      }
+    } catch (error) {
+      await widget.logs.add('player', 'error', 'backup', error.toString());
+      _notify('バックアップ失敗: $error');
+    } finally {
+      if (mounted) { setState(() => busy = false); }
+    }
+  }
+
+  Future<void> _restoreData() async {
+    if (busy) { return; }
+    setState(() => busy = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any, withData: true,
+      );
+      if (result == null || result.files.isEmpty) { return; }
+      final picked = result.files.single;
+      if (!picked.name.toLowerCase().endsWith('.chappybackup')) {
+        throw const FormatException('.chappybackup ファイルを選択してください');
+      }
+      final bytes = picked.bytes ?? (picked.path != null
+          ? await FileBytes.read(picked.path!) : null);
+      if (bytes == null) {
+        throw const FormatException('バックアップを読み取れませんでした');
+      }
+      final backup = DataBackupService(widget.repository.dataRoot);
+      final snapshot = backup.inspect(Uint8List.fromList(bytes));
+      if (!mounted) { return; }
+      final summary = snapshot.ids.take(6).join(', ');
+      if (!await _confirm('保存データを復元',
+          '${snapshot.appCount} 個のアプリの保存データを復元します。\n'
+          '作成日時 (UTC): ${snapshot.createdAt}\n'
+          '対象ID: $summary${snapshot.appCount > 6 ? ' ほか' : ''}\n\n'
+          '同じIDの現在の保存データは上書きされます。'
+          '復元前に現在のデータもバックアップしてください。')) { return; }
+      final count = await backup.restore(Uint8List.fromList(bytes));
+      await widget.logs.add('player', 'info', 'backup', 'Restored $count app data entries');
+      _notify('$count 個のアプリの保存データを復元しました');
+    } catch (error) {
+      await widget.logs.add('player', 'error', 'backup', error.toString());
+      _notify('復元失敗: $error');
+    } finally {
+      if (mounted) { setState(() => busy = false); }
+    }
+  }
+
   Future<void> _menuAction(ChappyPackage app, String action) async {
     try {
       if (action == 'rollback') {
@@ -249,7 +319,21 @@ class _HomePageState extends State<HomePage> {
           icon: const Icon(Icons.add_circle_outline),
           label: Text(busy ? '処理中…' : '.chappy を追加 / 更新'),
         ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: busy ? null : _backupData,
+          icon: const Icon(Icons.save_alt_outlined),
+          label: const Text('保存データをバックアップ'),
+        ),
+        OutlinedButton.icon(
+          onPressed: busy ? null : _restoreData,
+          icon: const Icon(Icons.settings_backup_restore),
+          label: const Text('保存データを復元'),
+        ),
         const SizedBox(height: 16),
+        const Text('バックアップにはアプリ本体が含まれません。重要なデータは必ず端末外に保管してください。',
+            style: TextStyle(fontSize: 12, color: Colors.white54)),
+        const SizedBox(height: 8),
         const Text('v0.1 試作版｜オフライン専用。信頼できる自作パッケージのみ読み込んでください。',
             style: TextStyle(fontSize: 12, color: Colors.white54)),
       ])),
