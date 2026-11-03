@@ -38,12 +38,13 @@ class LogEntry {
 
 class LogStore {
   File? _file;
+  Future<void> _pendingWrite = Future<void>.value();
   final List<LogEntry> _recent = [];
 
   List<LogEntry> get recent => List.unmodifiable(_recent);
 
-  Future<void> init() async {
-    final docs = await getApplicationDocumentsDirectory();
+  Future<void> init({Directory? baseDirectory}) async {
+    final docs = baseDirectory ?? await getApplicationDocumentsDirectory();
     _file = File(p.join(docs.path, 'chappy_diagnostics.jsonl'));
     if (!(await _file!.exists())) return;
     final length = await _file!.length();
@@ -61,7 +62,7 @@ class LogStore {
     }
   }
 
-  Future<void> add(String appId, String level, String source, String message) async {
+  Future<void> add(String appId, String level, String source, String message) {
     final value = LogEntry(
       time: DateTime.now().toUtc().toIso8601String(),
       appId: appId,
@@ -71,16 +72,22 @@ class LogStore {
     );
     _recent.add(value);
     if (_recent.length > 200) _recent.removeAt(0);
-    try {
-      final file = _file;
-      if (file == null) return;
-      if (await file.exists() && await file.length() > 1024 * 1024) {
-        await _rotate();
+    // Avoid interleaved append and rotation when many errors arrive together.
+    final write = _pendingWrite.then((_) async {
+      try {
+        final file = _file;
+        if (file == null) return;
+        if (await file.exists() && await file.length() > 1024 * 1024) {
+          await _rotate();
+        }
+        await file.writeAsString('${jsonEncode(value.toJson())}\n',
+            mode: FileMode.append, flush: true);
+      } catch (_) {
+        // Diagnostics failure must not crash the mini app.
       }
-      await file.writeAsString('${jsonEncode(value.toJson())}\n', mode: FileMode.append, flush: true);
-    } catch (_) {
-      // Diagnostics failure must not crash the mini app.
-    }
+    });
+    _pendingWrite = write;
+    return write;
   }
 
   Future<void> _rotate() async {

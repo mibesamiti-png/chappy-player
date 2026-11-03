@@ -26,8 +26,8 @@ class PackageRepository {
   Directory currentDir(String id) => Directory(p.join(appsRoot.path, id, 'current'));
   Directory previousDir(String id) => Directory(p.join(appsRoot.path, id, 'previous'));
 
-  Future<void> init() async {
-    final doc = await getApplicationDocumentsDirectory();
+  Future<void> init({Directory? baseDirectory}) async {
+    final doc = baseDirectory ?? await getApplicationDocumentsDirectory();
     root = Directory(p.join(doc.path, 'chappy_library'));
     appsRoot = Directory(p.join(root.path, 'apps'));
     dataRoot = Directory(p.join(root.path, 'data'));
@@ -36,21 +36,64 @@ class PackageRepository {
     await appsRoot.create(recursive: true);
     await dataRoot.create(recursive: true);
     await stagingRoot.create(recursive: true);
+    // The on-disk manifest is authoritative. An interrupted rename can leave
+    // library.json pointing at an older version or at a temporarily missing app.
+    // Preserve a corrupt registry for diagnostics rather than silently erasing it.
     if (await registryFile.exists()) {
       try {
-        final data = jsonDecode(await registryFile.readAsString()) as List<dynamic>;
-        for (final entry in data) {
-          final app = ChappyPackage.fromJson(Map<String, dynamic>.from(entry as Map));
-          if (await currentDir(app.id).exists()) { _apps[app.id] = app; }
+        final decoded = jsonDecode(await registryFile.readAsString());
+        if (decoded is! List) {
+          throw const FormatException('Invalid registry');
         }
       } catch (_) {
         throw const FormatException('アプリ一覧のデータが破損しています。削除せず診断してください');
       }
     }
+    await for (final entry in appsRoot.list(followLinks: false)) {
+      if (entry is! Directory) { continue; }
+      final id = p.basename(entry.path);
+      final current = currentDir(id);
+      final previous = previousDir(id);
+      final swap = Directory(p.join(entry.path, 'rollback_tmp'));
+
+      // Reconstruct the last safe version after interrupted install/rollback.
+      if (await swap.exists()) {
+        if (!await current.exists()) {
+          await swap.rename(current.path);
+        } else if (!await previous.exists()) {
+          await swap.rename(previous.path);
+        } else {
+          throw FormatException('手動確認が必要な復元データがあります: $id');
+        }
+      }
+      if (!await current.exists() && await previous.exists()) {
+        await previous.rename(current.path);
+      }
+      if (!await current.exists()) { continue; }
+
+      final manifest = File(p.join(current.path, 'manifest.json'));
+      final app = ChappyPackage.parse(await manifest.readAsString());
+      if (app.id != id) {
+        throw FormatException('インストール済みアプリIDの不一致: $id');
+      }
+      _apps[id] = app;
+    }
+    await _saveRegistry();
     // Clean only orphaned staging directories, never live app data.
     await for (final entry in stagingRoot.list()) {
       if (entry is Directory) { await entry.delete(recursive: true); }
     }
+  }
+
+  /// Validate a package and return its identity before overwriting anything.
+  /// Does not modify the installed app library.
+  ChappyPackage inspect(Uint8List zipBytes) {
+    validateZipEnvelope(zipBytes);
+    final archive = ZipDecoder().decodeBytes(zipBytes, verify: true);
+    final manifest = archive.files.firstWhere((e) => e.name == 'manifest.json');
+    return ChappyPackage.parse(utf8.decode(
+      manifest.readBytes() ?? (throw const FormatException('manifest.jsonが読み取れません')),
+    ));
   }
 
   Future<ChappyPackage> install(Uint8List zipBytes) async {
@@ -110,7 +153,11 @@ class PackageRepository {
     final old = ChappyPackage.parse(
       await File(p.join(previous.path, 'manifest.json')).readAsString(),
     );
-    final swap = Directory(p.join(stagingRoot.path, 'swap_${DateTime.now().microsecondsSinceEpoch}'));
+    // A stable path lets startup recovery discover an interrupted rollback.
+    final swap = Directory(p.join(current.parent.path, 'rollback_tmp'));
+    if (await swap.exists()) {
+      throw const FormatException('前回の復元処理が残っています。プレイヤーを再起動してください');
+    }
     await current.rename(swap.path);
     try {
       await previous.rename(current.path);
@@ -118,7 +165,16 @@ class PackageRepository {
       _apps[id] = old;
       await _saveRegistry();
     } catch (_) {
-      // Keep both versions rather than deleting user data on unexpected IO errors.
+      // Keep all versions; init() reconciles the filesystem if recovery could
+      // not complete before the process was terminated.
+      if (await swap.exists()) {
+        if (await current.exists() && !await previous.exists()) {
+          await current.rename(previous.path);
+        }
+        if (!await current.exists()) {
+          await swap.rename(current.path);
+        }
+      }
       rethrow;
     }
   }
