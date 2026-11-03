@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/screens/logs_page.dart';
 import 'package:flutter/material.dart';
@@ -8,12 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('capture starts, records, stops, and remains exportable',
       (tester) async {
-    final temp = Directory.systemTemp.createTempSync('chappy_widget_logs_');
-    addTearDown(() async {
-      if (await temp.exists()) await temp.delete(recursive: true);
-    });
+    // Keep widget tests free from dart:io to avoid FakeAsync deadlocks.
+    // Persistent behavior is verified separately by log_store_test.dart.
     final logs = LogStore();
-    await logs.init(baseDirectory: temp);
 
     await tester.pumpWidget(MaterialApp(
       home: LogsPage(logs: logs, appId: 'local.chappy.memo'),
