@@ -52,7 +52,7 @@ class DiagnosticSession {
   int get eventCount => entries.length;
 
   void append(LogEntry entry) {
-    if (!isRecording) return;
+    if (!isRecording) { return; }
     if (appId != null && entry.appId != appId && entry.appId != 'player') {
       return;
     }
@@ -90,7 +90,7 @@ class LogStore {
 
   Future<void> stopDiagnosticSession() async {
     final session = _capture;
-    if (session == null || !session.isRecording) return;
+    if (session == null || !session.isRecording) { return; }
     await _pendingWrite;
     session.endedAt = DateTime.now().toUtc().toIso8601String();
     await _saveCaptureState();
@@ -140,9 +140,9 @@ class LogStore {
       _file!,
     ];
     for (final file in candidates) {
-      if (!await file.exists()) continue;
+      if (!await file.exists()) { continue; }
       if (await file.length() > 1024 * 1024) {
-        if (file.path == _file!.path) await _rotate();
+        if (file.path == _file!.path) { await _rotate(); }
         continue;
       }
       final lines = await file.readAsLines();
@@ -174,7 +174,7 @@ class LogStore {
 
   Future<void> _loadCaptureState() async {
     final file = _captureStateFile!;
-    if (!await file.exists()) return;
+    if (!await file.exists()) { return; }
     try {
       if (await file.length() > 8192) {
         throw const FormatException('Capture state too large');
@@ -212,7 +212,7 @@ class LogStore {
   Future<void> _saveCaptureState() async {
     final file = _captureStateFile;
     final capture = _capture;
-    if (file == null || capture == null) return;
+    if (file == null || capture == null) { return; }
     await file.parent.create(recursive: true);
     final next = File('${file.path}.tmp');
     await next.writeAsString(jsonEncode({
