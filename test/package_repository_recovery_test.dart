@@ -96,6 +96,32 @@ void main() {
     expect((decoded.single as Map<String, dynamic>)['version'], '0.1.1');
   });
 
+  test('install, update, rollback and restart keep user data', () async {
+    final repo = PackageRepository();
+    await repo.init(baseDirectory: temp);
+    final original = Uint8List.fromList(
+      File('sample_memo.chappy').readAsBytesSync(),
+    );
+    final update = Uint8List.fromList(
+      File('sample_memo_update.chappy').readAsBytesSync(),
+    );
+    expect((await repo.install(original)).version, '0.1.0');
+    final data = File(p.join(repo.dataRoot.path, 'local.chappy.memo.json'));
+    data.writeAsStringSync('{"notes":"remember me"}');
+
+    expect((await repo.install(update)).version, '0.1.1');
+    expect(await repo.canRollback('local.chappy.memo'), isTrue);
+    expect(data.readAsStringSync(), contains('remember me'));
+
+    await repo.rollback('local.chappy.memo');
+    expect(repo.apps.single.version, '0.1.0');
+
+    final restarted = PackageRepository();
+    await restarted.init(baseDirectory: temp);
+    expect(restarted.apps.single.version, '0.1.0');
+    expect(data.readAsStringSync(), contains('remember me'));
+  });
+
   test('package preview does not install anything', () async {
     final repo = PackageRepository();
     await repo.init(baseDirectory: temp);
