@@ -64,10 +64,16 @@ def verify() -> None:
             r"Signer #\d+ certificate SHA-256 digest:\s*([a-fA-F0-9]{64})",
             response.stdout,
         )
-        if len(matches) != 1 or matches[0].lower() != expected_cert:
+        if len(matches) != 1:
             raise RuntimeError(
-                f"{abi}: signing certificate does not match the pinned "
-                "CHAPPY_RELEASE_CERT_SHA256. Publication refused.")
+                f"{abi}: expected exactly one APK signer certificate, "
+                f"found {len(matches)}. Publication refused.")
+        actual_cert = matches[0].lower()
+        if actual_cert != expected_cert:
+            raise RuntimeError(
+                f"{abi}: APK certificate SHA-256 {actual_cert.upper()} "
+                f"does not match pinned SHA-256 {expected_cert.upper()}. "
+                "Publication refused. Check release signing configuration.")
         print(f"{abi}: signed APK verified, pinned cert matched, "
               f"{filename.stat().st_size} bytes")
     print("All release artifacts passed signature and archive checks")
