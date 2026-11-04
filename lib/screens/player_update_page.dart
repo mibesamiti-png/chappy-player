@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:chappy_player/core/apk_upgrade_checker.dart';
 import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/core/update_service.dart';
 import 'package:file_picker/file_picker.dart';
@@ -19,6 +20,7 @@ class PlayerUpdatePage extends StatefulWidget {
 
 class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
   final UpdateService _updates = UpdateService();
+  final ApkUpgradeChecker _apkChecker = const ApkUpgradeChecker();
   PackageInfo? _installed;
   UpdateRelease? _release;
   UpdateArtifact? _artifact;
@@ -119,8 +121,28 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
           }
         },
       );
+      // Verify the *actual APK* identity and Android signing certificate
+      // BEFORE exporting the file or asking the user to install it.
+      // SHA-256 verifies download integrity, not compatibility with the
+      // already-installed package.
+      final compatibility = await _apkChecker.inspect(downloaded);
+      await widget.logs.add('player',
+          compatibility.compatible ? 'info' : 'warning',
+          'apk-preflight',
+          'APK preflight: ${compatibility.code} '
+          '(installed=${compatibility.installedBuild}, '
+          'candidate=${compatibility.candidateBuild})');
+      if (!compatibility.compatible) {
+        if (mounted) {
+          setState(() {
+            _error = compatibility.userMessage;
+            _status = '上書き互換性チェックで更新を中止しました';
+          });
+        }
+        return;
+      }
       if (!mounted) return;
-      setState(() => _status = 'SHA-256検証成功。保存先を選んでください');
+      setState(() => _status = 'APKの署名・バージョン確認成功。保存先を選んでください');
       // SAF saveFile is used rather than exposing private cache file:// URIs.
       final data = Uint8List.fromList(await downloaded.readAsBytes());
       final saved = await FilePicker.platform.saveFile(
@@ -229,6 +251,8 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
             '現在のデバッグAPKと新しい署名付きAPKでは上書きできない場合があります。'
             'アンインストールすると保存データが消えるため、'
             '更新前に必ずバックアップを取ってください。'
+            'ダウンロードしたAPKの署名証明書・アプリID・ビルド番号を確認し、'
+            '不一致の場合は保存前に更新を中止します。'
             'この画面は自動でAPKをインストールしません。',
             style: TextStyle(fontSize: 12, color: Colors.white60),
           ),
