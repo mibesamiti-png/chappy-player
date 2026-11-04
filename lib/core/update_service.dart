@@ -127,6 +127,27 @@ bool isSafeHttpsUrl(Uri url) =>
     url.fragment.isEmpty &&
     (url.port == 443 || !url.hasPort);
 
+/// GitHub Releases uses a temporary HTTPS CDN URL for binary assets.
+/// Never permit a cross-origin redirect except the known GitHub asset CDNs.
+bool isSafeUpdateRedirect(Uri initial, Uri next,
+    {bool allowLoopbackTest = false}) {
+  if (next.userInfo.isNotEmpty || next.fragment.isNotEmpty) return false;
+  final sameOrigin = initial.scheme == next.scheme &&
+      initial.host == next.host && initial.port == next.port;
+  if (sameOrigin && (isSafeHttpsUrl(next) ||
+      (allowLoopbackTest && initial.scheme == 'http' &&
+       (initial.host == '127.0.0.1' || initial.host == 'localhost')))) {
+    return true;
+  }
+  if (initial.scheme == 'https' && initial.host == 'github.com' &&
+      isSafeHttpsUrl(next) &&
+      (next.host == 'release-assets.githubusercontent.com' ||
+       next.host == 'objects.githubusercontent.com')) {
+    return true;
+  }
+  return false;
+}
+
 class UpdateService {
   static const maxFeedBytes = 64 * 1024;
   static const maxApkBytes = 180 * 1024 * 1024;
@@ -194,13 +215,39 @@ class UpdateService {
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 10);
     try {
-      final request = await client.getUrl(artifact.url)
-          .timeout(const Duration(seconds: 15));
-      request.followRedirects = false;
-      final response = await request.close()
-          .timeout(const Duration(seconds: 15));
-      if (response.statusCode != HttpStatus.ok) {
-        throw HttpException('APKの取得に失敗 (HTTP ${response.statusCode})');
+      // GitHub Releases returns a temporary redirect to its asset CDN.
+      // Permit only known HTTPS CDN destinations and limit the number of hops.
+      var current = artifact.url;
+      HttpClientResponse? response;
+      for (var hop = 0; hop <= 3; hop++) {
+        _validateUrl(current);
+        final request = await client.getUrl(current)
+            .timeout(const Duration(seconds: 15));
+        request.followRedirects = false;
+        final candidate = await request.close()
+            .timeout(const Duration(seconds: 15));
+        if (candidate.statusCode == HttpStatus.ok) {
+          response = candidate;
+          break;
+        }
+        if (![301, 302, 303, 307, 308].contains(candidate.statusCode)) {
+          throw HttpException(
+              'APKの取得に失敗 (HTTP ${candidate.statusCode})');
+        }
+        final location = candidate.headers.value(HttpHeaders.locationHeader);
+        await candidate.drain<void>();
+        if (location == null || hop == 3) {
+          throw const FormatException('APKのリダイレクト回数が多すぎます');
+        }
+        final next = current.resolve(location);
+        if (!isSafeUpdateRedirect(current, next,
+            allowLoopbackTest: allowInsecureLoopbackForTests)) {
+          throw const FormatException('許可されていないAPKの転送先です');
+        }
+        current = next;
+      }
+      if (response == null) {
+        throw const FormatException('APK配信先にアクセスできません');
       }
       if (response.contentLength > maxApkBytes ||
           (response.contentLength >= 0 &&
