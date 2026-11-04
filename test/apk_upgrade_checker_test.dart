@@ -30,6 +30,35 @@ void main() {
     expect(check.userMessage, contains('バージョン番号'));
   });
 
+  test('parses installer handoff without calling it an installed update', () {
+    final handoff = InstallerHandoff.fromNative({
+      'status': 'installer_opened',
+    });
+    expect(handoff.installerOpened, isTrue);
+    expect(handoff.needsPermission, isFalse);
+    final settings = InstallerHandoff.fromNative({
+      'status': 'permission_required',
+    });
+    expect(settings.needsPermission, isTrue);
+    expect(settings.installerOpened, isFalse);
+  });
+
+  test('rejects invalid native installer statuses and honors blocks', () {
+    final blocked = InstallerHandoff.fromNative({
+      'status': 'blocked',
+      'code': 'SIGNATURE_MISMATCH',
+    });
+    expect(blocked.installerOpened, isFalse);
+    expect(blocked.code, 'SIGNATURE_MISMATCH');
+    expect(() => InstallerHandoff.fromNative({
+      'status': 'installed',
+    }), throwsFormatException);
+    expect(() => InstallerHandoff.fromNative({
+      'status': 'installer_opened',
+      'code': 2,
+    }), throwsFormatException);
+  });
+
   test('rejects broken native response', () {
     expect(() => ApkCompatibilityResult.fromNative({
       'compatible': 'not a bool',
