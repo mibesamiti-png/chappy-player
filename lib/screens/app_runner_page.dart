@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:chappy_player/core/local_app_server.dart';
 import 'package:chappy_player/core/log_store.dart';
@@ -30,6 +31,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
   WebViewController? _controller;
   String? _fatal;
   bool _loading = true;
+  Timer? _loadWatchdog;
+  int _loadProgress = 0;
   late final StorageService _storage = StorageService(widget.repository.dataRoot);
   late final Stopwatch _startTime;
 
@@ -38,6 +41,96 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
     super.initState();
     _startTime = Stopwatch()..start();
     unawaited(_initialize());
+  }
+
+  void _armWatchdog() {
+    _loadWatchdog?.cancel();
+    _loadWatchdog = Timer(const Duration(seconds: 20), () {
+      if (!mounted || !_loading || _fatal != null) { return; }
+      const detail = 'ミニアプリの読み込みが20秒以内に終わりませんでした。'
+          '端末セルフチェックと診断ログを確認してください。';
+      setState(() {
+        _fatal = detail;
+        _loading = false;
+      });
+      unawaited(widget.logs.add(widget.app.id, 'error', 'webview-timeout',
+          '$detail (last progress: $_loadProgress%)'));
+    });
+  }
+
+  Future<void> _preflight(LocalAppServer server) async {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 4);
+    try {
+      final request = await client.getUrl(server.url)
+          .timeout(const Duration(seconds: 5));
+      final response = await request.close()
+          .timeout(const Duration(seconds: 5));
+      final html = await utf8.decoder.bind(response).join()
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode != HttpStatus.ok ||
+          !html.contains('/__chappy_boot.js')) {
+        throw StateError('ローカルサーバーの応答が不正です'
+            ' (HTTP ${response.statusCode})');
+      }
+      await widget.logs.add(widget.app.id, 'info', 'server',
+          'Loopback preflight OK (HTTP 200, injected bridge script)');
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  Future<void> _retry() async {
+    if (!mounted) { return; }
+    _loadWatchdog?.cancel();
+    setState(() {
+      _fatal = null;
+      _loading = true;
+      _loadProgress = 0;
+    });
+    try {
+      final server = _server;
+      final controller = _controller;
+      if (server == null || controller == null) {
+        await _initialize();
+      } else {
+        await _preflight(server);
+        _armWatchdog();
+        await controller.loadRequest(server.url);
+      }
+    } catch (error, stack) {
+      await widget.logs.add(widget.app.id, 'error', 'runner-retry', '$error\n$stack');
+      if (mounted) {
+        _loadWatchdog?.cancel();
+        setState(() {
+          _fatal = error.toString();
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _checkBridgeHealth(WebViewController controller) async {
+    try {
+      final result = await controller.runJavaScriptReturningResult(
+          'Boolean(window.Chappy && window.ChappyHost && '
+          'typeof window.__chappyResolve === "function")');
+      final ready = result == true || result.toString() == 'true';
+      await widget.logs.add(widget.app.id,
+          ready ? 'info' : 'error',
+          'bridge-health',
+          ready ? 'JavaScript bridge initialized' : 'JavaScript bridge not initialized');
+      if (!ready && mounted) {
+        setState(() {
+          _fatal = 'WebViewのページは表示されましたが、'
+              'JavaScriptブリッジの初期化に失敗しました。診断ログを確認してください。';
+          _loading = false;
+        });
+      }
+    } catch (error) {
+      await widget.logs.add(widget.app.id, 'error', 'bridge-health',
+          'Failed to probe JavaScript bridge: $error');
+    }
   }
 
   Future<void> _initialize() async {
@@ -49,6 +142,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
         return;
       }
       _server = server;
+      await _preflight(server);
       final controller = WebViewController();
       await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
       await controller.setBackgroundColor(const Color(0xFF111827));
@@ -65,6 +159,15 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
         ));
       });
       await controller.setNavigationDelegate(NavigationDelegate(
+        onProgress: (progress) {
+          if (mounted && _loading) {
+            setState(() => _loadProgress = progress);
+          }
+        },
+        onPageStarted: (_) {
+          unawaited(widget.logs.add(widget.app.id, 'info', 'webview',
+              'Main page navigation started'));
+        },
         onNavigationRequest: (request) {
           // Strictly prevent top-level navigation away from this mini-app.
           final target = Uri.tryParse(request.url);
@@ -79,24 +182,48 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
           return allowed ? NavigationDecision.navigate : NavigationDecision.prevent;
         },
         onWebResourceError: (error) {
-          unawaited(widget.logs.add(widget.app.id, 'error', 'webview',
-              '${error.errorCode}: ${error.description}'));
+          final mainFrame = error.isForMainFrame != false;
+          final detail = 'WebView error ${error.errorCode}: ${error.description}';
+          unawaited(widget.logs.add(widget.app.id, 'error',
+              mainFrame ? 'webview-main-frame' : 'webview-resource', detail));
+          if (mainFrame && mounted) {
+            _loadWatchdog?.cancel();
+            setState(() {
+              _fatal = detail;
+              _loading = false;
+            });
+          }
         },
         onPageFinished: (_) {
-          if (mounted) {
-            setState(() => _loading = false);
+          _loadWatchdog?.cancel();
+          if (mounted && _fatal == null) {
+            setState(() {
+              _loading = false;
+              _loadProgress = 100;
+            });
             unawaited(widget.logs.add(widget.app.id, 'info', 'performance',
                 'First page loaded in ${_startTime.elapsedMilliseconds} ms'));
+            unawaited(_checkBridgeHealth(controller));
           }
         },
       ));
       if (!mounted) { return; }
       setState(() => _controller = controller);
+      _armWatchdog();
       await controller.loadRequest(server.url);
       await widget.logs.add(widget.app.id, 'info', 'runner', 'Started ${widget.app.version}');
     } catch (error, stack) {
+      _loadWatchdog?.cancel();
+      final server = _server;
+      _server = null;
+      if (server != null) { await server.close(); }
       await widget.logs.add(widget.app.id, 'error', 'runner', '$error\n$stack');
-      if (mounted) { setState(() { _fatal = error.toString(); _loading = false; }); }
+      if (mounted) {
+        setState(() {
+          _fatal = error.toString();
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -176,6 +303,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
 
   @override
   void dispose() {
+    _loadWatchdog?.cancel();
     final server = _server;
     if (server != null) { unawaited(server.close()); }
     super.dispose();
@@ -198,12 +326,47 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
         ],
       ),
       body: Stack(children: [
-        if (_controller != null) WebViewWidget(controller: _controller!),
-        if (_fatal != null) Center(child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text('起動失敗: $_fatal'),
-        )),
-        if (_loading) const Center(child: CircularProgressIndicator()),
+        if (_controller != null)
+          Positioned.fill(child: WebViewWidget(controller: _controller!)),
+        if (_fatal != null)
+          Positioned.fill(child: ColoredBox(
+            color: const Color(0xFF111827),
+            child: Center(child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.error_outline, size: 44, color: Colors.orangeAccent),
+                const SizedBox(height: 12),
+                const Text('ミニアプリの起動に失敗しました',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                SelectableText(_fatal!, textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: _retry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('もう一度読み込む'),
+                ),
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).pushNamed(
+                    '/logs', arguments: widget.app.id),
+                  icon: const Icon(Icons.bug_report_outlined),
+                  label: const Text('このアプリの診断ログを開く'),
+                ),
+              ]),
+            )),
+          )),
+        if (_loading && _fatal == null)
+          Positioned.fill(child: ColoredBox(
+            color: const Color(0xFF111827),
+            child: Center(child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 12),
+                Text('読み込み中… $_loadProgress%'),
+              ],
+            )),
+          )),
       ]),
     );
   }

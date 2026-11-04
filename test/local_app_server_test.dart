@@ -24,4 +24,27 @@ void main() {
       dir.deleteSync(recursive: true);
     }
   });
+  test('sample memo resources are reachable on the loopback host', () async {
+    final server = LocalAppServer(Directory('sample_apps/memo'));
+    final client = HttpClient();
+    try {
+      await server.start();
+      for (final resource in ['index.html', 'main.js', 'style.css']) {
+        final request = await client.getUrl(server.url.resolve(resource));
+        final response = await request.close();
+        expect(response.statusCode, HttpStatus.ok, reason: resource);
+        final body = await utf8.decoder.bind(response).join();
+        expect(body.isNotEmpty, isTrue, reason: resource);
+        if (resource == 'index.html') {
+          expect(response.headers.contentType?.charset, 'utf-8');
+          expect(body, contains('メモ帳'));
+          expect(body, contains('/__chappy_boot.js'));
+        }
+      }
+    } finally {
+      client.close(force: true);
+      await server.close();
+    }
+  });
+
 }
