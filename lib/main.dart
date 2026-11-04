@@ -8,6 +8,7 @@ import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/core/package_model.dart';
 import 'package:chappy_player/core/package_repository.dart';
 import 'package:chappy_player/screens/app_runner_page.dart';
+import 'package:chappy_player/screens/chappy_catalog_page.dart';
 import 'package:chappy_player/screens/logs_page.dart';
 import 'package:chappy_player/screens/player_update_page.dart';
 import 'package:chappy_player/screens/self_check_page.dart';
@@ -393,6 +394,22 @@ class _HomePageState extends State<HomePage> {
           ),
         )),
         const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: busy ? null : () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => ChappyCatalogPage(
+              repository: widget.repository,
+              logs: widget.logs,
+              onLibraryChanged: () {
+                if (mounted) {
+                  setState(() {});
+                }
+              },
+            )),
+          ),
+          icon: const Icon(Icons.storefront_outlined),
+          label: const Text('Chappy Apps 公開ライブラリ'),
+        ),
+        const SizedBox(height: 8),
         FilledButton.tonalIcon(
           onPressed: busy ? null : _installBundledSample,
           icon: const Icon(Icons.science_outlined),
