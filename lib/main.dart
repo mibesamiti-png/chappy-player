@@ -102,6 +102,74 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool busy = false;
+  bool _externalReceiving = false;
+  bool _externalQueued = false;
+  static const MethodChannel _externalChannel =
+      MethodChannel('dev.chappy.player/external_chappy');
+
+  @override
+  void initState() {
+    super.initState();
+    _externalChannel.setMethodCallHandler((call) async {
+      if (call.method == 'incomingChappyAvailable') {
+        _signalExternalImport();
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _signalExternalImport();
+    });
+  }
+
+  @override
+  void dispose() {
+    _externalChannel.setMethodCallHandler(null);
+    super.dispose();
+  }
+
+  void _signalExternalImport() {
+    _externalQueued = true;
+    unawaited(_consumeExternalChappy());
+  }
+
+  Future<void> _consumeExternalChappy() async {
+    if (!mounted || busy || _externalReceiving) return;
+    _externalReceiving = true;
+    try {
+      while (mounted && !busy) {
+        _externalQueued = false;
+        final result = await _externalChannel
+            .invokeMapMethod<String, dynamic>('takePendingChappy');
+        if (result == null) break;
+        final path = result['path'];
+        final name = result['fileName'];
+        if (path is! String || name is! String ||
+            !name.toLowerCase().endsWith('.chappy')) {
+          throw const FormatException('Androidからの.chappy情報が不正です');
+        }
+        final file = File(path);
+        try {
+          final length = await file.length();
+          if (length < 22 || length > 12 * 1024 * 1024) {
+            throw const FormatException('外部.chappyのサイズが不正です');
+          }
+          await _importBytes(await file.readAsBytes());
+        } finally {
+          if (await file.exists()) {
+            await file.delete();
+          }
+        }
+      }
+    } catch (error) {
+      await widget.logs.add('player', 'error', 'external-import', '$error');
+      _notify('外部ファイルの読み込みに失敗: $error');
+    } finally {
+      _externalReceiving = false;
+      if (_externalQueued && mounted && !busy) {
+        unawaited(_consumeExternalChappy());
+      }
+    }
+  }
+
   late final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
 
   void _notify(String message) {
@@ -123,28 +191,40 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _import() async {
-    if (busy) { return; }
+    if (busy) return;
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.any, withData: true);
-      if (result == null || result.files.isEmpty) { return; }
+      final result = await FilePicker.platform.pickFiles(
+          type: FileType.any, withData: true);
+      if (result == null || result.files.isEmpty) return;
       final picked = result.files.single;
       if (!picked.name.toLowerCase().endsWith('.chappy')) {
-        _notify('.chappyファイルを選択してください');
-        return;
+        throw const FormatException('.chappyファイルを選択してください');
       }
-      final bytes = picked.bytes ?? (picked.path != null
-          ? await FileBytes.read(picked.path!) : null);
-      if (bytes == null) { throw const FormatException('選択したファイルを読み取れませんでした'); }
+      final bytes = picked.bytes ??
+          (picked.path != null ? await FileBytes.read(picked.path!) : null);
+      if (bytes == null) {
+        throw const FormatException('選択したファイルを読み取れませんでした');
+      }
+      await _importBytes(Uint8List.fromList(bytes));
+    } catch (error) {
+      await widget.logs.add('player', 'error', 'import', error.toString());
+      _notify('インポート失敗: $error');
+    }
+  }
+
+  /// Shared installer: Files app, share sheet, and in-app picker all require
+  /// the same ZIP preflight and an explicit confirmation before replacing.
+  Future<void> _importBytes(Uint8List bytes) async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
       if (bytes.length > 12 * 1024 * 1024) {
         throw const FormatException('ファイルサイズが上限（12MiB）を超えています');
       }
-      // Inspect before displaying the confirmation dialog. The source file
-      // name is not a trusted app identity.
-      final incoming = widget.repository.inspect(Uint8List.fromList(bytes));
+      final incoming = widget.repository.inspect(bytes);
       final matches = widget.repository.apps.where((a) => a.id == incoming.id);
       final installed = matches.isEmpty ? null : matches.first;
-      if (!mounted) { return; }
-      setState(() => busy = true);
+      if (!mounted) return;
       final action = installed == null ? 'アプリを追加' : 'アプリを更新';
       final versionChange = installed == null
           ? '新規インストール'
@@ -157,15 +237,19 @@ class _HomePageState extends State<HomePage> {
           '${installed == null ? 'インストールしますか？' : '保存データを残して更新しますか？'}')) {
         return;
       }
-      final app = await widget.repository.install(Uint8List.fromList(bytes));
-      await widget.logs.add(app.id, 'info', 'import', 'Installed version ${app.version}');
-      if (mounted) { setState(() {}); }
+      final app = await widget.repository.install(bytes);
+      await widget.logs.add(app.id, 'info', 'import',
+          'Installed version ${app.version}');
+      if (mounted) setState(() {});
       _notify('${app.name} を登録しました');
     } catch (error) {
       await widget.logs.add('player', 'error', 'import', error.toString());
       _notify('インポート失敗: $error');
     } finally {
-      if (mounted) { setState(() => busy = false); }
+      if (mounted) setState(() => busy = false);
+      if (_externalQueued && mounted) {
+        unawaited(_consumeExternalChappy());
+      }
     }
   }
 
