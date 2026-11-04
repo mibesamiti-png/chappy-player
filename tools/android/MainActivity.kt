@@ -2,6 +2,9 @@ package dev.chappy.chappy_player
 
 import android.app.Activity
 import android.content.Intent
+import android.content.ClipData
+import android.provider.Settings
+import androidx.core.content.FileProvider
 import android.net.Uri
 import java.io.IOException
 import android.content.pm.PackageInfo
@@ -38,6 +41,19 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, updateChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "launchVerifiedInstaller" -> {
+                        val path = call.argument<String>("path")
+                        if (path.isNullOrBlank()) {
+                            result.error("INVALID_PATH", "更新APKのパスがありません", null)
+                        } else {
+                            try {
+                                result.success(launchVerifiedInstaller(path))
+                            } catch (error: Exception) {
+                                result.error("INSTALLER_LAUNCH_FAILED",
+                                    "Androidのインストール画面を開けません: ${error.message}", null)
+                            }
+                        }
+                    }
                     "checkApkCompatibility" -> {
                         val path = call.argument<String>("path")
                         if (path.isNullOrBlank()) {
@@ -187,6 +203,51 @@ class MainActivity : FlutterActivity() {
 
     private fun ByteArray.toHex(): String =
         joinToString("") { byte -> "%02x".format(byte) }
+
+    /**
+     * Open Android's own installer with a one-time content URI grant.
+     * This is invoked only after the user taps the update button, after the
+     * HTTPS download's SHA-256 has been verified by Dart.
+     *
+     * A successful return means the installer was OPENED, not that Android
+     * has installed the app. This code never uninstalls an existing package.
+     */
+    private fun launchVerifiedInstaller(path: String): Map<String, String> {
+        val candidate = File(path).canonicalFile
+        val updateCache = File(cacheDir, "chappy_updates").canonicalFile
+        if (!candidate.path.startsWith(updateCache.path + File.separator) ||
+            !candidate.isFile || !candidate.name.endsWith(".apk")) {
+            return mapOf("status" to "blocked", "code" to "INVALID_PATH")
+        }
+        if (candidate.length() < 1024 || candidate.length() > 180L * 1024 * 1024) {
+            return mapOf("status" to "blocked", "code" to "INVALID_SIZE")
+        }
+        val verdict = checkApkCompatibility(path)
+        if (verdict["compatible"] != true) {
+            return mapOf(
+                "status" to "blocked",
+                "code" to (verdict["code"]?.toString() ?: "APK_UNREADABLE")
+            )
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !packageManager.canRequestPackageInstalls()) {
+            val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                data = Uri.parse("package:$packageName")
+            }
+            startActivity(settingsIntent)
+            return mapOf("status" to "permission_required")
+        }
+        val contentUri = FileProvider.getUriForFile(
+            this, "$packageName.chappyupdates", candidate
+        )
+        val installer = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(contentUri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            clipData = ClipData.newUri(contentResolver, "Chappy Player update", contentUri)
+        }
+        startActivity(installer)
+        return mapOf("status" to "installer_opened")
+    }
 
     private fun checkApkCompatibility(path: String): Map<String, Any> {
         val candidate = File(path).canonicalFile
