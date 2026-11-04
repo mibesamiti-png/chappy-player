@@ -164,6 +164,41 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Make the first Android test possible without downloading any external file.
+  Future<void> _installBundledSample() async {
+    if (busy) { return; }
+    setState(() => busy = true);
+    try {
+      final asset = await rootBundle.load('sample_memo.chappy');
+      final bytes = asset.buffer.asUint8List(
+        asset.offsetInBytes, asset.lengthInBytes,
+      );
+      final incoming = widget.repository.inspect(bytes);
+      final matches = widget.repository.apps.where((a) => a.id == incoming.id);
+      final installed = matches.isEmpty ? null : matches.first;
+      if (!mounted) { return; }
+      final change = installed == null
+          ? '新規インストール'
+          : '${installed.version} → ${incoming.version}';
+      if (!await _confirm('サンプルメモ帳',
+          '${incoming.name}\n'
+          'ID: ${incoming.id}\n'
+          'バージョン: $change\n\n'
+          '${installed == null ? 'サンプルアプリを追加しますか？' : '既存のアプリ本体を上書きしますか？ 保存データは保持します。'}')) {
+        return;
+      }
+      final app = await widget.repository.install(bytes);
+      await widget.logs.add(app.id, 'info', 'sample', 'Installed bundled sample ${app.version}');
+      if (mounted) { setState(() {}); }
+      _notify('${app.name} を追加しました。タップして起動してね');
+    } catch (error) {
+      await widget.logs.add('player', 'error', 'sample', error.toString());
+      _notify('サンプルの追加に失敗しました: $error');
+    } finally {
+      if (mounted) { setState(() => busy = false); }
+    }
+  }
+
   Future<void> _backupData() async {
     if (busy) { return; }
     setState(() => busy = true);
@@ -314,6 +349,12 @@ class _HomePageState extends State<HomePage> {
           ),
         )),
         const SizedBox(height: 12),
+        FilledButton.tonalIcon(
+          onPressed: busy ? null : _installBundledSample,
+          icon: const Icon(Icons.science_outlined),
+          label: const Text('サンプルメモ帳を追加してテスト'),
+        ),
+        const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: busy ? null : _import,
           icon: const Icon(Icons.add_circle_outline),
