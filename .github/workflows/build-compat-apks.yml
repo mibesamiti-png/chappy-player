@@ -1,0 +1,52 @@
+name: Build Compatibility APKs
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/build-compat-apks.yml'
+      - 'tools/verify_compat_apks.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-compat-apks.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android runner
+        run: flutter create --platforms=android --org dev.chappy .
+      - name: Configure Android loopback WebView
+        run: python3 tools/patch_android.py
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Build separate debug APKs for ARM64, ARM32, and x86-64
+        run: flutter build apk --debug --split-per-abi
+      - name: Inspect APKs and verify cryptographic signatures
+        run: python3 tools/verify_compat_apks.py
+      - name: Upload compact APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: chappy-player-compatibility-debug-apks
+          path: |
+            build/app/outputs/flutter-apk/app-*-debug.apk
+            build/app/outputs/flutter-apk/compatibility-report.txt
+          if-no-files-found: error
+          retention-days: 30
