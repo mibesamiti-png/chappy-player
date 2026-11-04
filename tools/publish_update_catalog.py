@@ -44,6 +44,8 @@ def check_feed(feed, tag):
         raise ValueError("Invalid buildNumber")
     if not re.fullmatch(r"v\d+\.\d+\.\d+-b\d+", tag):
         raise ValueError("Invalid release tag")
+    if tag != f"v{feed.get('version')}-b{feed.get('buildNumber')}":
+        raise ValueError("Release tag does not match version/build number")
     arts = feed.get("artifacts")
     if not isinstance(arts, list) or len(arts) != 3:
         raise ValueError("Expected three CPU-specific signed APKs")
@@ -52,11 +54,12 @@ def check_feed(feed, tag):
         raise ValueError("Wrong or duplicate CPU architectures")
     for art in arts:
         parsed = urlparse(art["url"])
-        expected_prefix = (
-            f"/{PUBLIC_REPO}/releases/download/{tag}/ChappyPlayer-"
+        expected_path = (
+            f"/{PUBLIC_REPO}/releases/download/{tag}/"
+            f"ChappyPlayer-{art['abi']}.apk"
         )
         if parsed.scheme != "https" or parsed.netloc != "github.com" or (
-            not parsed.path.startswith(expected_prefix)
+            parsed.path != expected_path or parsed.query or parsed.fragment
         ):
             raise ValueError("APK URL points outside the official public release")
         if not re.fullmatch(r"[a-f0-9]{64}", art.get("sha256", "")):
