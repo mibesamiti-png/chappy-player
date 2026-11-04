@@ -23,8 +23,11 @@ class UpdateArtifact {
   final Uri url;
   final String sha256Hex;
   final int sizeBytes;
+  /// The exact Android versionCode inside this ABI-specific signed APK.
+  final int? androidVersionCode;
 
-  const UpdateArtifact(this.abi, this.url, this.sha256Hex, this.sizeBytes);
+  const UpdateArtifact(this.abi, this.url, this.sha256Hex, this.sizeBytes,
+      {this.androidVersionCode});
 
   static UpdateArtifact parse(Object? raw) {
     if (raw is! Map<String, dynamic>) {
@@ -34,6 +37,7 @@ class UpdateArtifact {
     final source = raw['url'];
     final digest = raw['sha256'];
     final size = raw['sizeBytes'];
+    final nativeBuild = raw['androidVersionCode'];
     if (abi is! String ||
         !{'arm64-v8a', 'armeabi-v7a', 'x86_64', 'universal'}.contains(abi)) {
       throw const FormatException('未対応のAPK CPU形式です');
@@ -52,7 +56,12 @@ class UpdateArtifact {
     if (size is! int || size < 1024 || size > UpdateService.maxApkBytes) {
       throw const FormatException('APKのサイズが許容範囲外です');
     }
-    return UpdateArtifact(abi, url, digest.toLowerCase(), size);
+    if (nativeBuild != null && (nativeBuild is! int ||
+        nativeBuild < 1 || nativeBuild > 2147483647)) {
+      throw const FormatException('APKのAndroidビルド番号が不正です');
+    }
+    return UpdateArtifact(abi, url, digest.toLowerCase(), size,
+        androidVersionCode: nativeBuild as int?);
   }
 }
 
@@ -107,7 +116,12 @@ class UpdateRelease {
     );
   }
 
-  bool newerThan(int installedBuild) => buildNumber > installedBuild;
+  /// Prefer per-ABI actual versionCode; split-per-abi APKs add 1000/2000/4000.
+  /// The top-level buildNumber is legacy-only fallback for older feeds.
+  bool newerThan(int installedBuild, {String? abi}) {
+    final candidate = forAbi(abi)?.androidVersionCode ?? buildNumber;
+    return candidate > installedBuild;
+  }
 
   UpdateArtifact? forAbi(String? deviceAbi) {
     for (final item in artifacts) {

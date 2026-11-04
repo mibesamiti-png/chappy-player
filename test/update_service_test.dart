@@ -39,6 +39,38 @@ void main() {
     expect(item.artifacts.length, 2);
   });
 
+  test('split-ABI versionCodes correctly detect Android upgrades', () {
+    final item = UpdateRelease.parse(feed(build: 4006, artifacts: [
+      {
+        'abi': 'arm64-v8a',
+        'url': 'https://updates.example.org/chappy-arm64.apk',
+        'sha256': repeat64('a'),
+        'sizeBytes': 4096,
+        'androidVersionCode': 2006,
+      },
+      {
+        'abi': 'armeabi-v7a',
+        'url': 'https://updates.example.org/chappy-arm.apk',
+        'sha256': repeat64('b'),
+        'sizeBytes': 4096,
+        'androidVersionCode': 1006,
+      },
+      {
+        'abi': 'x86_64',
+        'url': 'https://updates.example.org/chappy-x86.apk',
+        'sha256': repeat64('c'),
+        'sizeBytes': 4096,
+        'androidVersionCode': 4006,
+      },
+    ]));
+    expect(item.newerThan(2005, abi: 'arm64-v8a'), isTrue);
+    expect(item.newerThan(2006, abi: 'arm64-v8a'), isFalse);
+    expect(item.newerThan(4005, abi: 'x86_64'), isTrue);
+    expect(item.newerThan(4006, abi: 'x86_64'), isFalse);
+    expect(item.newerThan(1006, abi: 'armeabi-v7a'), isFalse);
+    expect(item.forAbi('arm64-v8a')!.androidVersionCode, 2006);
+  });
+
   test('rejects wrong app, unsafe URLs, duplicated ABIs and invalid hash', () {
     expect(() => UpdateRelease.parse(feed(packageId: 'not.chappy')),
         throwsFormatException);

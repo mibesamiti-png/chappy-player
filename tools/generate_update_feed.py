@@ -18,8 +18,12 @@ def main():
     parser.add_argument("--release-notes", default="")
     parser.add_argument("--output", default="chappy-update.json")
     args = parser.parse_args()
-    if args.build_number < 1 or args.build_number > 2147483647:
-        parser.error("build-number out of range")
+    # Flutter's --split-per-abi adds a fixed offset to versionCode.
+    # Fail rather than silently wrap into another ABI's range at build #1000.
+    if args.build_number < 1 or args.build_number >= 1000:
+        parser.error("split-ABI base build-number must be between 1 and 999")
+    abi_offsets = {"armeabi-v7a": 1000, "arm64-v8a": 2000,
+                   "x86_64": 4000}
     if len(args.release_notes) > 3000:
         parser.error("release notes too long")
     import re
@@ -49,12 +53,15 @@ def main():
         entries.append({
             "abi": abi, "url": url, "sha256": digest.hexdigest(),
             "sizeBytes": size,
+            "androidVersionCode": args.build_number + abi_offsets.get(abi, 0),
         })
     result = {
         "schemaVersion": 1,
         "packageId": "dev.chappy.chappy_player",
         "version": args.version,
-        "buildNumber": args.build_number,
+        # Global monotone feed sequence; the actual APK code depends on ABI.
+        "buildNumber": args.build_number + 4000,
+        "buildSequence": args.build_number,
         "releaseNotes": args.release_notes,
         "artifacts": entries,
     }

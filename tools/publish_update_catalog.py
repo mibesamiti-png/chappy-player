@@ -40,19 +40,27 @@ def check_feed(feed, tag):
         raise ValueError("Invalid schemaVersion")
     if feed.get("packageId") != "dev.chappy.chappy_player":
         raise ValueError("Wrong update packageId")
-    if not isinstance(feed.get("buildNumber"), int) or feed["buildNumber"] <= 0:
-        raise ValueError("Invalid buildNumber")
+    base_build = feed.get("buildSequence")
+    if (not isinstance(base_build, int) or isinstance(base_build, bool)
+            or base_build < 1 or base_build >= 1000):
+        raise ValueError("Invalid split-ABI base buildSequence")
+    if feed.get("buildNumber") != base_build + 4000:
+        raise ValueError("Global feed buildNumber does not match split-ABI sequence")
     if not re.fullmatch(r"v\d+\.\d+\.\d+-b\d+", tag):
         raise ValueError("Invalid release tag")
-    if tag != f"v{feed.get('version')}-b{feed.get('buildNumber')}":
-        raise ValueError("Release tag does not match version/build number")
+    if tag != f"v{feed.get('version')}-b{base_build}":
+        raise ValueError("Release tag does not match version/buildSequence")
     arts = feed.get("artifacts")
     if not isinstance(arts, list) or len(arts) != 3:
         raise ValueError("Expected three CPU-specific signed APKs")
     expected_abis = {"arm64-v8a", "armeabi-v7a", "x86_64"}
     if {a.get("abi") for a in arts if isinstance(a, dict)} != expected_abis:
         raise ValueError("Wrong or duplicate CPU architectures")
+    offsets = {"armeabi-v7a": 1000, "arm64-v8a": 2000,
+               "x86_64": 4000}
     for art in arts:
+        if art.get("androidVersionCode") != base_build + offsets[art["abi"]]:
+            raise ValueError("Wrong signed APK Android versionCode for ABI")
         parsed = urlparse(art["url"])
         expected_path = (
             f"/{PUBLIC_REPO}/releases/download/{tag}/"

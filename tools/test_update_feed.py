@@ -25,7 +25,9 @@ with tempfile.TemporaryDirectory(prefix="chappy_feed_test_") as dirname:
     assert good.returncode == 0, good.stderr
     feed = json.loads(out.read_text(encoding="utf-8"))
     assert feed["packageId"] == "dev.chappy.chappy_player"
-    assert feed["buildNumber"] == 42
+    assert feed["buildNumber"] == 4042
+    assert feed["buildSequence"] == 42
+    assert feed["artifacts"][0]["androidVersionCode"] == 2042
     assert feed["artifacts"][0]["sha256"] == hashlib.sha256(fake).hexdigest()
     assert feed["artifacts"][0]["sizeBytes"] == len(fake)
 
