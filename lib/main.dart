@@ -9,6 +9,7 @@ import 'package:chappy_player/core/package_model.dart';
 import 'package:chappy_player/core/package_repository.dart';
 import 'package:chappy_player/screens/app_runner_page.dart';
 import 'package:chappy_player/screens/logs_page.dart';
+import 'package:chappy_player/screens/self_check_page.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -302,6 +303,16 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Chappy Player'),
         actions: [
+          IconButton(
+            tooltip: '端末セルフチェック',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => SelfCheckPage(
+                repository: widget.repository,
+                logs: widget.logs,
+              )),
+            ),
+            icon: const Icon(Icons.fact_check_outlined),
+          ),
           IconButton(
             tooltip: '診断ログ',
             onPressed: () => Navigator.of(context).pushNamed('/logs'),
