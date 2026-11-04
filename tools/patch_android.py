@@ -47,10 +47,11 @@ if not any(el.get('{%s}authorities' % android_ns) ==
 # screens. Most providers set a generic ZIP or octet-stream MIME type; the
 # native host MUST inspect the display name and bytes before importing.
 # No automatic execution or broad storage permission is required.
-activity = next(
-    (node for node in application.findall('activity')
-     if (node.get('{%s}name' % android_ns, '').endswith('MainActivity')), None
-)
+activity = None
+for node in application.findall('activity'):
+    if node.get('{%s}name' % android_ns, '').endswith('MainActivity'):
+        activity = node
+        break
 if activity is None:
     raise SystemExit('Generated Flutter MainActivity not found')
 
