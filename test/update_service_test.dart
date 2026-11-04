@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  String repeat64(String part) => List.filled(64, part).join();
   String feed({
     int build = 12,
     String packageId = 'dev.chappy.chappy_player',
@@ -19,12 +20,12 @@ void main() {
     'artifacts': artifacts ?? [{
       'abi': 'arm64-v8a',
       'url': 'https://updates.example.org/chappy-arm64.apk',
-      'sha256': 'a' * 64,
+      'sha256': repeat64('a'),
       'sizeBytes': 4096,
     }, {
       'abi': 'universal',
       'url': 'https://updates.example.org/chappy-universal.apk',
-      'sha256': 'b' * 64,
+      'sha256': repeat64('b'),
       'sizeBytes': 12000,
     }],
   });
@@ -44,13 +45,13 @@ void main() {
     expect(() => UpdateRelease.parse(feed(artifacts: [{
       'abi': 'arm64-v8a',
       'url': 'http://example.org/insecure.apk',
-      'sha256': 'a' * 64,
+      'sha256': repeat64('a'),
       'sizeBytes': 4096,
     }])), throwsFormatException);
     expect(() => UpdateRelease.parse(feed(artifacts: [{
       'abi': 'arm64-v8a',
       'url': 'https://user:pass@example.org/file.apk',
-      'sha256': 'a' * 64,
+      'sha256': repeat64('a'),
       'sizeBytes': 4096,
     }])), throwsFormatException);
     expect(() => UpdateRelease.parse(feed(artifacts: [{
@@ -63,13 +64,13 @@ void main() {
       {
         'abi': 'arm64-v8a',
         'url': 'https://example.org/a.apk',
-        'sha256': 'a' * 64,
+        'sha256': repeat64('a'),
         'sizeBytes': 4096,
       },
       {
         'abi': 'arm64-v8a',
         'url': 'https://example.org/b.apk',
-        'sha256': 'b' * 64,
+        'sha256': repeat64('b'),
         'sizeBytes': 4096,
       },
     ])), throwsFormatException);
@@ -93,7 +94,7 @@ void main() {
       expect(await path.readAsBytes(), bytes);
       expect(path.path, endsWith('chappy-update.apk'));
 
-      final bad = UpdateArtifact('arm64-v8a', url, 'f' * 64, bytes.length);
+      final bad = UpdateArtifact('arm64-v8a', url, repeat64('f'), bytes.length);
       await expectLater(service.download(bad, temp), throwsFormatException);
       expect(await File('${temp.path}/chappy-update.part').exists(), isFalse);
     } finally {
