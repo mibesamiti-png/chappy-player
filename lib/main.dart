@@ -253,41 +253,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Make the first Android test possible without downloading any external file.
-  Future<void> _installBundledSample() async {
-    if (busy) { return; }
-    setState(() => busy = true);
-    try {
-      final asset = await rootBundle.load('sample_memo.chappy');
-      final bytes = asset.buffer.asUint8List(
-        asset.offsetInBytes, asset.lengthInBytes,
-      );
-      final incoming = widget.repository.inspect(bytes);
-      final matches = widget.repository.apps.where((a) => a.id == incoming.id);
-      final installed = matches.isEmpty ? null : matches.first;
-      if (!mounted) { return; }
-      final change = installed == null
-          ? '新規インストール'
-          : '${installed.version} → ${incoming.version}';
-      if (!await _confirm('サンプルメモ帳',
-          '${incoming.name}\n'
-          'ID: ${incoming.id}\n'
-          'バージョン: $change\n\n'
-          '${installed == null ? 'サンプルアプリを追加しますか？' : '既存のアプリ本体を上書きしますか？ 保存データは保持します。'}')) {
-        return;
-      }
-      final app = await widget.repository.install(bytes);
-      await widget.logs.add(app.id, 'info', 'sample', 'Installed bundled sample ${app.version}');
-      if (mounted) { setState(() {}); }
-      _notify('${app.name} を追加しました。タップして起動してね');
-    } catch (error) {
-      await widget.logs.add('player', 'error', 'sample', error.toString());
-      _notify('サンプルの追加に失敗しました: $error');
-    } finally {
-      if (mounted) { setState(() => busy = false); }
-    }
-  }
-
   Future<void> _backupData() async {
     if (busy) { return; }
     setState(() => busy = true);
@@ -412,6 +377,37 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         actions: [
+          PopupMenuButton<String>(
+            key: const Key('home_data_menu'),
+            tooltip: 'データ管理',
+            enabled: !busy,
+            icon: const Icon(Icons.folder_copy_outlined),
+            onSelected: (action) {
+              if (action == 'backup') {
+                unawaited(_backupData());
+              } else if (action == 'restore') {
+                unawaited(_restoreData());
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem<String>(
+                value: 'backup',
+                child: Row(children: [
+                  Icon(Icons.save_alt_outlined),
+                  SizedBox(width: 12),
+                  Text('保存データをバックアップ'),
+                ]),
+              ),
+              PopupMenuItem<String>(
+                value: 'restore',
+                child: Row(children: [
+                  Icon(Icons.settings_backup_restore),
+                  SizedBox(width: 12),
+                  Text('保存データを復元'),
+                ]),
+              ),
+            ],
+          ),
           IconButton(
             tooltip: 'プレイヤー本体の更新',
             onPressed: () => Navigator.of(context).push(
@@ -450,7 +446,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 12),
             const Text('まだアプリがありません'),
             const SizedBox(height: 6),
-            Text('まず sample_memo.chappy を追加してね',
+            Text('公開ライブラリかファイルからミニアプリを追加してね',
                 style: Theme.of(context).textTheme.bodySmall),
           ]),
         )),
@@ -494,30 +490,13 @@ class _HomePageState extends State<HomePage> {
           label: const Text('Chappy Apps 公開ライブラリ'),
         ),
         const SizedBox(height: 8),
-        FilledButton.tonalIcon(
-          onPressed: busy ? null : _installBundledSample,
-          icon: const Icon(Icons.science_outlined),
-          label: const Text('サンプルメモ帳を追加してテスト'),
-        ),
-        const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: busy ? null : _import,
           icon: const Icon(Icons.add_circle_outline),
           label: Text(busy ? '処理中…' : '.chappy を追加 / 更新'),
         ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: busy ? null : _backupData,
-          icon: const Icon(Icons.save_alt_outlined),
-          label: const Text('保存データをバックアップ'),
-        ),
-        OutlinedButton.icon(
-          onPressed: busy ? null : _restoreData,
-          icon: const Icon(Icons.settings_backup_restore),
-          label: const Text('保存データを復元'),
-        ),
         const SizedBox(height: 16),
-        const Text('バックアップにはアプリ本体が含まれません。重要なデータは必ず端末外に保管してください。',
+        const Text('バックアップ・復元は右上の「データ管理」から。バックアップにアプリ本体は含まれません。',
             style: TextStyle(fontSize: 12, color: Colors.white54)),
         const SizedBox(height: 8),
         const Text('オフライン専用の個人向けプレイヤー。信頼できる自作パッケージのみ読み込んでください。',
