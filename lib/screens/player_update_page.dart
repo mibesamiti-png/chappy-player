@@ -73,7 +73,7 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
         setState(() {
           _release = release;
           _artifact = artifact;
-          _status = !release.newerThan(installed)
+          _status = !release.newerThan(installed, abi: currentAndroidAbi())
               ? '現在のバージョンが最新です'
               : artifact == null
                   ? '更新がありますが、この端末向けAPKがありません'
@@ -223,7 +223,7 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
     final artifact = _artifact;
     final canDownload = !_busy && _pendingInstallApk == null && release != null &&
         artifact != null && installedBuild != null &&
-        release.newerThan(installedBuild);
+        release.newerThan(installedBuild, abi: currentAndroidAbi());
     return Scaffold(
       appBar: AppBar(title: const Text('プレイヤー本体の更新')),
       body: SafeArea(
@@ -267,7 +267,7 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
             Card(child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('配布版：v${release.version}（ビルド ${release.buildNumber}）',
+                Text('配布版：v${release.version}（APKビルド ${artifact?.androidVersionCode ?? release.buildNumber}）',
                     style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Text(release.releaseNotes),
