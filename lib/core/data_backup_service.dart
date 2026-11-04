@@ -83,7 +83,10 @@ class DataBackupService {
   }
 
   /// Fully validate before touching disk.
-  BackupSnapshot inspect(Uint8List bytes) {
+  BackupSnapshot inspect(Uint8List bytes) => inspectBackup(bytes);
+
+  /// Validate portable backup data without needing access to storage files.
+  static BackupSnapshot inspectBackup(Uint8List bytes) {
     if (bytes.isEmpty || bytes.length > maxBytes) {
       throw const FormatException('バックアップは12MiB以下である必要があります');
     }

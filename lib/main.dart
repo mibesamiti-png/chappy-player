@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:chappy_player/core/backup_export_service.dart';
 import 'package:chappy_player/core/data_backup_service.dart';
 import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/core/package_model.dart';
@@ -208,21 +209,25 @@ class _HomePageState extends State<HomePage> {
       final backup = DataBackupService(widget.repository.dataRoot);
       final bytes = await backup.exportData();
       final count = backup.inspect(bytes).appCount;
+      if (count == 0) {
+        throw const FormatException(
+          'バックアップ対象の保存データがありません。先にメモ帳で保存してください。',
+        );
+      }
       if (!mounted) { return; }
       if (!await _confirm('保存データをバックアップ',
-          '$count 個のアプリの保存データを端末外に保存しますか？\n'
+          '$count 個のアプリの保存データ（${bytes.length}バイト）を端末外に保存しますか？\n'
+          '出力後に保存先のデータを読み戻して検証します。\n'
           'バックアップは暗号化されていません。安全な場所に保存してください。\n'
           'アプリ本体（.chappy）は含まれません。')) { return; }
       final date = DateTime.now().toIso8601String().substring(0, 10);
-      final result = await FilePicker.platform.saveFile(
-        dialogTitle: 'Chappy保存データを保存',
-        fileName: 'chappy-data-$date.chappybackup',
-        type: FileType.any,
-        bytes: bytes,
+      final receipt = await BackupExportService().export(
+        bytes, fileName: 'chappy-data-$date.chappybackup',
       );
-      if (result != null) {
-        await widget.logs.add('player', 'info', 'backup', 'Exported $count app data entries');
-        _notify('保存データのバックアップを作成しました');
+      if (receipt != null) {
+        await widget.logs.add('player', 'info', 'backup',
+            'Verified external backup: $count apps, ${receipt.sizeBytes} bytes');
+        _notify('保存先の読み戻し検証に成功（${receipt.sizeBytes}バイト）。バックアップ完了！');
       }
     } catch (error) {
       await widget.logs.add('player', 'error', 'backup', error.toString());
@@ -246,8 +251,11 @@ class _HomePageState extends State<HomePage> {
       }
       final bytes = picked.bytes ?? (picked.path != null
           ? await FileBytes.read(picked.path!) : null);
-      if (bytes == null) {
-        throw const FormatException('バックアップを読み取れませんでした');
+      if (bytes == null || bytes.isEmpty) {
+        throw const FormatException(
+          'バックアップファイルが0KBです。復元できません。'
+          '元のメモ帳のデータは変更していません。',
+        );
       }
       final backup = DataBackupService(widget.repository.dataRoot);
       final snapshot = backup.inspect(Uint8List.fromList(bytes));
