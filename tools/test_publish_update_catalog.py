@@ -13,7 +13,8 @@ def example():
         "schemaVersion": 1,
         "packageId": "dev.chappy.chappy_player",
         "version": "0.2.0",
-        "buildNumber": 12,
+        "buildNumber": 4012,
+        "buildSequence": 12,
         "releaseNotes": "バックアップと更新を改善",
         "artifacts": [
             {
@@ -21,6 +22,7 @@ def example():
                 "url": BASE + "ChappyPlayer-" + abi + ".apk",
                 "sha256": "a" * 64,
                 "sizeBytes": 123456,
+                "androidVersionCode": 12 + {"arm64-v8a": 2000, "armeabi-v7a": 1000, "x86_64": 4000}[abi],
             }
             for abi in ("arm64-v8a", "armeabi-v7a", "x86_64")
         ],
@@ -55,4 +57,10 @@ rejects(duplicate_abis)
 not_chappy = copy.deepcopy(valid)
 not_chappy["packageId"] = "another.company.app"
 rejects(not_chappy)
+wrong_code = copy.deepcopy(valid)
+wrong_code["artifacts"][0]["androidVersionCode"] = 12
+rejects(wrong_code)
+wrong_sequence = copy.deepcopy(valid)
+wrong_sequence["buildSequence"] = 999
+rejects(wrong_sequence)
 print("Public APK manifest publisher smoke tests passed")
