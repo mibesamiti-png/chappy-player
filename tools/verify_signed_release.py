@@ -27,6 +27,36 @@ def find_apksigner() -> Path:
     return sorted(candidates)[-1]
 
 
+def parse_apk_certificate_digests(output: str) -> list[str]:
+    """Read every certificate digest reported by Android's apksigner.
+
+    Recent build-tools may label signers by SDK interval rather than '#1'.
+    Fail closed for unknown formats, missing digests, and malformed records.
+    """
+    certificate_line = re.compile(
+        r"Signer (?:#\\d+|\\([^()\\r\\n]+\\)) certificate "
+        r"SHA-256 digest:\\s*([0-9a-fA-F]{64})"
+    )
+    digests = []
+    for line in output.splitlines():
+        line = line.strip()
+        if "certificate SHA-256 digest:" not in line:
+            continue
+        match = certificate_line.fullmatch(line)
+        if match is None:
+            raise RuntimeError(
+                "apksigner returned an unrecognized signer certificate format; "
+                "publication refused"
+            )
+        digests.append(match.group(1).lower())
+    if not digests:
+        raise RuntimeError(
+            "apksigner did not report a signer certificate SHA-256 digest; "
+            "publication refused"
+        )
+    return digests
+
+
 def verify() -> None:
     expected_cert = os.environ.get("CHAPPY_RELEASE_CERT_SHA256", "").strip()
     if not re.fullmatch(r"[a-fA-F0-9]{64}", expected_cert):
@@ -60,20 +90,13 @@ def verify() -> None:
         )
         if response.returncode != 0:
             raise RuntimeError(f"{abi}: APK signature verification failed")
-        matches = re.findall(
-            r"Signer #\d+ certificate SHA-256 digest:\s*([a-fA-F0-9]{64})",
-            response.stdout,
-        )
-        if len(matches) != 1:
-            raise RuntimeError(
-                f"{abi}: expected exactly one APK signer certificate, "
-                f"found {len(matches)}. Publication refused.")
-        actual_cert = matches[0].lower()
-        if actual_cert != expected_cert:
-            raise RuntimeError(
-                f"{abi}: APK certificate SHA-256 {actual_cert.upper()} "
-                f"does not match pinned SHA-256 {expected_cert.upper()}. "
-                "Publication refused. Check release signing configuration.")
+        digests = parse_apk_certificate_digests(response.stdout)
+        for actual_cert in digests:
+            if actual_cert != expected_cert:
+                raise RuntimeError(
+                    f"{abi}: APK certificate SHA-256 {actual_cert.upper()} "
+                    f"does not match pinned SHA-256 {expected_cert.upper()}. "
+                    "Publication refused. Check release signing configuration.")
         print(f"{abi}: signed APK verified, pinned cert matched, "
               f"{filename.stat().st_size} bytes")
     print("All release artifacts passed signature and archive checks")
