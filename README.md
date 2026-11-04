@@ -19,6 +19,19 @@ Xiaomi 11T Pro / Android 14 でサンプルメモの表示・保存・バック�
 テスト手順：[初回上書き更新のチェックリスト](docs/android-update-smoke-test.md)。
 初期設定：[公開APK配布の初期設定](docs/public-apk-distribution-setup.md)。
 
+## 次期アップデートの開発内容（まだ正式APK未配布）
+
+- `Publish Signed APK Updates` は **手動実行のみ**。開発中のPRマージでは正式APKを公開しない。
+- AndroidのCPU別APKビルド番号の扱いを修正。`--split-per-abi` でARM32+1000 / ARM64+2000 / x86_64+4000の番号を確認し、各ABI別に比較する。
+- プレイヤー更新センターにGitHub公開Releasesからのバージョン履歴一覧と、上書き可能な更新版を選択する機能を追加。
+- `Chappy Apps`：Public `mibesamiti-png/chappy-apps` の Stable / Debugカタログと、SHA-256・ZIP検証・確認付きミニアプリ追加/更新。
+- Android「ファイルで開く」「共有」からの `.chappy` 直接受信と、既存インポートの共通化。
+- HTMLを `.chappy` へ梱包し、公開Stable / Debug用 `catalog.json` を生成するCLIを追加。
+
+**公開用 `chappy-apps` リポジトリは現時点ではまだ未作成。** 公開する際はソース／APIキー／私的データを含めずに作成すること。
+詳細：[公開カタログ](docs/chappy-apps-catalog.md) / [ファイル直接取り込み](docs/android-external-chappy.md) / [HTML移植](docs/html-to-chappy.md)。
+実機でのファイル連携・本体更新の成功は未確認。次の署名付きAPKにまとめた後でテストする。
+
 ## 収録されているもの
 
 - `lib/` — Flutterホーム画面、追加/更新/旧版復元/削除、WebView実行

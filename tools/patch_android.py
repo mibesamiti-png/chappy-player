@@ -43,6 +43,44 @@ if not any(el.get('{%s}authorities' % android_ns) ==
         '{%s}resource' % android_ns: '@xml/chappy_update_paths'
     })
 
+# Allow the user to tap/share .chappy files from Android's Downloads/Files
+# screens. Most providers set a generic ZIP or octet-stream MIME type; the
+# native host MUST inspect the display name and bytes before importing.
+# No automatic execution or broad storage permission is required.
+activity = None
+for node in application.findall('activity'):
+    if node.get('{%s}name' % android_ns, '').endswith('MainActivity'):
+        activity = node
+        break
+if activity is None:
+    raise SystemExit('Generated Flutter MainActivity not found')
+
+def install_intent_filter(action, mime_types, scheme=None):
+    filt = ET.SubElement(activity, 'intent-filter')
+    ET.SubElement(filt, 'action', {permission: action})
+    ET.SubElement(filt, 'category', {
+        permission: 'android.intent.category.DEFAULT'
+    })
+    if action == 'android.intent.action.VIEW':
+        ET.SubElement(filt, 'category', {
+            permission: 'android.intent.category.BROWSABLE'
+        })
+    for mime in mime_types:
+        attrs = {'{%s}mimeType' % android_ns: mime}
+        if scheme:
+            attrs['{%s}scheme' % android_ns] = scheme
+        ET.SubElement(filt, 'data', attrs)
+
+chappy_mimes = [
+    'application/vnd.chappy.package',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/octet-stream',
+]
+install_intent_filter('android.intent.action.VIEW', chappy_mimes, 'content')
+install_intent_filter('android.intent.action.SEND', chappy_mimes)
+print('Enabled user-invoked .chappy file open/share intent filters')
+
 # Future releases should replace localhost cleartext with an HTTPS asset loader.
 ET.indent(root, space='    ')
 manifest.write_text('<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(root, encoding='unicode'), encoding='utf-8')

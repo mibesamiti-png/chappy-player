@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:chappy_player/core/apk_release_history_service.dart';
 import 'package:chappy_player/core/apk_upgrade_checker.dart';
 import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/core/update_service.dart';
@@ -18,6 +19,10 @@ class PlayerUpdatePage extends StatefulWidget {
 
 class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
   final UpdateService _updates = UpdateService();
+  final ApkReleaseHistoryService _releaseHistory =
+      const ApkReleaseHistoryService();
+  List<UpdateRelease> _history = const [];
+  String? _historyError;
   final ApkUpgradeChecker _apkChecker = const ApkUpgradeChecker();
   PackageInfo? _installed;
   UpdateRelease? _release;
@@ -56,6 +61,8 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
       _status = 'HTTPSで更新情報を確認しています…';
       _release = null;
       _artifact = null;
+      _history = const [];
+      _historyError = null;
       _pendingInstallApk = null;
     });
     try {
@@ -80,6 +87,15 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
                   : '新しいバージョンが見つかりました';
         });
       }
+      try {
+        final history = await _releaseHistory.fetch();
+        if (mounted) setState(() => _history = history);
+      } catch (error) {
+        // Latest signed feed still works when GitHub API is rate-limited.
+        if (mounted) setState(() => _historyError = '$error');
+        await widget.logs.add('player', 'warning', 'release-history',
+            'Optional release list could not be read: $error');
+      }
       await widget.logs.add('player', 'info', 'update',
           'Update check succeeded; remote build ${release.buildNumber}');
     } catch (error) {
@@ -94,6 +110,22 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _selectHistoryRelease(UpdateRelease choice) {
+    final installed = _installedBuild;
+    final cpu = currentAndroidAbi();
+    final artifact = choice.forAbi(cpu);
+    if (_busy || _pendingInstallApk != null || installed == null ||
+        artifact == null || !choice.newerThan(installed, abi: cpu)) {
+      return;
+    }
+    setState(() {
+      _release = choice;
+      _artifact = artifact;
+      _status = 'v${choice.version}（ビルド ${artifact.androidVersionCode ?? choice.buildNumber}）'
+          ' を選択しました。ダウンロードして更新できます。';
+    });
   }
 
   /// Perform strict local Android checks again before every installer handoff.
@@ -278,6 +310,45 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
                         '${(artifact.sizeBytes / 1024 / 1024).toStringAsFixed(1)} MiB'),
               ]),
             )),
+          ],
+          if (_history.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('公開済みバージョン一覧',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            const Text('Androidは古いAPKを上書きできません。'
+                'インストール済みより新しい版だけ選択可能です。',
+                style: TextStyle(fontSize: 12, color: Colors.white60)),
+            ..._history.map((item) {
+              final cpu = currentAndroidAbi();
+              final choice = item.forAbi(cpu);
+              final available = installedBuild != null && choice != null &&
+                  item.newerThan(installedBuild, abi: cpu);
+              final selected = release?.version == item.version &&
+                  release?.buildNumber == item.buildNumber;
+              final detail = choice == null ? '非対応CPU' :
+                  '${(choice.sizeBytes / 1024 / 1024).toStringAsFixed(1)} MiB';
+              return Card(
+                child: ListTile(
+                  title: Text('v${item.version}'),
+                  subtitle: Text(
+                      'Build ${choice?.androidVersionCode ?? '—'} · $detail'),
+                  trailing: OutlinedButton(
+                    onPressed: _busy || _pendingInstallApk != null ||
+                            !available
+                        ? null : () => _selectHistoryRelease(item),
+                    child: Text(selected ? '選択中' :
+                        available ? '選ぶ' : '更新不可'),
+                  ),
+                ),
+              );
+            }),
+          ],
+          if (_historyError != null) ...[
+            const SizedBox(height: 8),
+            Text('履歴一覧を取得できませんでした：$_historyError',
+                style: const TextStyle(
+                    color: Colors.orangeAccent, fontSize: 12)),
           ],
           const SizedBox(height: 12),
           FilledButton.tonalIcon(

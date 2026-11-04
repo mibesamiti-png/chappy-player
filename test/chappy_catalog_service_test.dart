@@ -6,7 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final sha = 'a' * 64;
+  final sha = List.filled(64, 'a').join();
 
   Map<String, Object> entry({
     String id = 'local.chappy.memo',
@@ -89,7 +89,7 @@ void main() {
       expect(await service.download(item), data);
       final broken = ChappyCatalogEntry.parse({
         ...entry(url: source.toString()),
-        'sha256': 'f' * 64,
+        'sha256': List.filled(64, 'f').join(),
         'sizeBytes': data.length,
       }, allowLoopbackForTests: true);
       await expectLater(service.download(broken), throwsFormatException);
