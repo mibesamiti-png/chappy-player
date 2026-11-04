@@ -55,12 +55,52 @@ class ApkCompatibilityResult {
   };
 }
 
+/// Installer handoff only; opening Android's dialog is NOT installation success.
+class InstallerHandoff {
+  final String status;
+  final String? code;
+  const InstallerHandoff(this.status, this.code);
+
+  factory InstallerHandoff.fromNative(Map<dynamic, dynamic> data) {
+    final status = data['status'];
+    final code = data['code'];
+    if (status is! String ||
+        !{'blocked', 'permission_required', 'installer_opened'}.contains(status) ||
+        (code != null && code is! String)) {
+      throw const FormatException('Androidのインストール状態が不正です');
+    }
+    return InstallerHandoff(status, code as String?);
+  }
+
+  bool get installerOpened => status == 'installer_opened';
+  bool get needsPermission => status == 'permission_required';
+}
+
 class ApkUpgradeChecker {
   static const channelName = 'dev.chappy.player/update';
   final MethodChannel _channel;
   const ApkUpgradeChecker({
     MethodChannel channel = const MethodChannel(channelName),
   }) : _channel = channel;
+
+  /// Ask Android to show its own user-consented package installation screen.
+  /// Android may require a separate allow-install-from-this-source step first.
+  Future<InstallerHandoff> launchInstaller(File file) async {
+    if (!Platform.isAndroid) {
+      throw UnsupportedError('APKのインストールはAndroid専用です');
+    }
+    try {
+      final values = await _channel.invokeMapMethod<String, dynamic>(
+        'launchVerifiedInstaller', {'path': file.absolute.path},
+      );
+      if (values == null) {
+        throw const FormatException('Androidからインストーラーの結果がありません');
+      }
+      return InstallerHandoff.fromNative(values);
+    } on MissingPluginException {
+      throw const FormatException('このプレイヤーはアプリ内更新に未対応です');
+    }
+  }
 
   Future<ApkCompatibilityResult> inspect(File file) async {
     if (!Platform.isAndroid) {
