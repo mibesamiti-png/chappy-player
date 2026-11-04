@@ -38,3 +38,17 @@ elif groovy.exists():
     body = groovy.read_text(encoding='utf-8')
     body = body.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 24')
     groovy.write_text(body, encoding='utf-8')
+
+
+# Flutter generates Android sources on each CI runner. Install the player
+# MethodChannel host after generation, so an APK can be checked against the
+# currently installed app's signing certificate before suggesting an update.
+native_host = Path('tools/android/MainActivity.kt')
+native_target = Path('android/app/src/main/kotlin/dev/chappy/chappy_player/MainActivity.kt')
+if not native_host.is_file() or not native_target.is_file():
+    raise SystemExit('Missing Flutter MainActivity or update-check host template')
+existing = native_target.read_text(encoding='utf-8')
+if 'package dev.chappy.chappy_player' not in existing:
+    raise SystemExit('Unexpected generated Android package; refusing to overwrite')
+native_target.write_text(native_host.read_text(encoding='utf-8'), encoding='utf-8')
+print('Installed native APK update compatibility preflight host')
