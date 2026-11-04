@@ -21,6 +21,28 @@ application = root.find('application')
 if application is None:
     raise SystemExit('Missing application node')
 application.set('{%s}usesCleartextTraffic' % android_ns, 'true')
+# Self-hosted/sideloaded builds only: this permission enables a user-initiated
+# Android installation confirmation; nothing is silently installed.
+if not any(el.get(permission) == 'android.permission.REQUEST_INSTALL_PACKAGES'
+           for el in root.findall('uses-permission')):
+    root.insert(0, ET.Element('uses-permission', {
+        permission: 'android.permission.REQUEST_INSTALL_PACKAGES'
+    }))
+# FileProvider shares only a verified APK in our private update cache.
+provider_attrs = {
+    '{%s}name' % android_ns: 'androidx.core.content.FileProvider',
+    '{%s}authorities' % android_ns: '${applicationId}.chappyupdates',
+    '{%s}exported' % android_ns: 'false',
+    '{%s}grantUriPermissions' % android_ns: 'true',
+}
+if not any(el.get('{%s}authorities' % android_ns) ==
+           '${applicationId}.chappyupdates' for el in application.findall('provider')):
+    provider = ET.SubElement(application, 'provider', provider_attrs)
+    ET.SubElement(provider, 'meta-data', {
+        '{%s}name' % android_ns: 'android.support.FILE_PROVIDER_PATHS',
+        '{%s}resource' % android_ns: '@xml/chappy_update_paths'
+    })
+
 # Future releases should replace localhost cleartext with an HTTPS asset loader.
 ET.indent(root, space='    ')
 manifest.write_text('<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(root, encoding='unicode'), encoding='utf-8')
@@ -52,3 +74,12 @@ if 'package dev.chappy.chappy_player' not in existing:
     raise SystemExit('Unexpected generated Android package; refusing to overwrite')
 native_target.write_text(native_host.read_text(encoding='utf-8'), encoding='utf-8')
 print('Installed native APK update compatibility preflight host')
+
+# Ship only the private update cache path; never share all cache or app data.
+paths_src = Path('tools/android/chappy_update_paths.xml')
+paths_dst = Path('android/app/src/main/res/xml/chappy_update_paths.xml')
+if not paths_src.is_file():
+    raise SystemExit('Missing FileProvider update paths template')
+paths_dst.parent.mkdir(parents=True, exist_ok=True)
+paths_dst.write_bytes(paths_src.read_bytes())
+print('Enabled user-confirmed APK update handoff via scoped FileProvider')
