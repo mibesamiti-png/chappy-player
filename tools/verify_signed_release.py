@@ -65,6 +65,14 @@ def verify() -> None:
             "of the one permanent signing certificate before publication")
     expected_cert = expected_cert.lower()
     signer = find_apksigner()
+    aapt = signer.with_name("aapt")
+    if not aapt.is_file():
+        raise RuntimeError("Android aapt tool was not found")
+    base_build = int(os.environ["GITHUB_RUN_NUMBER"])
+    if base_build < 1 or base_build >= 1000:
+        raise RuntimeError("Split ABI build number has exceeded safe range")
+    expected_version = os.environ["CHAPPY_VERSION"]
+    offsets = {"armeabi-v7a": 1000, "arm64-v8a": 2000, "x86_64": 4000}
 
     for abi, filename in EXPECTED.items():
         if not filename.is_file():
@@ -84,6 +92,25 @@ def verify() -> None:
             corrupt = archive.testzip()
             if corrupt:
                 raise RuntimeError(f"{abi}: ZIP corruption at {corrupt}")
+        metadata = subprocess.run(
+            [str(aapt), "dump", "badging", str(filename)],
+            capture_output=True, text=True,
+        )
+        if metadata.returncode != 0:
+            raise RuntimeError(f"{abi}: cannot inspect APK versionCode")
+        match = re.search(
+            r"package: name='([^']+)' versionCode='(\\d+)' versionName='([^']+)'",
+            metadata.stdout,
+        )
+        expected_code = base_build + offsets[abi]
+        if (match is None or match.group(1) != "dev.chappy.chappy_player"
+                or int(match.group(2)) != expected_code
+                or match.group(3) != expected_version):
+            raise RuntimeError(
+                f"{abi}: actual APK package/versionCode/versionName does not "
+                f"match expected {expected_code}/{expected_version}. "
+                "Publication refused."
+            )
         response = subprocess.run(
             [str(signer), "verify", "--verbose", "--print-certs", str(filename)],
             capture_output=True, text=True,
