@@ -110,6 +110,29 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
     }
   }
 
+  Future<void> _checkBridgeHealth(WebViewController controller) async {
+    try {
+      final result = await controller.runJavaScriptReturningResult(
+          'Boolean(window.Chappy && window.ChappyHost && '
+          'typeof window.__chappyResolve === "function")');
+      final ready = result == true || result.toString() == 'true';
+      await widget.logs.add(widget.app.id,
+          ready ? 'info' : 'error',
+          'bridge-health',
+          ready ? 'JavaScript bridge initialized' : 'JavaScript bridge not initialized');
+      if (!ready && mounted) {
+        setState(() {
+          _fatal = 'WebViewのページは表示されましたが、'
+              'JavaScriptブリッジの初期化に失敗しました。診断ログを確認してください。';
+          _loading = false;
+        });
+      }
+    } catch (error) {
+      await widget.logs.add(widget.app.id, 'error', 'bridge-health',
+          'Failed to probe JavaScript bridge: $error');
+    }
+  }
+
   Future<void> _initialize() async {
     try {
       final server = LocalAppServer(widget.repository.currentDir(widget.app.id));
@@ -180,6 +203,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
             });
             unawaited(widget.logs.add(widget.app.id, 'info', 'performance',
                 'First page loaded in ${_startTime.elapsedMilliseconds} ms'));
+            unawaited(_checkBridgeHealth(controller));
           }
         },
       ));
@@ -190,6 +214,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
       await widget.logs.add(widget.app.id, 'info', 'runner', 'Started ${widget.app.version}');
     } catch (error, stack) {
       _loadWatchdog?.cancel();
+      final server = _server;
+      _server = null;
+      if (server != null) { await server.close(); }
       await widget.logs.add(widget.app.id, 'error', 'runner', '$error\n$stack');
       if (mounted) {
         setState(() {
