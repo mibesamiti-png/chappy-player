@@ -153,7 +153,9 @@ class ChappyCatalogService {
   bool _validCatalogUrl(Uri uri) {
     if (allowInsecureLoopbackForTests &&
         uri.scheme == 'http' &&
-        (uri.host == '127.0.0.1' || uri.host == 'localhost')) return true;
+        (uri.host == '127.0.0.1' || uri.host == 'localhost')) {
+      return true;
+    }
     return uri.toString() == chappyAppsCatalogUrl;
   }
 
