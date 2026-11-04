@@ -108,10 +108,12 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
         'APK: ${check.code} (${check.installedBuild} -> ${check.candidateBuild})');
     if (!check.compatible) {
       _pendingInstallApk = null;
-      if (mounted) setState(() {
-        _error = check.userMessage;
-        _status = '安全のためインストールを中止しました';
-      });
+      if (mounted) {
+        setState(() {
+          _error = check.userMessage;
+          _status = '安全のためインストールを中止しました';
+        });
+      }
       return;
     }
     final handoff = await _apkChecker.launchInstaller(file);
@@ -153,10 +155,12 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
       await _openAndroidInstaller(file);
     } catch (error) {
       await widget.logs.add('player', 'error', 'apk-installer', '$error');
-      if (mounted) setState(() {
-        _error = '$error';
-        _status = 'Androidのインストール画面を開けませんでした';
-      });
+      if (mounted) {
+        setState(() {
+          _error = '$error';
+          _status = 'Androidのインストール画面を開けませんでした';
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -181,10 +185,12 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
         artifact,
         Directory('${cache.path}/chappy_updates'),
         onProgress: (received, total) {
-          if (mounted) setState(() {
-            _received = received;
-            _total = total;
-          });
+          if (mounted) {
+            setState(() {
+              _received = received;
+              _total = total;
+            });
+          }
         },
       );
       // The downloader already compared the file's SHA-256 and exact length.
@@ -196,10 +202,12 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
           _status.contains('インストール確認画面を開きました');
     } catch (error) {
       await widget.logs.add('player', 'error', 'update', 'APK update failed: $error');
-      if (mounted) setState(() {
-        _error = '$error';
-        _status = 'APKの取得・検証・インストール準備に失敗しました';
-      });
+      if (mounted) {
+        setState(() {
+          _error = '$error';
+          _status = 'APKの取得・検証・インストール準備に失敗しました';
+        });
+      }
     } finally {
       if (!keepForInstaller && downloaded != null && await downloaded.exists()) {
         await downloaded.delete();
