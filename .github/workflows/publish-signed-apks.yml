@@ -1,0 +1,153 @@
+name: Publish Signed APK Updates
+
+# SAFETY: manually triggered only. Source repo remains private.
+# Missing signing secrets or the public distribution repo fail BEFORE build.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (for example 0.2.0)'
+        type: string
+        required: true
+      release_notes:
+        description: 'User-visible release notes (no secrets)'
+        type: string
+        required: true
+        default: 'Chappy Player の更新'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chappy-public-signed-publish
+  cancel-in-progress: false
+
+jobs:
+  publish-signed-apks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CHAPPY_DIST_REPO: mibesamiti-png/chappy-player-updates
+      CHAPPY_VERSION: ${{ inputs.version }}
+      CHAPPY_RELEASE_NOTES: ${{ inputs.release_notes }}
+      CHAPPY_UPDATE_FEED_URL: https://raw.githubusercontent.com/mibesamiti-png/chappy-player-updates/main/update.json
+    steps:
+      - name: Checkout PRIVATE source repository
+        uses: actions/checkout@v4
+      - name: Verify one-time distribution and signing configuration
+        env:
+          GH_TOKEN: ${{ secrets.CHAPPY_PUBLISH_TOKEN }}
+          CHAPPY_KEYSTORE_B64: ${{ secrets.CHAPPY_KEYSTORE_B64 }}
+          CHAPPY_STORE_PASSWORD: ${{ secrets.CHAPPY_STORE_PASSWORD }}
+          CHAPPY_KEY_PASSWORD: ${{ secrets.CHAPPY_KEY_PASSWORD }}
+          CHAPPY_KEY_ALIAS: ${{ secrets.CHAPPY_KEY_ALIAS }}
+          CHAPPY_RELEASE_CERT_SHA256: ${{ vars.CHAPPY_RELEASE_CERT_SHA256 }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          needed = ['GH_TOKEN', 'CHAPPY_KEYSTORE_B64', 'CHAPPY_STORE_PASSWORD',
+                    'CHAPPY_KEY_PASSWORD', 'CHAPPY_KEY_ALIAS',
+                    'CHAPPY_RELEASE_CERT_SHA256']
+          missing = [name for name in needed if not os.getenv(name)]
+          if missing:
+              raise SystemExit('Configure GitHub secrets/variables first: ' +
+                               ', '.join(missing))
+          if not re.fullmatch(r'\d+\.\d+\.\d+', os.environ['CHAPPY_VERSION']):
+              raise SystemExit('Version must be X.Y.Z')
+          if len(os.environ['CHAPPY_RELEASE_NOTES']) > 3000:
+              raise SystemExit('Release notes are too long')
+          if not re.fullmatch(r'[0-9a-fA-F]{64}',
+                              os.environ['CHAPPY_RELEASE_CERT_SHA256']):
+              raise SystemExit('Invalid pinned Android release certificate SHA-256')
+          PY
+          test "$(gh api "repos/$CHAPPY_DIST_REPO" --jq '.private')" = false ||
+            { echo 'Create a public APK-only repository first'; exit 1; }
+          test "$(gh api "repos/$CHAPPY_DIST_REPO" --jq '.default_branch')" = main ||
+            { echo 'Distribution repository must use main'; exit 1; }
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android runner
+        run: flutter create --platforms=android --org dev.chappy .
+      - name: Configure Android host and user-consented updater
+        run: python3 tools/patch_android.py
+      - name: Configure permanent Android release signing
+        env:
+          CHAPPY_KEYSTORE_B64: ${{ secrets.CHAPPY_KEYSTORE_B64 }}
+          CHAPPY_STORE_PASSWORD: ${{ secrets.CHAPPY_STORE_PASSWORD }}
+          CHAPPY_KEY_PASSWORD: ${{ secrets.CHAPPY_KEY_PASSWORD }}
+          CHAPPY_KEY_ALIAS: ${{ secrets.CHAPPY_KEY_ALIAS }}
+        run: python3 tools/configure_release_signing.py
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Unit tests
+        run: flutter test
+      - name: Build three permanently signed CPU-specific APKs
+        run: |
+          flutter build apk --release --split-per-abi \
+            --build-name "$CHAPPY_VERSION" \
+            --build-number "$GITHUB_RUN_NUMBER" \
+            --dart-define="CHAPPY_UPDATE_FEED_URL=$CHAPPY_UPDATE_FEED_URL"
+      - name: Verify APK contents and pinned signing certificate
+        env:
+          CHAPPY_RELEASE_CERT_SHA256: ${{ vars.CHAPPY_RELEASE_CERT_SHA256 }}
+        run: python3 tools/verify_signed_release.py
+      - name: Prepare ONLY APKs for publication
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/ChappyPlayer-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/ChappyPlayer-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk dist/ChappyPlayer-x86_64.apk
+          printf '%s\n' "$CHAPPY_RELEASE_NOTES" > dist/release-notes.txt
+      - name: Publish signed APKs to PUBLIC distribution repository
+        env:
+          GH_TOKEN: ${{ secrets.CHAPPY_PUBLISH_TOKEN }}
+        run: |
+          TAG="v${CHAPPY_VERSION}-b${GITHUB_RUN_NUMBER}"
+          # Refuse to replace an existing release, to prevent accidental rollback.
+          if gh release view "$TAG" --repo "$CHAPPY_DIST_REPO" >/dev/null 2>&1; then
+            echo "Release already exists; not overwriting it"
+            exit 1
+          fi
+          gh release create "$TAG" \
+            dist/ChappyPlayer-arm64-v8a.apk \
+            dist/ChappyPlayer-armeabi-v7a.apk \
+            dist/ChappyPlayer-x86_64.apk \
+            --repo "$CHAPPY_DIST_REPO" \
+            --target main \
+            --title "Chappy Player $CHAPPY_VERSION (build $GITHUB_RUN_NUMBER)" \
+            --notes-file dist/release-notes.txt
+      - name: Generate update feed from real signed APK bytes
+        run: |
+          TAG="v${CHAPPY_VERSION}-b${GITHUB_RUN_NUMBER}"
+          BASE="https://github.com/$CHAPPY_DIST_REPO/releases/download/$TAG"
+          python3 tools/generate_update_feed.py \
+            --version "$CHAPPY_VERSION" \
+            --build-number "$GITHUB_RUN_NUMBER" \
+            --release-notes "$CHAPPY_RELEASE_NOTES" \
+            --apk arm64-v8a dist/ChappyPlayer-arm64-v8a.apk "$BASE/ChappyPlayer-arm64-v8a.apk" \
+            --apk armeabi-v7a dist/ChappyPlayer-armeabi-v7a.apk "$BASE/ChappyPlayer-armeabi-v7a.apk" \
+            --apk x86_64 dist/ChappyPlayer-x86_64.apk "$BASE/ChappyPlayer-x86_64.apk" \
+            --output dist/update.json
+      - name: Publish update.json to PUBLIC distribution repository
+        env:
+          CHAPPY_PUBLISH_TOKEN: ${{ secrets.CHAPPY_PUBLISH_TOKEN }}
+        run: |
+          TAG="v${CHAPPY_VERSION}-b${GITHUB_RUN_NUMBER}"
+          python3 tools/publish_update_catalog.py --file dist/update.json --tag "$TAG"
+      - name: Retain signed APKs in private Actions artifacts as backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: chappy-player-signed-distribution-${{ github.run_number }}
+          path: |
+            dist/*.apk
+            dist/update.json
+          if-no-files-found: error
+          retention-days: 30
