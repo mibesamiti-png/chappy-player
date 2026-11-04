@@ -30,8 +30,6 @@ jobs:
         run: python3 tools/patch_android.py
       - name: Install dependencies
         run: flutter pub get
-      - name: Apply Dart analyzer-supported fixes
-        run: dart fix --apply
       - name: Format sources (CI only)
         run: dart format lib test
       - name: Analyze
