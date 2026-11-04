@@ -326,11 +326,13 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
                   item.newerThan(installedBuild, abi: cpu);
               final selected = release?.version == item.version &&
                   release?.buildNumber == item.buildNumber;
+              final detail = choice == null ? '非対応CPU' :
+                  '${(choice.sizeBytes / 1024 / 1024).toStringAsFixed(1)} MiB';
               return Card(
                 child: ListTile(
                   title: Text('v${item.version}'),
-                  subtitle: Text('Build ${choice?.androidVersionCode ?? '—'} · '
-                      '${choice == null ? '非対応CPU' : '${(choice.sizeBytes / 1024 / 1024).toStringAsFixed(1)} MiB'}'),
+                  subtitle: Text(
+                      'Build ${choice?.androidVersionCode ?? '—'} · $detail'),
                   trailing: OutlinedButton(
                     onPressed: _busy || _pendingInstallApk != null ||
                             !available
