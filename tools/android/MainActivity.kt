@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.content.ClipData
 import android.provider.Settings
+import android.provider.OpenableColumns
+import android.os.Bundle
 import androidx.core.content.FileProvider
 import android.net.Uri
 import java.io.IOException
@@ -27,6 +29,82 @@ import java.security.MessageDigest
 class MainActivity : FlutterActivity() {
     private val updateChannel = "dev.chappy.player/update"
     private val backupChannel = "dev.chappy.player/backup_export"
+    private val externalChannelName = "dev.chappy.player/external_chappy"
+    private var incomingChannel: MethodChannel? = null
+    private var pendingExternalUri: Uri? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        captureExternalIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        captureExternalIntent(intent)
+        incomingChannel?.invokeMethod("incomingChappyAvailable", null)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun captureExternalIntent(incoming: Intent?) {
+        if (incoming == null) return
+        val uri = when (incoming.action) {
+            Intent.ACTION_VIEW -> incoming.data
+            Intent.ACTION_SEND -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    incoming.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    incoming.getParcelableExtra(Intent.EXTRA_STREAM)
+                }
+            }
+            else -> null
+        }
+        // content:// grants are scoped to a single user-selected document.
+        if (uri?.scheme == "content") pendingExternalUri = uri
+    }
+
+    private fun copyExternalChappy(uri: Uri): Map<String, Any> {
+        var filename: String? = null
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME),
+            null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index >= 0) filename = cursor.getString(index)
+            }
+        }
+        val name = filename ?: throw IOException(
+            "ファイル名を取得できません。ホーム画面のファイル選択を使ってください")
+        if (name.length > 240 || !name.endsWith(".chappy", ignoreCase = true)) {
+            throw IOException(".chappyファイルのみ開けます")
+        }
+        val root = File(cacheDir, "chappy_external").apply { mkdirs() }
+        val copy = File.createTempFile("incoming-", ".chappy", root)
+        try {
+            val input = contentResolver.openInputStream(uri)
+                ?: throw IOException("ファイルを開けません")
+            var received = 0L
+            input.use { source ->
+                copy.outputStream().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val count = source.read(buffer)
+                        if (count < 0) break
+                        received += count
+                        if (received > 12L * 1024 * 1024) {
+                            throw IOException(".chappyが12MiBを超えています")
+                        }
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            if (received < 22) throw IOException("空または不完全な.chappyです")
+            return mapOf("path" to copy.absolutePath, "fileName" to name,
+                "sizeBytes" to received)
+        } catch (error: Exception) {
+            copy.delete()
+            throw error
+        }
+    }
     private val backupRequestCode = 0x64C4
     private data class PendingBackup(
         val source: File,
@@ -38,6 +116,33 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        incomingChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger, externalChannelName
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                if (call.method != "takePendingChappy") {
+                    result.notImplemented()
+                } else {
+                    val uri = pendingExternalUri
+                    pendingExternalUri = null
+                    if (uri == null) {
+                        result.success(null)
+                    } else {
+                        Thread {
+                            try {
+                                val receipt = copyExternalChappy(uri)
+                                runOnUiThread { result.success(receipt) }
+                            } catch (error: Exception) {
+                                runOnUiThread {
+                                    result.error("EXTERNAL_CHAPPY_FAILED",
+                                        "受信した.chappyの取り込みに失敗: ${error.message}", null)
+                                }
+                            }
+                        }.start()
+                    }
+                }
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, updateChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
