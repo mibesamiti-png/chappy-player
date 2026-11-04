@@ -99,7 +99,7 @@ def verify() -> None:
         if metadata.returncode != 0:
             raise RuntimeError(f"{abi}: cannot inspect APK versionCode")
         match = re.search(
-            r"package: name='([^']+)' versionCode='(\\d+)' versionName='([^']+)'",
+            r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'",
             metadata.stdout,
         )
         expected_code = base_build + offsets[abi]
