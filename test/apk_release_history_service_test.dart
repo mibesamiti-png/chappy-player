@@ -17,7 +17,7 @@ void main() {
         for (final abi in ['arm64-v8a', 'armeabi-v7a', 'x86_64'])
           {
             'name': 'ChappyPlayer-$abi.apk',
-            'digest': 'sha256:${'a' * 64}',
+            'digest': 'sha256:${List.filled(64, 'a').join()}',
             'size': 18000000,
             'browser_download_url':
                 'https://github.com/mibesamiti-png/chappy-player-updates/'
