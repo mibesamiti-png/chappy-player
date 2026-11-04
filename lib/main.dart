@@ -13,6 +13,7 @@ import 'package:chappy_player/screens/player_update_page.dart';
 import 'package:chappy_player/screens/self_check_page.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/services.dart';
 
 Future<void> main() async {
@@ -100,6 +101,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool busy = false;
+  late final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
 
   void _notify(String message) {
     if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message))); }
@@ -309,7 +311,21 @@ class _HomePageState extends State<HomePage> {
     final apps = widget.repository.apps;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chappy Player'),
+        title: FutureBuilder<PackageInfo>(
+          future: _packageInfo,
+          builder: (context, snapshot) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Chappy Player'),
+              if (snapshot.hasData)
+                Text(
+                  'v${snapshot.data!.version} · Build ${snapshot.data!.buildNumber}',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+            ],
+          ),
+        ),
         actions: [
           IconButton(
             tooltip: 'プレイヤー本体の更新',
@@ -403,7 +419,7 @@ class _HomePageState extends State<HomePage> {
         const Text('バックアップにはアプリ本体が含まれません。重要なデータは必ず端末外に保管してください。',
             style: TextStyle(fontSize: 12, color: Colors.white54)),
         const SizedBox(height: 8),
-        const Text('v0.1 試作版｜オフライン専用。信頼できる自作パッケージのみ読み込んでください。',
+        const Text('オフライン専用の個人向けプレイヤー。信頼できる自作パッケージのみ読み込んでください。',
             style: TextStyle(fontSize: 12, color: Colors.white54)),
       ])),
     );
