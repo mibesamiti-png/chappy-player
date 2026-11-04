@@ -103,6 +103,54 @@ void main() {
     }
   });
 
+  test('only approved GitHub release asset redirects are allowed', () {
+    final original = Uri.parse(
+        'https://github.com/mibesamiti-png/chappy-player-updates/'
+        'releases/download/v0.2.0-b15/ChappyPlayer-arm64-v8a.apk');
+    expect(isSafeUpdateRedirect(original, Uri.parse(
+        'https://release-assets.githubusercontent.com/assets/123?token=x')),
+        isTrue);
+    expect(isSafeUpdateRedirect(original, Uri.parse(
+        'https://objects.githubusercontent.com/assets/123?token=x')),
+        isTrue);
+    expect(isSafeUpdateRedirect(original, Uri.parse(
+        'https://attacker.example/malware.apk')), isFalse);
+    expect(isSafeUpdateRedirect(original, Uri.parse(
+        'http://release-assets.githubusercontent.com/malware.apk')), isFalse);
+    expect(isSafeUpdateRedirect(original, Uri.parse(
+        'https://user:pass@objects.githubusercontent.com/malware.apk')), isFalse);
+  });
+
+  test('follows test-only loopback redirect and still verifies SHA-256',
+      () async {
+    final data = List<int>.generate(4096, (i) => (i * 7) % 256);
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      if (request.uri.path == '/start.apk') {
+        request.response.statusCode = HttpStatus.found;
+        request.response.headers.set(
+            HttpHeaders.locationHeader, '/release.apk');
+      } else {
+        request.response.add(data);
+      }
+      await request.response.close();
+    });
+    final root = await Directory.systemTemp.createTemp(
+        'chappy_update_redirect_');
+    try {
+      final uri = Uri.parse(
+          'http://127.0.0.1:${server.port}/start.apk');
+      final artifact = UpdateArtifact('arm64-v8a', uri,
+          sha256.convert(data).toString(), data.length);
+      final file = await UpdateService(
+          allowInsecureLoopbackForTests: true).download(artifact, root);
+      expect(await file.readAsBytes(), data);
+    } finally {
+      await server.close(force: true);
+      await root.delete(recursive: true);
+    }
+  });
+
   test('does not accept plain HTTP outside tests', () async {
     final service = UpdateService();
     await expectLater(
