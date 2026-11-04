@@ -28,34 +28,34 @@ def find_apksigner() -> Path:
 
 
 def parse_apk_certificate_digests(output: str) -> list[str]:
-    """Read every certificate digest reported by Android's apksigner.
+    """Extract SHA-256 certificates from the trusted apksigner verify output.
 
-    Recent build-tools may label signers by SDK interval rather than '#1'.
-    Fail closed for unknown formats, missing digests, and malformed records.
+    Labels vary by Android build-tools version, so only interpret the field
+    named 'certificate SHA-256 digest:' rather than assuming signer numbering.
+    apksigner must independently verify the APK successfully before this is
+    called. All reported certificate hashes must match the pinned certificate.
     """
-    certificate_line = re.compile(
-        r"Signer (?:#\d+|\([^()\r\n]+\)) certificate "
-        r"SHA-256 digest:\s*([0-9a-fA-F]{64})"
-    )
+    marker = "certificate SHA-256 digest:"
     digests = []
     for line in output.splitlines():
-        line = line.strip()
-        if "certificate SHA-256 digest:" not in line:
+        if marker not in line:
             continue
-        match = certificate_line.fullmatch(line)
-        if match is None:
+        _, _, value = line.partition(marker)
+        # Support plain hexadecimal and colon-separated certificate hashes.
+        normalized = "".join(value.split()).replace(":", "")
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", normalized):
             raise RuntimeError(
-                "apksigner returned an unrecognized signer certificate format; "
+                "apksigner returned an unrecognized certificate SHA-256 field "
+                f"(raw length {len(value)}, normalized length {len(normalized)}); "
                 "publication refused"
             )
-        digests.append(match.group(1).lower())
+        digests.append(normalized.lower())
     if not digests:
         raise RuntimeError(
-            "apksigner did not report a signer certificate SHA-256 digest; "
+            "apksigner did not report a certificate SHA-256 digest; "
             "publication refused"
         )
     return digests
-
 
 def verify() -> None:
     expected_cert = os.environ.get("CHAPPY_RELEASE_CERT_SHA256", "").strip()
