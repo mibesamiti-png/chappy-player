@@ -50,14 +50,75 @@ class ApkReleaseHistoryService {
         final size = asset['size'];
         final url = asset['browser_download_url'];
         if (name is! String || digest is! String ||
-            size is! int || url is! String) continue;
+            size is! int || url is! String) {
+          continue;
+        }
         final abiMatch = RegExp(
             r'^ChappyPlayer-(arm64-v8a|armeabi-v7a|x86_64)\.apk$')
             .firstMatch(name);
         if (abiMatch == null || !digest.startsWith('sha256:') ||
-            !RegExp(r'^sha256:[a-fA-F0-9]{64}$').hasMatch(digest) ||
+            !RegExp(r'^sha256:[a-fA-F0-9]{64}
+        final abi = abiMatch.group(1)!;
+        if (!assetAbis.add(abi)) {
+          continue;
+        }
+        artifacts.add(UpdateArtifact(
+          abi, Uri.parse(url), digest.substring(7).toLowerCase(), size,
+          androidVersionCode: build + offsets[abi]!,
+        ));
+      }
+      if (assetAbis.length != 3) {
+        continue;
+      }
+      final notes = release['body'];
+      releases.add(UpdateRelease(
+        packageId: 'dev.chappy.chappy_player',
+        version: match.group(1)!,
+        buildNumber: 4000 + build,
+        releaseNotes: notes is String ? notes.substring(
+            0, notes.length > 3000 ? 3000 : notes.length) : '',
+        artifacts: List.unmodifiable(artifacts),
+      ));
+    }
+    releases.sort((a, b) => b.buildNumber.compareTo(a.buildNumber));
+    return List.unmodifiable(releases);
+  }
+
+  Future<List<UpdateRelease>> fetch() async {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 10);
+    try {
+      final req = await client.getUrl(Uri.parse(chappyApkHistoryApi))
+          .timeout(const Duration(seconds: 12));
+      req.followRedirects = false;
+      req.headers.set(HttpHeaders.userAgentHeader, 'ChappyPlayer/1.0');
+      req.headers.set(HttpHeaders.acceptHeader, 'application/vnd.github+json');
+      final response = await req.close().timeout(
+          const Duration(seconds: 12));
+      if (response.statusCode != HttpStatus.ok) {
+        throw HttpException('リリース一覧を取得できません (HTTP ${response.statusCode})');
+      }
+      const maxJson = 256 * 1024;
+      var total = 0;
+      final bytes = <int>[];
+      await for (final part in response.timeout(const Duration(seconds: 20))) {
+        total += part.length;
+        if (total > maxJson) {
+          throw const FormatException('リリース一覧が大きすぎます');
+        }
+        bytes.addAll(part);
+      }
+      return parse(utf8.decode(bytes));
+    } finally {
+      client.close(force: true);
+    }
+  }
+}
+).hasMatch(digest) ||
             size < 1024 || size > UpdateService.maxApkBytes ||
-            url != '$allowedBase$name') continue;
+            url != '$allowedBase$name') {
+          continue;
+        }
         final abi = abiMatch.group(1)!;
         if (!assetAbis.add(abi)) {
           continue;
