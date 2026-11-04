@@ -82,6 +82,7 @@ jobs:
           CHAPPY_STORE_PASSWORD: ${{ secrets.CHAPPY_STORE_PASSWORD }}
           CHAPPY_KEY_PASSWORD: ${{ secrets.CHAPPY_KEY_PASSWORD }}
           CHAPPY_KEY_ALIAS: ${{ secrets.CHAPPY_KEY_ALIAS }}
+          CHAPPY_RELEASE_CERT_SHA256: ${{ vars.CHAPPY_RELEASE_CERT_SHA256 }}
         run: python3 tools/configure_release_signing.py
       - name: Install dependencies
         run: flutter pub get
