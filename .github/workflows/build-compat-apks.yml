@@ -9,6 +9,10 @@ on:
   push:
     branches: [main]
     paths:
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'sample_memo.chappy'
+      - 'tools/patch_android.py'
       - '.github/workflows/build-compat-apks.yml'
 
 permissions:
