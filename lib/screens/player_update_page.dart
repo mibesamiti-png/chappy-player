@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:chappy_player/core/apk_upgrade_checker.dart';
 import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/core/update_service.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -29,6 +27,7 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
   bool _busy = false;
   int _received = 0;
   int _total = 0;
+  File? _pendingInstallApk;
 
   @override
   void initState() {
@@ -57,6 +56,7 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
       _status = 'HTTPSで更新情報を確認しています…';
       _release = null;
       _artifact = null;
+      _pendingInstallApk = null;
     });
     try {
       final url = Uri.parse(chappyUpdateFeedUrl);
@@ -96,80 +96,112 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
     }
   }
 
+  /// Perform strict local Android checks again before every installer handoff.
+  Future<void> _openAndroidInstaller(File file) async {
+    if (!await file.exists()) {
+      throw const FileSystemException('保存済みの更新APKが見つかりません');
+    }
+    final check = await _apkChecker.inspect(file);
+    await widget.logs.add('player',
+        check.compatible ? 'info' : 'warning',
+        'apk-preflight',
+        'APK: ${check.code} (${check.installedBuild} -> ${check.candidateBuild})');
+    if (!check.compatible) {
+      _pendingInstallApk = null;
+      if (mounted) setState(() {
+        _error = check.userMessage;
+        _status = '安全のためインストールを中止しました';
+      });
+      return;
+    }
+    final handoff = await _apkChecker.launchInstaller(file);
+    await widget.logs.add('player', 'info', 'apk-installer',
+        'Android installer handoff: ${handoff.status} ${handoff.code ?? ''}');
+    if (!mounted) return;
+    if (handoff.installerOpened) {
+      _pendingInstallApk = null;
+      setState(() {
+        _status = 'Androidのインストール確認画面を開きました。'
+            '「更新」または「インストール」を選んでください。'
+            '確認画面を開いた時点では、更新完了とは判定しません。';
+      });
+    } else if (handoff.needsPermission) {
+      _pendingInstallApk = file;
+      setState(() {
+        _status = 'Androidの「この提供元を許可」画面を開きました。'
+            '許可したらChappy Playerへ戻って「インストールを再開」を押してください。'
+            'APKを再ダウンロードする必要はありません。';
+      });
+    } else {
+      _pendingInstallApk = null;
+      setState(() {
+        _error = 'AndroidがAPKの起動を拒否しました'
+            '（${handoff.code ?? '不明'}）。';
+        _status = 'インストールは開始されていません';
+      });
+    }
+  }
+
+  Future<void> _resumeInstall() async {
+    final file = _pendingInstallApk;
+    if (_busy || file == null) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await _openAndroidInstaller(file);
+    } catch (error) {
+      await widget.logs.add('player', 'error', 'apk-installer', '$error');
+      if (mounted) setState(() {
+        _error = '$error';
+        _status = 'Androidのインストール画面を開けませんでした';
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _download() async {
     if (_busy || _artifact == null) return;
     final artifact = _artifact!;
     setState(() {
       _busy = true;
       _error = null;
+      _pendingInstallApk = null;
       _received = 0;
       _total = artifact.sizeBytes;
       _status = 'APKをダウンロードして検証しています…';
     });
     File? downloaded;
+    var keepForInstaller = false;
     try {
       final cache = await getTemporaryDirectory();
       downloaded = await _updates.download(
         artifact,
         Directory('${cache.path}/chappy_updates'),
         onProgress: (received, total) {
-          if (mounted) {
-            setState(() {
-              _received = received;
-              _total = total;
-            });
-          }
+          if (mounted) setState(() {
+            _received = received;
+            _total = total;
+          });
         },
       );
-      // Verify the *actual APK* identity and Android signing certificate
-      // BEFORE exporting the file or asking the user to install it.
-      // SHA-256 verifies download integrity, not compatibility with the
-      // already-installed package.
-      final compatibility = await _apkChecker.inspect(downloaded);
-      await widget.logs.add('player',
-          compatibility.compatible ? 'info' : 'warning',
-          'apk-preflight',
-          'APK preflight: ${compatibility.code} '
-          '(installed=${compatibility.installedBuild}, '
-          'candidate=${compatibility.candidateBuild})');
-      if (!compatibility.compatible) {
-        if (mounted) {
-          setState(() {
-            _error = compatibility.userMessage;
-            _status = '上書き互換性チェックで更新を中止しました';
-          });
-        }
-        return;
-      }
+      // The downloader already compared the file's SHA-256 and exact length.
+      // Keep it in private cache so FileProvider can stream it to Android.
       if (!mounted) return;
-      setState(() => _status = 'APKの署名・バージョン確認成功。保存先を選んでください');
-      // SAF saveFile is used rather than exposing private cache file:// URIs.
-      final data = Uint8List.fromList(await downloaded.readAsBytes());
-      final saved = await FilePicker.platform.saveFile(
-        dialogTitle: 'Chappy Player更新APKの保存先',
-        fileName: 'ChappyPlayer-${artifact.abi}.apk',
-        type: FileType.any,
-        bytes: data,
-      );
-      if (saved == null) {
-        if (mounted) setState(() => _status = '保存をキャンセルしました');
-        return;
-      }
-      await widget.logs.add('player', 'info', 'update',
-          'Verified update APK exported to Android document picker');
-      if (mounted) {
-        setState(() => _status = 'APKを保存しました。ファイル管理アプリから開いて更新してください');
-      }
+      setState(() => _status = 'APK検証成功。インストール確認へ進みます…');
+      await _openAndroidInstaller(downloaded);
+      keepForInstaller = _pendingInstallApk != null ||
+          _status.contains('インストール確認画面を開きました');
     } catch (error) {
-      await widget.logs.add('player', 'error', 'update', 'APK download failed: $error');
-      if (mounted) {
-        setState(() {
-          _error = '$error';
-          _status = 'APKの取得・保存に失敗しました';
-        });
-      }
+      await widget.logs.add('player', 'error', 'update', 'APK update failed: $error');
+      if (mounted) setState(() {
+        _error = '$error';
+        _status = 'APKの取得・検証・インストール準備に失敗しました';
+      });
     } finally {
-      if (downloaded != null && await downloaded.exists()) {
+      if (!keepForInstaller && downloaded != null && await downloaded.exists()) {
         await downloaded.delete();
       }
       if (mounted) setState(() => _busy = false);
@@ -181,7 +213,7 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
     final installedBuild = _installedBuild;
     final release = _release;
     final artifact = _artifact;
-    final canDownload = !_busy && release != null &&
+    final canDownload = !_busy && _pendingInstallApk == null && release != null &&
         artifact != null && installedBuild != null &&
         release.newerThan(installedBuild);
     return Scaffold(
@@ -243,17 +275,27 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
           FilledButton.tonalIcon(
             onPressed: canDownload ? _download : null,
             icon: const Icon(Icons.download_outlined),
-            label: const Text('検証してAPKを保存'),
+            label: const Text('ダウンロードして更新'),
           ),
+          if (_pendingInstallApk != null) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _resumeInstall,
+              icon: const Icon(Icons.system_update_alt_outlined),
+              label: const Text('インストールを再開'),
+            ),
+          ],
           const SizedBox(height: 16),
           const Text(
-            '注意：保存したAPKのインストールはAndroid側の確認操作が必要です。'
+            '更新APKは署名・アプリID・ビルド番号を照合してから'
+            'Android標準のインストール画面に渡します。'
+            '実際の更新にはAndroid側での確認操作が必要です。'
             '現在のデバッグAPKと新しい署名付きAPKでは上書きできない場合があります。'
             'アンインストールすると保存データが消えるため、'
             '更新前に必ずバックアップを取ってください。'
             'ダウンロードしたAPKの署名証明書・アプリID・ビルド番号を確認し、'
             '不一致の場合は保存前に更新を中止します。'
-            'この画面は自動でAPKをインストールしません。',
+            '無断でアンインストールしたり、無承認で更新を完了したりはしません。',
             style: TextStyle(fontSize: 12, color: Colors.white60),
           ),
         ]),
