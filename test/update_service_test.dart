@@ -1,0 +1,131 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:chappy_player/core/update_service.dart';
+import 'package:crypto/crypto.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  String feed({
+    int build = 12,
+    String packageId = 'dev.chappy.chappy_player',
+    List<Map<String, Object>>? artifacts,
+  }) => jsonEncode({
+    'schemaVersion': 1,
+    'packageId': packageId,
+    'version': '0.2.0',
+    'buildNumber': build,
+    'releaseNotes': 'Improved startup and saving',
+    'artifacts': artifacts ?? [{
+      'abi': 'arm64-v8a',
+      'url': 'https://updates.example.org/chappy-arm64.apk',
+      'sha256': 'a' * 64,
+      'sizeBytes': 4096,
+    }, {
+      'abi': 'universal',
+      'url': 'https://updates.example.org/chappy-universal.apk',
+      'sha256': 'b' * 64,
+      'sizeBytes': 12000,
+    }],
+  });
+
+  test('accepts valid feed and selects CPU-specific APK', () {
+    final item = UpdateRelease.parse(feed());
+    expect(item.newerThan(11), isTrue);
+    expect(item.newerThan(12), isFalse);
+    expect(item.forAbi('arm64-v8a')!.abi, 'arm64-v8a');
+    expect(item.forAbi('armeabi-v7a')!.abi, 'universal');
+    expect(item.artifacts.length, 2);
+  });
+
+  test('rejects wrong app, unsafe URLs, duplicated ABIs and invalid hash', () {
+    expect(() => UpdateRelease.parse(feed(packageId: 'not.chappy')),
+        throwsFormatException);
+    expect(() => UpdateRelease.parse(feed(artifacts: [{
+      'abi': 'arm64-v8a',
+      'url': 'http://example.org/insecure.apk',
+      'sha256': 'a' * 64,
+      'sizeBytes': 4096,
+    }])), throwsFormatException);
+    expect(() => UpdateRelease.parse(feed(artifacts: [{
+      'abi': 'arm64-v8a',
+      'url': 'https://user:pass@example.org/file.apk',
+      'sha256': 'a' * 64,
+      'sizeBytes': 4096,
+    }])), throwsFormatException);
+    expect(() => UpdateRelease.parse(feed(artifacts: [{
+      'abi': 'arm64-v8a',
+      'url': 'https://example.org/file.apk',
+      'sha256': 'broken',
+      'sizeBytes': 4096,
+    }])), throwsFormatException);
+    expect(() => UpdateRelease.parse(feed(artifacts: [
+      {
+        'abi': 'arm64-v8a',
+        'url': 'https://example.org/a.apk',
+        'sha256': 'a' * 64,
+        'sizeBytes': 4096,
+      },
+      {
+        'abi': 'arm64-v8a',
+        'url': 'https://example.org/b.apk',
+        'sha256': 'b' * 64,
+        'sizeBytes': 4096,
+      },
+    ])), throwsFormatException);
+  });
+
+  test('download validates the exact SHA-256 and rejects tampered APKs',
+      () async {
+    final bytes = List<int>.generate(4096, (index) => index % 256);
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      request.response.add(bytes);
+      await request.response.close();
+    });
+    final temp = await Directory.systemTemp.createTemp('chappy_updates_test_');
+    try {
+      final url = Uri.parse('http://127.0.0.1:${server.port}/file.apk');
+      final expected = sha256.convert(bytes).toString();
+      final service = UpdateService(allowInsecureLoopbackForTests: true);
+      final good = UpdateArtifact('arm64-v8a', url, expected, bytes.length);
+      final path = await service.download(good, temp);
+      expect(await path.readAsBytes(), bytes);
+      expect(path.path, endsWith('chappy-update.apk'));
+
+      final bad = UpdateArtifact('arm64-v8a', url, 'f' * 64, bytes.length);
+      await expectLater(service.download(bad, temp), throwsFormatException);
+      expect(await File('${temp.path}/chappy-update.part').exists(), isFalse);
+    } finally {
+      await server.close(force: true);
+      await temp.delete(recursive: true);
+    }
+  });
+
+  test('does not accept plain HTTP outside tests', () async {
+    final service = UpdateService();
+    await expectLater(
+      service.fetch(Uri.parse('http://127.0.0.1:9999/feed.json')),
+      throwsFormatException,
+    );
+  });
+
+  test('fetches small JSON feed with loopback only in tests', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      request.response.headers.contentType =
+          ContentType('application', 'json', charset: 'utf-8');
+      request.response.write(feed(build: 7));
+      await request.response.close();
+    });
+    try {
+      final service = UpdateService(allowInsecureLoopbackForTests: true);
+      final item = await service.fetch(
+          Uri.parse('http://127.0.0.1:${server.port}/feed.json'));
+      expect(item.buildNumber, 7);
+      expect(item.forAbi('arm64-v8a'), isNotNull);
+    } finally {
+      await server.close(force: true);
+    }
+  });
+}
