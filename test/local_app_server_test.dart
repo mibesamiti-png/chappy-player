@@ -35,6 +35,11 @@ void main() {
         expect(response.statusCode, HttpStatus.ok, reason: resource);
         final body = await utf8.decoder.bind(response).join();
         expect(body.isNotEmpty, isTrue, reason: resource);
+        if (resource == 'index.html') {
+          expect(response.headers.contentType?.charset, 'utf-8');
+          expect(body, contains('メモ帳'));
+          expect(body, contains('/__chappy_boot.js'));
+        }
       }
     } finally {
       client.close(force: true);
