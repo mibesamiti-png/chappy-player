@@ -1,25 +1,23 @@
-# Chappy Player — Flutter MVP v0.1.0
+# Chappy Player — 個人用Androidミニアプリプレイヤー
 
 **Android向け・自分専用の `.chappy` ミニアプリプレイヤー（試作コード）**
 
 最初に Flutter 製 APK を1回入れて、以後は `.chappy` (ZIP) ファイルをスマホで読み込む。
 
-## 本体アプリの簡単更新（開発中）
+## 正式署名APK・アプリ内更新（2026-11-04）
 
-Xiaomi 11T Pro / Android 14 の実機で、メモ帳の表示・保存・
-バックアップ復元を確認済み。更新センターにはCPU形式の自動判別、
-HTTPSダウンロード、SHA-256・署名・バージョン事前検証、
-Android標準インストーラーへのワンタップ引き渡しを追加済み。
+Xiaomi 11T Pro / Android 14 でサンプルメモの表示・保存・バックアップ復元を検証済み。
+正式署名版 **v0.2.0 (Build 5)** はGitHub Actionsからのビルド・署名検証・公開が成功し、Android端末へのインストールも確認済み。
 
-**デバッグAPK同士は署名が異なる場合があるため、まだ継続的な上書き更新には使わないこと。**
-固定署名と公開APK配布が利用できるようになると、通常はアンインストールせず更新できる。
+- 公開APK（**アプリ本体のみ**）：[chappy-player-updates Releases](https://github.com/mibesamiti-png/chappy-player-updates/releases)
+- ソースコード：この非公開リポジトリ（公開しない）
+- 配布フィード：`https://raw.githubusercontent.com/mibesamiti-png/chappy-player-updates/main/update.json`
+- 署名鍵：GitHub Secretsの固定署名鍵を継続使用。署名の変更やビルド番号の巻き戻しは公開前に拒否
+- ユーザー確認付きのアプリ内更新：HTTPS、SHA-256、パッケージID、署名、ビルド番号を検証しAndroid標準インストーラーに引き渡す
 
-公開APK専用の`mibesamiti-png/chappy-player-updates`リポジトリを
-別途作る計画。**現時点ではまだ未作成で、公開APKも未配布。**
-新しい手動専用ワークフロー `Publish Signed APK Updates` は、
-署名鍵・配布専用トークンが無い間は実行に失敗する安全設計。
-
-一回だけ必要な設定：[公開APK配布の初期設定](docs/public-apk-distribution-setup.md)
+**次の目標：v0.2.1へ、アプリ内から上書き更新できるか実機テストする。** Android 14での本体更新成功はまだ未検証。
+テスト手順：[初回上書き更新のチェックリスト](docs/android-update-smoke-test.md)。
+初期設定：[公開APK配布の初期設定](docs/public-apk-distribution-setup.md)。
 
 ## 収録されているもの
 
@@ -33,7 +31,7 @@ Android標準インストーラーへのワンタップ引き渡しを追加済�
 
 ## 現在の検証状況（2026-11-04）
 
-- `main` のビルド #5 は **Flutter解析・ユニットテスト・debug APK生成が成功**。ただしAndroid実機は未検証。
+- 正式版 **v0.2.0 (Build 5)** は、GitHub Actionsの署名付きAPKビルド・証明書指紋照合・公開が成功。Android 14実機へのインストールも確認済み。アプリ内からの次バージョン上書きは未検証。
 - PR #1 ではインポート前のアプリ情報プレビュー・異常終了後の復旧・回帰テストを追加。マージ前にPRのActionsが成功することを確認する。
 - JavaScriptブリッジのNodeスモークテストをActionsにも追加。
 - 現段階でカメラ・ネット通信・一般の非信頼パッケージ用サンドボックスは未対応。
@@ -91,11 +89,12 @@ flutter build apk --debug
 
 ## APK更新と署名について（重要）
 
-現段階でActionsが生成する `app-debug.apk` は**使い捨ての個人テスト用**です。GitHub Actionsの別の実行で署名鍵が変わると、Androidは既存APKへの上書きインストールを拒否します。
+**正式版は固定署名付きAPK**。初回v0.2.0 (Build 5) のビルド・署名検証・公開・端末へのインストールを確認済み。
+デバッグ版との署名は異なるので、初回移行はアンインストールが必要になる場合がある。一方、正式署名版同士は同じアプリID・署名でビルド番号が増えればAndroid標準インストーラーから上書き可能。
 
-プレイヤーAPKをアンインストールすると、アプリ内に保存されたメモ等のデータも削除されます。固定署名とバックアップ/復元機能が完成するまでは、重要な実データを保存しないでください。
+**上書き更新の実機成功はまだ未確認**。更新の前に必ず保存データをバックアップし、`.chappy` 本体も保管すること。失敗しても、既存アプリをいきなりアンインストールしないこと。
 
-将来的にはGitHub ActionsのSecretに固定署名鍵を安全に保管し、同一署名・単調増加するversionCodeで更新できるリリースAPKを作る予定です。この署名鍵はソースコードにコミットしません。なお、`.chappy` パッケージだけの更新にはAPK再署名は不要です。
+新リリースは非公開開発リポジトリの `Publish Signed APK Updates` を手動実行する。生成APK・更新JSONのみ公開用リポジトリに保存し、秘密の署名鍵・ソース・トークンは含めない。
 
 ## 保存データのバックアップと復元（開発中）
 
@@ -110,31 +109,18 @@ flutter build apk --debug
 
 バックアップ→APKアンインストール→新APKインストール→復元→`.chappy` の再インポート、の順でデータ移行が可能（実機動作は未検証）。
 
-## 固定署名のAPKビルド（開発中）
+## 固定署名APKのビルド・更新
 
-`.github/workflows/release-android.yml` に手動実行の `Build Signed Release APK` を用意。
-GitHubリポジトリの **Settings → Secrets and variables → Actions** に以下4件を登録するまで実行できない。
+公開版のビルドは `.github/workflows/publish-signed-apks.yml` を実行する。
+非公開GitHubリポジトリの `Actions → Publish Signed APK Updates → Run workflow` で `version` と `release_notes` を入力する。
 
-| Secret | 内容 |
-|---|---|
-| `CHAPPY_KEYSTORE_B64` | 同じAndroid署名キーストアファイルをBase64化した値 |
-| `CHAPPY_STORE_PASSWORD` | キーストアのパスワード |
-| `CHAPPY_KEY_PASSWORD` | 鍵のパスワード |
-| `CHAPPY_KEY_ALIAS` | 署名鍵のエイリアス |
+- `CHAPPY_KEYSTORE_B64`、`CHAPPY_STORE_PASSWORD`、`CHAPPY_KEY_PASSWORD`、`CHAPPY_KEY_ALIAS` は非公開リポジトリの **Actions Secrets** に登録済み。
+- `CHAPPY_RELEASE_CERT_SHA256` は **Actions Variables** に登録済み。実際の秘密鍵と生成APKの両方をこの証明書指紋と照合する。
+- `CHAPPY_PUBLISH_TOKEN` は公開配布専用リポジトリにしか書き込めないトークンとして **Actions Secrets** に登録済み。
+- Secrets・署名鍵・トークンはチャットやソースに貼り付けない。
+- 今後の更新でも **同一の署名鍵**を使う。署名鍵とパスワードは安全な場所にバックアップする。
 
-署名鍵の生成例（手元の安全な環境）：
-
-```bash
-keytool -genkeypair -v -keystore chappy-release.jks -alias chappy -keyalg RSA -keysize 3072 -validity 10000
-# Base64 encoding example (macOS/Linux)
-base64 -w 0 chappy-release.jks
-```
-
-環境によってBase64のコマンドオプションは異なる。鍵とパスワードはGitHubのソースコードやチャットに貼り付けないこと。
-**署名鍵の紛失は同じアプリIDのAPKを上書き更新できなくなる原因になる**ため、秘密情報を安全な場所に控えておくこと。
-
-同じ署名鍵を使い、かつversionCodeを増やしたAPKなら上書き更新可能。GitHub Actionsではrun_numberをbuild-numberに指定している。
-なお、既存のデバッグAPKと新しいリリースAPKでは署名が異なるため、そのままの上書き更新は通常できない。最初の切替前に必ずバックアップを保存する。
+初回更新の手順は [Android上書き更新実機チェックリスト](docs/android-update-smoke-test.md) を参照。
 
 ## `.chappy` v1 仕様
 
