@@ -74,7 +74,16 @@ class LocalAppServer {
       '.webp': 'image/webp', '.gif': 'image/gif', '.wasm': 'application/wasm',
       '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav',
     };
-    response.headers.set('Content-Type', types[p.extension(file.path).toLowerCase()] ?? 'application/octet-stream');
+    final mime = types[p.extension(file.path).toLowerCase()] ??
+        'application/octet-stream';
+    // HttpResponse.write() uses Latin-1 if a Content-Type lacks charset.
+    // Our HTML includes Japanese characters; use UTF-8 to avoid HTTP 500.
+    final textual = mime.startsWith('text/') ||
+        mime == 'application/javascript' ||
+        mime == 'application/json' ||
+        mime == 'image/svg+xml';
+    response.headers.set('Content-Type',
+        textual ? '$mime; charset=utf-8' : mime);
     if (p.basename(file.path) == 'index.html') {
       var html = await file.readAsString();
       const bootstrap = '<script src="/__chappy_boot.js"></script>';
