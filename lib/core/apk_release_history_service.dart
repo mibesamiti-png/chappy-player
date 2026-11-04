@@ -59,13 +59,17 @@ class ApkReleaseHistoryService {
             size < 1024 || size > UpdateService.maxApkBytes ||
             url != '$allowedBase$name') continue;
         final abi = abiMatch.group(1)!;
-        if (!assetAbis.add(abi)) continue;
+        if (!assetAbis.add(abi)) {
+          continue;
+        }
         artifacts.add(UpdateArtifact(
           abi, Uri.parse(url), digest.substring(7).toLowerCase(), size,
           androidVersionCode: build + offsets[abi]!,
         ));
       }
-      if (assetAbis.length != 3) continue;
+      if (assetAbis.length != 3) {
+        continue;
+      }
       final notes = release['body'];
       releases.add(UpdateRelease(
         packageId: 'dev.chappy.chappy_player',
