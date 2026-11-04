@@ -228,7 +228,7 @@ class UpdateService {
       if (digest.toString() != artifact.sha256Hex) {
         throw const FormatException('APKのSHA-256検証に失敗しました');
       }
-      return part.rename(finished.path);
+      return await part.rename(finished.path);
     } catch (_) {
       if (await part.exists()) await part.delete();
       rethrow;
