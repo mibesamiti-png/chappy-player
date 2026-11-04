@@ -9,7 +9,19 @@
 - QA-13: 端末セルフチェック 未確認
 - 確認端末: Xiaomi 11T Pro / Android 14 / HyperOS 1.0.20.0.UKDJPXM
 
-**現時点で根本原因は未確定。**
+## 再現できた不具合（2026-11-04）
+
+GitHub Actions の実HTML読み込みテストで、日本語を含む`index.html`へのアクセスが
+**HTTP 500** を返すことを確認。従来の英字だけのテストHTMLはHTTP 200だった。
+
+原因：`LocalAppServer`のHTML配信時に`Content-Type: text/html`のみ指定しており、
+`charset=utf-8`が欠落。Dartの`HttpResponse.write()`が既定のLatin-1で日本語を
+書き込もうとして例外を起こし、サーバーがHTTP 500を返していた。
+
+修正：HTML/JS/CSS/JSON/SVGのテキストリソースに`charset=utf-8`を指定。
+日本語を含む実メモ帳がHTTP 200で返り、本文が文字化けしないことを回帰テストに追加。
+
+**コード上の再現原因は特定・修正済み。Android実機での動作成功はまだ未確認。**
 
 ## 起動診断の改良
 
