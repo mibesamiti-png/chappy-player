@@ -34,8 +34,8 @@ def parse_apk_certificate_digests(output: str) -> list[str]:
     Fail closed for unknown formats, missing digests, and malformed records.
     """
     certificate_line = re.compile(
-        r"Signer (?:#\\d+|\\([^()\\r\\n]+\\)) certificate "
-        r"SHA-256 digest:\\s*([0-9a-fA-F]{64})"
+        r"Signer (?:#\d+|\([^()\r\n]+\)) certificate "
+        r"SHA-256 digest:\s*([0-9a-fA-F]{64})"
     )
     digests = []
     for line in output.splitlines():
