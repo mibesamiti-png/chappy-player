@@ -9,7 +9,7 @@
 - ホストは映像・音声のバイト列をログに残さず、ローカルWebViewへ渡す。ネット接続は従来のCSPで禁止
 - トラックの終了/ページ終了/バックグラウンド移動時はJavaScriptで停止する。Android側でもWebView破棄時に取得を終了する
 - 既存ミニアプリ（`permissions: []`）はそのまま動作し、権限を自動で付与しない
-- 現時点で実機検証はまだ。Android WebViewによるハードウェア依存の挙動は未知
+- 実機ではカメラ表示と解像度変更が成功。WebViewのマイク取得は未成功（NotReadableError）。新しいAndroid AudioRecord方式は実機未検証
 
 ## 利用する標準API
 
@@ -31,14 +31,14 @@ Androidのカメラ/マイク権限はFlutterから `dev.chappy.player/media_per
 - パッケージID: `local.chappy.media_probe`
 - 追加権限: `camera`, `microphone`
 - ビルド: `Build Android APK` Actions の `chappy-media-probe` 成果物の `media-probe.chappy` を取得
-- ミニアプリは公開ライブラリの **Debug** に掲載（Stable未公開）。実機のマイク取得エラーを調べるため、v0.1.1から「基本入力（audio: true）」と「高度な入力設定」の切替を追加
+- ミニアプリは公開ライブラリの **Debug** に掲載（Stable未公開）。v0.1.1では基本/高度なマイク比較、v0.1.2ではカメラ解像度・マイク機器診断を追加。ネイティブマイク試験用v0.1.3は新しいAPKが配布されるまで公開ライブラリへ反映しない
 
 ローカルでの作成:
 
 ```sh
 python3 tools/pack_html_chappy.py --source sample_apps/media_probe \
   --id local.chappy.media_probe --name "Chappy Media Lab" \
-  --version 0.1.1 --permission camera --permission microphone \
+  --version 0.1.3 --permission camera --permission microphone \
   --output media-probe.chappy
 ```
 
