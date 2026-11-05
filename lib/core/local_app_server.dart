@@ -183,6 +183,11 @@ const _bootScript = r'''
         remove: key => call('storage.remove', {key})
       }),
       info: () => call('info.get', {}),
+      microphone: Object.freeze({
+        start: () => call('microphone.start', {}),
+        levels: () => call('microphone.levels', {}),
+        stop: () => call('microphone.stop', {})
+      }),
       log: (message) => call('log', {message: String(message)})
     })
   });
