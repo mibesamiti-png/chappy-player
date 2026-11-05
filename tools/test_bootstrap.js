@@ -23,5 +23,19 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   assert.equal(await read, 'hello');
   listeners.error({message: 'oops', error: {stack: 'trace'}});
   assert.equal(sent[2].method, 'diagnostic.error');
-  console.log('Bridge smoke tests passed: storage.set/get + error capture');
+  const mic = window.Chappy.microphone.start();
+  assert.equal(sent[3].method, 'microphone.start');
+  window.__chappyResolve({requestId: sent[3].requestId, ok: true,
+    value: {running: true, sampleRate: 16000}});
+  assert.equal((await mic).sampleRate, 16000);
+  const levels = window.Chappy.microphone.levels();
+  assert.equal(sent[4].method, 'microphone.levels');
+  window.__chappyResolve({requestId: sent[4].requestId, ok: true,
+    value: {running: true, rms: 0.25, levels: [0.1, 0.2]}});
+  assert.equal((await levels).rms, 0.25);
+  const stop = window.Chappy.microphone.stop();
+  assert.equal(sent[5].method, 'microphone.stop');
+  window.__chappyResolve({requestId: sent[5].requestId, ok: true, value: true});
+  assert.equal(await stop, true);
+  console.log('Bridge smoke tests passed: storage, error capture and native microphone API');
 })().catch(err => { console.error(err); process.exit(1); });
