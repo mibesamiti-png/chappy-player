@@ -55,6 +55,16 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
     else:
         raise AssertionError("Unsupported native permission was allowed")
 
+    # Package the real media test mini-app; never activate devices in CI.
+    real_html = Path(__file__).resolve().parent.parent / "sample_apps/media_probe"
+    media_demo = root / "media-probe.chappy"
+    package_html(real_html, media_demo, "local.chappy.media_probe",
+                 "Chappy Media Lab", "0.1.0", ["camera", "microphone"])
+    with zipfile.ZipFile(media_demo) as archive:
+        demo_manifest = json.loads(archive.read("manifest.json"))
+        assert demo_manifest["permissions"] == ["camera", "microphone"]
+        assert b"getUserMedia" in archive.read("index.html")
+
     debug = public / "debug"
     debug.mkdir()
     debug_package = debug / "asmr-test.chappy"
