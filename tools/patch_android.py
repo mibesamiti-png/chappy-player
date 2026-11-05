@@ -17,6 +17,17 @@ permission = '{%s}name' % android_ns
 if not any(el.get(permission) == 'android.permission.INTERNET' for el in root.findall('uses-permission')):
     item = ET.Element('uses-permission', {permission: 'android.permission.INTERNET'})
     root.insert(0, item)
+# Hardware is opt-in per mini-app: Android permissions are requested only
+# after the user approves an individual camera/microphone request.
+for name in ('android.permission.CAMERA', 'android.permission.RECORD_AUDIO'):
+    if not any(item.get(permission) == name for item in root.findall('uses-permission')):
+        root.insert(0, ET.Element('uses-permission', {permission: name}))
+# Camera/microphone are optional hardware; don't exclude devices without them.
+for feature in ('android.hardware.camera.any', 'android.hardware.microphone'):
+    if not any(item.get(permission) == feature for item in root.findall('uses-feature')):
+        root.insert(0, ET.Element('uses-feature', {
+            permission: feature, '{%s}required' % android_ns: 'false'
+        }))
 application = root.find('application')
 if application is None:
     raise SystemExit('Missing application node')
