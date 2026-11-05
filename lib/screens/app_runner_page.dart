@@ -4,10 +4,12 @@ import 'dart:io';
 
 import 'package:chappy_player/core/local_app_server.dart';
 import 'package:chappy_player/core/log_store.dart';
+import 'package:chappy_player/core/media_permission_policy.dart';
 import 'package:chappy_player/core/package_model.dart';
 import 'package:chappy_player/core/package_repository.dart';
 import 'package:chappy_player/core/storage_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class AppRunnerPage extends StatefulWidget {
@@ -26,7 +28,10 @@ class AppRunnerPage extends StatefulWidget {
   State<AppRunnerPage> createState() => _AppRunnerPageState();
 }
 
-class _AppRunnerPageState extends State<AppRunnerPage> {
+class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserver {
+  static const MethodChannel _mediaChannel =
+      MethodChannel('dev.chappy.player/media_permissions');
+  bool _mediaPermissionPending = false;
   LocalAppServer? _server;
   WebViewController? _controller;
   String? _fatal;
@@ -39,8 +44,103 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startTime = Stopwatch()..start();
     unawaited(_initialize());
+  }
+
+  /// Each WebView request requires a manifest declaration, explicit in-app
+  /// confirmation, and Android runtime permission. No silent auto-grants.
+  Future<void> _handleMediaPermission(WebViewPermissionRequest request) async {
+    final requested = <String>[];
+    for (final type in request.types) {
+      if (type == WebViewPermissionResourceType.camera) {
+        requested.add('camera');
+      } else if (type == WebViewPermissionResourceType.microphone) {
+        requested.add('microphone');
+      } else {
+        await _denyMedia(request, 'unsupported WebView resource');
+        return;
+      }
+    }
+    if (!mounted || _mediaPermissionPending ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        !canRequestChappyMedia(widget.app.permissions, requested)) {
+      await _denyMedia(request, 'not declared, no foreground route, or busy');
+      return;
+    }
+    _mediaPermissionPending = true;
+    final names = requested.map((e) => e == 'camera' ? 'カメラ' : 'マイク').join('・');
+    try {
+      unawaited(widget.logs.add(widget.app.id, 'info', 'media-permission',
+          'Requested $requested'));
+      final approved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialog) => AlertDialog(
+          title: Text('$names の使用許可'),
+          content: Text('ミニアプリ「${widget.app.name}」が $names を使おうとしています。'
+              '使用中の映像・音声はこのミニアプリ内で処理されます。'
+              '信頼できるアプリにだけ許可してください。'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('拒否')),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true),
+                child: const Text('今回だけ許可')),
+          ],
+        ),
+      );
+      if (approved != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        await _denyMedia(request, 'user denied or page closed');
+        return;
+      }
+      final osGranted = await _mediaChannel.invokeMethod<bool>(
+        'requestMediaPermissions', {'types': requested},
+      );
+      if (osGranted != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        await _denyMedia(request, 'Android denied or page closed');
+        return;
+      }
+      await request.grant();
+      await widget.logs.add(widget.app.id, 'info', 'media-permission',
+          'Granted $requested for this WebView request');
+    } catch (error) {
+      await _denyMedia(request, 'permission request failed: $error');
+    } finally {
+      _mediaPermissionPending = false;
+    }
+  }
+
+  Future<void> _denyMedia(WebViewPermissionRequest request, String reason) async {
+    try {
+      await request.deny();
+    } catch (_) {
+      // Android WebView may have already cancelled a pending request.
+    }
+    await widget.logs.add(widget.app.id, 'warning', 'media-permission',
+        'Denied: $reason');
+  }
+
+  /// The JS bootstrap tracks streams so leaving the app/background stops tracks.
+  Future<void> _stopMedia() async {
+    final controller = _controller;
+    if (controller == null) return;
+    try {
+      await controller.runJavaScript(
+          'if (typeof window.__chappyStopMedia === "function") '
+          'window.__chappyStopMedia();');
+    } catch (_) {
+      // WebView may already be disposed.
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      unawaited(_stopMedia());
+    }
   }
 
   void _armWatchdog() {
@@ -143,7 +243,11 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
       }
       _server = server;
       await _preflight(server);
-      final controller = WebViewController();
+      final controller = WebViewController(
+        onPermissionRequest: (request) {
+          unawaited(_handleMediaPermission(request));
+        },
+      );
       await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
       await controller.setBackgroundColor(const Color(0xFF111827));
       await controller.addJavaScriptChannel(
@@ -303,6 +407,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_stopMedia());
     _loadWatchdog?.cancel();
     final server = _server;
     if (server != null) { unawaited(server.close()); }
@@ -320,7 +426,10 @@ class _AppRunnerPageState extends State<AppRunnerPage> {
         actions: [
           IconButton(
             tooltip: 'このアプリのログ',
-            onPressed: () => Navigator.of(context).pushNamed('/logs', arguments: widget.app.id),
+            onPressed: () {
+              unawaited(_stopMedia());
+              Navigator.of(context).pushNamed('/logs', arguments: widget.app.id);
+            },
             icon: const Icon(Icons.bug_report_outlined),
           ),
         ],

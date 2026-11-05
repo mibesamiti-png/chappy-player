@@ -1,5 +1,22 @@
 import 'dart:convert';
 
+/// Explicit, install-time capabilities supported by this release.
+const supportedChappyPermissions = <String>{'camera', 'microphone'};
+
+String chappyPermissionsLabel(List<String> permissions) {
+  if (permissions.isEmpty) return '追加権限なし';
+  return permissions.map((permission) {
+    switch (permission) {
+      case 'camera':
+        return 'カメラ';
+      case 'microphone':
+        return 'マイク';
+      default:
+        return '未対応の権限';
+    }
+  }).join('・');
+}
+
 class ChappyPackage {
   final String id;
   final String name;
@@ -45,8 +62,11 @@ class ChappyPackage {
     if (entry != 'index.html') {
       throw const FormatException('v0.1のentryはindex.htmlのみ対応です');
     }
-    if (permissions is! List || permissions.isNotEmpty) {
-      throw const FormatException('v0.1は追加権限なし（permissions: []）のみ対応です');
+    if (permissions is! List ||
+        permissions.any((item) => item is! String ||
+            !supportedChappyPermissions.contains(item)) ||
+        permissions.toSet().length != permissions.length) {
+      throw const FormatException('permissionsはcamera/microphoneのみ、重複なしで指定してください');
     }
     if (decoded['minPlayerVersion'] != null &&
         decoded['minPlayerVersion'] != '0.1.0') {
@@ -57,7 +77,7 @@ class ChappyPackage {
       name: name,
       version: version,
       entry: entry,
-      permissions: const [],
+      permissions: List<String>.unmodifiable(permissions.cast<String>()),
     );
   }
 

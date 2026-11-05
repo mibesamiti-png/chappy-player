@@ -1,6 +1,9 @@
 package dev.chappy.chappy_player
 
 import android.app.Activity
+import android.Manifest
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.content.Intent
 import android.content.ClipData
 import android.provider.Settings
@@ -30,6 +33,10 @@ class MainActivity : FlutterActivity() {
     private val updateChannel = "dev.chappy.player/update"
     private val backupChannel = "dev.chappy.player/backup_export"
     private val externalChannelName = "dev.chappy.player/external_chappy"
+    private val mediaChannelName = "dev.chappy.player/media_permissions"
+    private val mediaPermissionRequestCode = 0x44FA
+    private var mediaPermissionCallback: MethodChannel.Result? = null
+    private var mediaRequestedPermissions: List<String> = emptyList()
     private var incomingChannel: MethodChannel? = null
     private var pendingExternalUri: Uri? = null
 
@@ -143,6 +150,39 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannelName)
+            .setMethodCallHandler { call, result ->
+                if (call.method != "requestMediaPermissions") {
+                    result.notImplemented()
+                } else {
+                    val names = call.argument<List<String>>("types")
+                    if (names.isNullOrEmpty() || names.size != names.toSet().size ||
+                        names.any { it != "camera" && it != "microphone" }) {
+                        result.error("MEDIA_TYPES_UNSUPPORTED",
+                            "Camera/microphone are the only supported media resources", null)
+                    } else if (mediaPermissionCallback != null) {
+                        result.error("MEDIA_PERMISSION_BUSY",
+                            "A media permission prompt is already open", null)
+                    } else {
+                        val requested = names.map {
+                            if (it == "camera") Manifest.permission.CAMERA
+                            else Manifest.permission.RECORD_AUDIO
+                        }
+                        if (requested.all {
+                                ContextCompat.checkSelfPermission(this, it) ==
+                                    PackageManager.PERMISSION_GRANTED
+                            }) {
+                            result.success(true)
+                        } else {
+                            mediaRequestedPermissions = requested
+                            mediaPermissionCallback = result
+                            ActivityCompat.requestPermissions(this,
+                                requested.toTypedArray(), mediaPermissionRequestCode)
+                        }
+                    }
+                }
+            }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, updateChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -220,6 +260,21 @@ class MainActivity : FlutterActivity() {
                     }
                 }
             }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != mediaPermissionRequestCode) return
+        val callback = mediaPermissionCallback ?: return
+        val requested = mediaRequestedPermissions
+        mediaPermissionCallback = null
+        mediaRequestedPermissions = emptyList()
+        callback.success(requested.isNotEmpty() && requested.all {
+            ContextCompat.checkSelfPermission(this, it) ==
+                PackageManager.PERMISSION_GRANTED
+        })
     }
 
     @Deprecated("Deprecated in Android SDK, used for document picker result")

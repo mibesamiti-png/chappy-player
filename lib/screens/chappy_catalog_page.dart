@@ -87,7 +87,7 @@ class _ChappyCatalogPageState extends State<ChappyCatalogPage> {
             'ID：${app.id}\n'
             'バージョン：${installed?.version ?? '未追加'} → ${app.version}\n'
             '配信チャンネル：${item.channel == 'debug' ? 'Debug' : 'Stable'}\n'
-            '必要な追加権限：なし\n\n'
+            '必要な追加権限：${chappyPermissionsLabel(app.permissions)}\n\n'
             '${item.channel == 'debug' ? 'これは開発・検証用の公開ファイルです。\n\n' : ''}'
             '提供元のコードを実行するため、信頼できる自作アプリだけを追加してください。'
             '${update ? ' 保存データは保持されます。' : ''}',

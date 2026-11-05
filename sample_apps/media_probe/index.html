@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chappy Media Lab</title>
+<style>
+:root {color-scheme:dark;font-family:system-ui,-apple-system,sans-serif;background:#0e1422;color:#f4f7fc}
+*{box-sizing:border-box} body{margin:0;padding:16px;max-width:760px;margin-inline:auto}
+h1{font-size:1.4rem;margin:6px 0 4px}p{color:#b7c5db;line-height:1.5;font-size:.9rem}
+section{border:1px solid #33425a;border-radius:16px;padding:14px;margin:14px 0;background:#182339}
+h2{font-size:1.08rem;margin:0 0 10px}button{background:#395ce6;border:0;color:white;border-radius:10px;padding:12px 14px;font-weight:700;margin:4px 4px 4px 0}
+button.secondary{background:#35425b}button:disabled{opacity:.45}
+video,canvas, img{display:block;width:100%;border-radius:10px;background:#080e18;max-height:250px}
+canvas{height:128px}img{margin-top:9px;max-height:220px;object-fit:contain}
+small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
+.status{padding:9px 12px;background:#111c30;border-radius:9px;margin-top:9px}
+</style>
+</head>
+<body>
+<h1>📷🎤 Chappy Media Lab</h1>
+<p>Chappy Playerのカメラ・マイク許可と停止処理を実機で確認するミニアプリです。操作するまで撮影・録音を開始しません。映像・音声をサーバーに送信しません。</p>
+<section>
+<h2>カメラ</h2>
+<button id="cameraOn">カメラを開始</button>
+<button class="secondary" id="photo" disabled>写真を撮る</button>
+<button class="secondary" id="cameraOff" disabled>停止</button>
+<video id="view" autoplay muted playsinline></video>
+<div class="status" id="cameraStatus">停止中</div>
+<img id="snapshot" alt="撮影した静止画" hidden>
+</section>
+<section>
+<h2>マイク・波形</h2>
+<button id="micOn">マイクを開始</button>
+<button class="secondary" id="micOff" disabled>停止</button>
+<canvas id="wave" width="640" height="128" aria-label="マイク入力波形"></canvas>
+<div class="status" id="micStatus">停止中</div>
+<small id="micDetails">入力した音声はスピーカーへ再生されません。</small>
+</section>
+<section>
+<h2>診断</h2>
+<div class="status" id="diagnostic">初期化中...</div>
+<small>権限確認で「拒否」を選ぶと、ここにエラー内容が表示されます。Android側の許可も必要です。ホームへ戻るとストリームを停止します。</small>
+</section>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  let cameraStream = null, micStream = null, audioContext = null;
+  let animation = 0, analyser = null;
+  const canvas = $('wave'), ctx = canvas.getContext('2d');
+  function status(id, value) { $(id).textContent = value; }
+  function describe(error) {
+    return (error && error.name ? error.name + ': ' : '') +
+      String(error && error.message ? error.message : error);
+  }
+  function mark(message) {
+    status('diagnostic', message);
+    try { if (window.Chappy) Chappy.log('[media-probe] ' + message); } catch (_) {}
+  }
+  function stopTracks(stream) {
+    if (!stream) return;
+    try { stream.getTracks().forEach(track => track.stop()); } catch (_) {}
+  }
+  function stopCamera() {
+    stopTracks(cameraStream); cameraStream = null;
+    $('view').pause(); $('view').srcObject = null;
+    $('cameraOn').disabled = false;
+    $('cameraOff').disabled = true;
+    $('photo').disabled = true;
+    status('cameraStatus', '停止中');
+  }
+  async function stopMic() {
+    cancelAnimationFrame(animation); animation = 0;
+    stopTracks(micStream); micStream = null; analyser = null;
+    const old = audioContext; audioContext = null;
+    if (old) { try { await old.close(); } catch (_) {} }
+    $('micOn').disabled = false;
+    $('micOff').disabled = true;
+    status('micStatus', '停止中');
+  }
+  async function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      mark('getUserMedia が利用できません。WebView / Android設定を確認してください。');
+      return;
+    }
+    $('cameraOn').disabled = true;
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: {facingMode: {ideal: 'environment'}}, audio: false
+      });
+      $('view').srcObject = cameraStream;
+      await $('view').play();
+      $('cameraOff').disabled = false;
+      $('photo').disabled = false;
+      const track = cameraStream.getVideoTracks()[0];
+      const info = track && track.getSettings ? track.getSettings() : {};
+      status('cameraStatus', '動作中：' + (info.width || '?') + '×' + (info.height || '?'));
+      mark('カメラ取得成功');
+    } catch (error) {
+      stopCamera(); mark('カメラ取得失敗：' + describe(error));
+    }
+  }
+  function snapshot() {
+    if (!cameraStream || !$('view').videoWidth) return;
+    const picture = document.createElement('canvas');
+    picture.width = $('view').videoWidth;
+    picture.height = $('view').videoHeight;
+    picture.getContext('2d').drawImage($('view'), 0, 0);
+    $('snapshot').src = picture.toDataURL('image/png');
+    $('snapshot').hidden = false;
+    mark('静止画キャプチャ成功（端末内プレビューのみ）');
+  }
+  function drawWave() {
+    if (!analyser) return;
+    const values = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(values);
+    const w = canvas.width, h = canvas.height;
+    ctx.fillStyle = '#081020'; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#5eeab8'; ctx.lineWidth = 2; ctx.beginPath();
+    let squared = 0;
+    for (let i = 0; i < values.length; i++) {
+      const y = values[i] / 128 - 1;
+      squared += y * y;
+      const x = i * w / (values.length - 1);
+      if (!i) ctx.moveTo(x, h * (1 - y) / 2);
+      else ctx.lineTo(x, h * (1 - y) / 2);
+    }
+    ctx.stroke();
+    const rms = Math.sqrt(squared / values.length);
+    status('micStatus', '入力中・RMS: ' + rms.toFixed(3));
+    animation = requestAnimationFrame(drawWave);
+  }
+  async function startMic() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      mark('getUserMedia が利用できません。WebView / Android設定を確認してください。');
+      return;
+    }
+    $('micOn').disabled = true;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: {channelCount: {ideal: 2},
+          echoCancellation: false, noiseSuppression: false, autoGainControl: false}
+      });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      await audioContext.resume();
+      const input = audioContext.createMediaStreamSource(micStream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 1024;
+      input.connect(analyser);
+      // Deliberately do not connect the microphone to speakers.
+      const settings = micStream.getAudioTracks()[0].getSettings();
+      status('micDetails', '入力チャンネル: ' + (settings.channelCount || '不明') +
+        ' / sampleRate: ' + (settings.sampleRate || '不明') +
+        '（ステレオは端末・WebView次第）');
+      $('micOff').disabled = false;
+      drawWave();
+      mark('マイク取得成功');
+    } catch (error) {
+      await stopMic(); mark('マイク取得失敗：' + describe(error));
+    }
+  }
+  $('cameraOn').addEventListener('click', startCamera);
+  $('cameraOff').addEventListener('click', stopCamera);
+  $('photo').addEventListener('click', snapshot);
+  $('micOn').addEventListener('click', startMic);
+  $('micOff').addEventListener('click', () => { void stopMic(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { stopCamera(); void stopMic(); }
+  });
+  window.addEventListener('pagehide', () => { stopCamera(); void stopMic(); });
+  mark('準備完了：ボタンを押して権限を確認してください');
+})();
+</script>
+</body>
+</html>

@@ -46,6 +46,21 @@ jobs:
         run: python3 tools/test_update_feed.py
       - name: Public APK feed publisher safety smoke test
         run: python3 tools/test_publish_update_catalog.py
+      - name: Package Chappy Media Lab demo
+        run: |
+          python3 tools/pack_html_chappy.py \
+            --source sample_apps/media_probe \
+            --id local.chappy.media_probe \
+            --name 'Chappy Media Lab' \
+            --version 0.1.0 \
+            --permission camera --permission microphone \
+            --output media-probe.chappy
+      - name: Upload Chappy Media Lab demo package
+        uses: actions/upload-artifact@v4
+        with:
+          name: chappy-media-probe
+          path: media-probe.chappy
+          if-no-files-found: error
       - name: Build installable APK (debug signed; personal test only)
         run: flutter build apk --debug
       - uses: actions/upload-artifact@v4

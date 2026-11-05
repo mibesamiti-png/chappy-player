@@ -20,7 +20,7 @@ MAX_SINGLE = 10 * 1024 * 1024
 MAX_FILES = 200
 
 
-def package_html(source, output, app_id, name, version):
+def package_html(source, output, app_id, name, version, permissions=()):
     source, output = Path(source).resolve(), Path(output).resolve()
     if not source.is_dir() or not (source / "index.html").is_file():
         raise ValueError("source must be a directory with index.html")
@@ -35,10 +35,15 @@ def package_html(source, output, app_id, name, version):
     if source == output or source in output.parents:
         raise ValueError("output must be outside the source directory")
 
+    permissions = list(permissions)
+    if len(permissions) != len(set(permissions)) or any(
+            name not in ('camera', 'microphone') for name in permissions):
+        raise ValueError('unsupported or duplicate media permission')
+
     manifest = {
         "formatVersion": 1, "id": app_id, "name": name,
         "version": version, "minPlayerVersion": "0.1.0",
-        "entry": "index.html", "permissions": [],
+        "entry": "index.html", "permissions": permissions,
     }
     files = []
     unpacked = 0
@@ -95,8 +100,11 @@ def main():
     parser.add_argument("--name", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--permission", action="append", choices=["camera", "microphone"],
+                        default=[], help="Explicit Android media capability")
     args = parser.parse_args()
-    output = package_html(args.source, args.output, args.id, args.name, args.version)
+    output = package_html(args.source, args.output, args.id, args.name, args.version,
+                          args.permission)
     print(f"Created {output} ({output.stat().st_size} bytes)")
 
 

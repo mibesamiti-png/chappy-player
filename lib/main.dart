@@ -233,7 +233,7 @@ class _HomePageState extends State<HomePage> {
           'アプリ名: ${incoming.name}\n'
           'ID: ${incoming.id}\n'
           'バージョン: $versionChange\n'
-          '権限: 追加権限なし\n\n'
+          '権限: ${chappyPermissionsLabel(incoming.permissions)}\n\n'
           '${installed == null ? 'インストールしますか？' : '保存データを残して更新しますか？'}')) {
         return;
       }

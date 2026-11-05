@@ -47,6 +47,12 @@ class LocalAppServer {
       await response.close();
       return;
     }
+    if (request.uri.path == '/__chappy_media.js') {
+      response.headers.contentType = ContentType('application', 'javascript', charset: 'utf-8');
+      response.write(_mediaScript);
+      await response.close();
+      return;
+    }
     if (request.uri.path == '/__chappy_boot.js') {
       response.headers.contentType = ContentType('application', 'javascript', charset: 'utf-8');
       response.write(_bootScript);
@@ -86,7 +92,8 @@ class LocalAppServer {
         textual ? '$mime; charset=utf-8' : mime);
     if (p.basename(file.path) == 'index.html') {
       var html = await file.readAsString();
-      const bootstrap = '<script src="/__chappy_boot.js"></script>';
+      const bootstrap = '<script src="/__chappy_media.js"></script>'
+          '<script src="/__chappy_boot.js"></script>';
       final headTag = RegExp(r'<head[^>]*>', caseSensitive: false);
       final match = headTag.firstMatch(html);
       if (match != null) {
@@ -101,6 +108,46 @@ class LocalAppServer {
     await response.close();
   }
 }
+
+
+const _mediaScript = r'''
+(function () {
+  'use strict';
+  // Track only streams opened by this page. There is no native capture bridge:
+  // navigator.mediaDevices.getUserMedia still uses Android + WebView consent.
+  const streams = new Set();
+  const devices = navigator.mediaDevices;
+  function stopMedia() {
+    streams.forEach(stream => {
+      try { stream.getTracks().forEach(track => track.stop()); } catch (_) {}
+    });
+    streams.clear();
+  }
+  Object.defineProperty(window, '__chappyStopMedia', {
+    configurable: false, writable: false, value: stopMedia
+  });
+  window.addEventListener('pagehide', stopMedia);
+  if (!devices || typeof devices.getUserMedia !== 'function') return;
+  const original = devices.getUserMedia.bind(devices);
+  try {
+    devices.getUserMedia = async function (constraints) {
+      const stream = await original(constraints);
+      streams.add(stream);
+      stream.getTracks().forEach(track => {
+        track.addEventListener('ended', () => {
+          if (stream.getTracks().every(item => item.readyState === 'ended')) {
+            streams.delete(stream);
+          }
+        });
+      });
+      return stream;
+    };
+  } catch (_) {
+    // Android WebView may disallow overriding this method. The host will
+    // additionally release its WebView when leaving the page.
+  }
+})();
+''';
 
 const _bootScript = r'''
 (function () {

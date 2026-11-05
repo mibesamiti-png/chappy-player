@@ -16,9 +16,25 @@ void main() {
     expect(app.id, 'local.chappy.memo');
     expect(app.entry, 'index.html');
   });
-  test('reject privileges until permissions UI exists', () {
-    expect(() => ChappyPackage.parse(valid.replaceFirst('"permissions": []',
-        '"permissions": ["camera"]')), throwsFormatException);
+  test('accept explicitly declared camera and microphone', () {
+    final app = ChappyPackage.parse(valid.replaceFirst('"permissions": []',
+        '"permissions": ["camera", "microphone"]'));
+    expect(app.permissions, ['camera', 'microphone']);
+    expect(chappyPermissionsLabel(app.permissions), 'カメラ・マイク');
+    expect(chappyPermissionsLabel([]), '追加権限なし');
+  });
+  test('reject unknown, duplicate and malformed privileges', () {
+    for (final list in [
+      '["location"]',
+      '["camera", "camera"]',
+      '["camera", "location"]',
+      '["microphone", 42]',
+      '"camera"',
+    ]) {
+      expect(() => ChappyPackage.parse(
+          valid.replaceFirst('"permissions": []', '"permissions": $list')),
+          throwsFormatException);
+    }
   });
   test('reject unsafe IDs', () {
     expect(() => ChappyPackage.parse(valid.replaceFirst('local.chappy.memo',

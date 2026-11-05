@@ -17,6 +17,16 @@ void main() {
       final content = await utf8.decoder.bind(response).join();
       expect(response.statusCode, 200);
       expect(content, contains('/__chappy_boot.js'));
+      expect(content, contains('/__chappy_media.js'));
+      expect(content.indexOf('/__chappy_media.js'),
+          lessThan(content.indexOf('/__chappy_boot.js')));
+      final mediaResponse = await (await client.getUrl(
+          server.url.resolve('/__chappy_media.js'))).close();
+      final mediaSource = await utf8.decoder.bind(mediaResponse).join();
+      expect(mediaResponse.statusCode, HttpStatus.ok);
+      expect(mediaSource, contains('getUserMedia'));
+      expect(mediaSource, contains('pagehide'));
+      expect(mediaSource, contains('track.stop()'));
       expect(response.headers.value('content-security-policy'), contains("connect-src 'none'"));
       client.close();
     } finally {
