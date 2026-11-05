@@ -129,6 +129,15 @@ if 'package dev.chappy.chappy_player' not in existing:
 native_target.write_text(native_host.read_text(encoding='utf-8'), encoding='utf-8')
 print('Installed native APK update compatibility preflight host')
 
+# The native microphone class is shipped in the same Android package.
+# Capture is foreground-only, user-approved, and never stores raw PCM.
+mic_source = Path('tools/android/NativeMicCapture.kt')
+mic_target = native_target.with_name('NativeMicCapture.kt')
+if not mic_source.is_file():
+    raise SystemExit('Missing native AudioRecord capture implementation')
+mic_target.write_bytes(mic_source.read_bytes())
+print('Installed foreground-only native microphone capture host')
+
 # Ship only the private update cache path; never share all cache or app data.
 paths_src = Path('tools/android/chappy_update_paths.xml')
 paths_dst = Path('android/app/src/main/res/xml/chappy_update_paths.xml')
