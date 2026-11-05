@@ -31,14 +31,14 @@ Androidのカメラ/マイク権限はFlutterから `dev.chappy.player/media_per
 - パッケージID: `local.chappy.media_probe`
 - 追加権限: `camera`, `microphone`
 - ビルド: `Build Android APK` Actions の `chappy-media-probe` 成果物の `media-probe.chappy` を取得
-- ミニアプリの公開配布には **まだ登録しない**。実機テスト後、許可を得てStable/Debugカタログへ登録する
+- ミニアプリは公開ライブラリの **Debug** に掲載（Stable未公開）。実機のマイク取得エラーを調べるため、v0.1.1から「基本入力（audio: true）」と「高度な入力設定」の切替を追加
 
 ローカルでの作成:
 
 ```sh
 python3 tools/pack_html_chappy.py --source sample_apps/media_probe \
   --id local.chappy.media_probe --name "Chappy Media Lab" \
-  --version 0.1.0 --permission camera --permission microphone \
+  --version 0.1.1 --permission camera --permission microphone \
   --output media-probe.chappy
 ```
 
@@ -49,11 +49,12 @@ python3 tools/pack_html_chappy.py --source sample_apps/media_probe \
 3. `media-probe.chappy` を読み込み、権限表示が「カメラ・マイク」になっていることを確認する
 4. カメラ開始でプレイヤー独自ダイアログ→OS権限→カメラプレビューが表示される
 5. 撮影ボタンで静止画がアプリ内プレビューに表示される（外部ファイルへの保存は未対応）
-6. マイク開始でプレイヤー独自ダイアログ→OS権限→波形・RMSが動く
-7. 拒否した場合、アプリが失敗理由を表示し、診断ログに拒否が残る
-8. 停止・画面退出・バックグラウンド移動でカメラ/マイクのOSプライバシーインジケーターが消える
-9. システム設定で権限を取り消してから再起動すると再び許可が必要になる
-10. カメラのない端末や別のWebViewバージョンでもクラッシュせず理由を表示する
+6. マイク開始でプレイヤー独自ダイアログ→OS権限→波形・RMSが動く。まず「基本入力」を試す。成功したら「高度な入力設定」でも比較する
+7. `NotReadableError: Could not start audio source` が出た場合、マイク競合・端末設定とWebView依存の問題を切り分ける。診断ログで失敗フェーズ（getUserMedia/AudioContext）を確認する
+8. 拒否した場合、アプリが失敗理由を表示し、診断ログに拒否が残る
+9. 停止・画面退出・バックグラウンド移動でカメラ/マイクのOSプライバシーインジケーターが消える
+10. システム設定で権限を取り消してから再起動すると再び許可が必要になる
+11. カメラのない端末や別のWebViewバージョンでもクラッシュせず理由を表示する
 
 ## 制限
 

@@ -33,6 +33,11 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
 <h2>マイク・波形</h2>
 <button id="micOn">マイクを開始</button>
 <button class="secondary" id="micOff" disabled>停止</button>
+<label style="display:block;margin:10px 0">
+  <input type="checkbox" id="advancedAudio">
+  高度な入力設定を試す（ステレオ希望・音声補正OFF）
+</label>
+<small>通常は基本モード（audio: true）。まずこちらでマイクの動作を確認してください。</small>
 <canvas id="wave" width="640" height="128" aria-label="マイク入力波形"></canvas>
 <div class="status" id="micStatus">停止中</div>
 <small id="micDetails">入力した音声はスピーカーへ再生されません。</small>
@@ -77,6 +82,7 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
     if (old) { try { await old.close(); } catch (_) {} }
     $('micOn').disabled = false;
     $('micOff').disabled = true;
+    $('advancedAudio').disabled = false;
     status('micStatus', '停止中');
   }
   async function startCamera() {
@@ -136,29 +142,48 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
       mark('getUserMedia が利用できません。WebView / Android設定を確認してください。');
       return;
     }
+    const advanced = $('advancedAudio').checked;
+    const mode = advanced ? '高度な入力設定' : '基本入力';
+    // Basic capture is the compatibility baseline. Advanced constraints are
+    // opt-in so device-specific audio-source failures are easy to isolate.
+    const constraints = advanced ? {
+      video: false,
+      audio: {channelCount: {ideal: 2},
+        echoCancellation: false, noiseSuppression: false, autoGainControl: false}
+    } : {video: false, audio: true};
     $('micOn').disabled = true;
+    $('advancedAudio').disabled = true;
+    status('micStatus', '接続中（' + mode + '）');
+    mark('マイク取得開始：' + mode);
+    let phase = 'getUserMedia';
     try {
-      micStream = await navigator.mediaDevices.getUserMedia({
-        video: false,
-        audio: {channelCount: {ideal: 2},
-          echoCancellation: false, noiseSuppression: false, autoGainControl: false}
-      });
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      micStream = await navigator.mediaDevices.getUserMedia(constraints);
+      mark('音声ストリーム取得成功：' + mode);
+      phase = 'AudioContext';
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtor) throw new Error('AudioContext が利用できません');
+      audioContext = new AudioCtor();
       await audioContext.resume();
       const input = audioContext.createMediaStreamSource(micStream);
       analyser = audioContext.createAnalyser();
       analyser.fftSize = 1024;
       input.connect(analyser);
-      // Deliberately do not connect the microphone to speakers.
-      const settings = micStream.getAudioTracks()[0].getSettings();
+      // Do not play the microphone through the speakers.
+      const track = micStream.getAudioTracks()[0];
+      const settings = track && track.getSettings ? track.getSettings() : {};
       status('micDetails', '入力チャンネル: ' + (settings.channelCount || '不明') +
         ' / sampleRate: ' + (settings.sampleRate || '不明') +
-        '（ステレオは端末・WebView次第）');
+        ' / 使用モード: ' + mode + '（ステレオは端末次第）');
       $('micOff').disabled = false;
       drawWave();
-      mark('マイク取得成功');
+      mark('マイク波形表示成功：' + mode);
     } catch (error) {
-      await stopMic(); mark('マイク取得失敗：' + describe(error));
+      await stopMic();
+      const name = error && error.name ? error.name : 'Error';
+      status('micDetails', name === 'NotReadableError' ?
+        'マイク入力の開始に失敗。別の録音アプリを終了し、端末のマイク利用設定・Chappy Playerの権限を確認してください。' :
+        '取得エラー：' + describe(error));
+      mark('マイク取得失敗（' + mode + ' / ' + phase + '）：' + describe(error));
     }
   }
   $('cameraOn').addEventListener('click', startCamera);
