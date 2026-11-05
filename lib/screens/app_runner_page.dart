@@ -72,8 +72,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     _mediaPermissionPending = true;
     final names = requested.map((e) => e == 'camera' ? 'カメラ' : 'マイク').join('・');
     try {
-      await widget.logs.add(widget.app.id, 'info', 'media-permission',
-          'Requested $requested');
+      unawaited(widget.logs.add(widget.app.id, 'info', 'media-permission',
+          'Requested $requested'));
       final approved = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
