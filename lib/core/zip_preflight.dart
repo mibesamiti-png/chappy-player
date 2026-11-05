@@ -66,7 +66,8 @@ void validateZipEnvelope(Uint8List input) {
       throw const FormatException('v1ではZIP内ファイル名はASCIIのみ対応です');
     }
     final name = ascii.decode(nameBytes);
-    if (!isSafeArchivePath(name) || name == '__chappy_boot.js') {
+    if (!isSafeArchivePath(name) ||
+        name == '__chappy_boot.js' || name == '__chappy_media.js') {
       throw FormatException('安全でないパス: $name');
     }
     if (!seen.add(name.toLowerCase())) {
