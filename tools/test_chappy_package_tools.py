@@ -40,6 +40,21 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
     assert record["sizeBytes"] == package.stat().st_size
     assert record["url"].endswith("/stable/asmr-sound-lab.chappy")
 
+    media_package = stable / "media-probe.chappy"
+    package_html(html, media_package, "local.chappy.media", "Media Probe", "0.1.0",
+                 ["camera", "microphone"])
+    with zipfile.ZipFile(media_package) as archive:
+        assert json.loads(archive.read("manifest.json"))["permissions"] == ["camera", "microphone"]
+    catalog = json.loads(build_catalog(public))
+    assert len(catalog["entries"]) == 2
+    try:
+        package_html(html, public / "invalid.chappy", "local.chappy.invalid", "Invalid", "0.1.0",
+                     ["location"])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Unsupported native permission was allowed")
+
     debug = public / "debug"
     debug.mkdir()
     debug_package = debug / "asmr-test.chappy"
