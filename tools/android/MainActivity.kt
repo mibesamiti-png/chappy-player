@@ -35,6 +35,8 @@ class MainActivity : FlutterActivity() {
     private val externalChannelName = "dev.chappy.player/external_chappy"
     private val mediaChannelName = "dev.chappy.player/media_permissions"
     private val mediaPermissionRequestCode = 0x44FA
+    private val nativeMic = NativeMicCapture()
+    @Volatile private var micActivityVisible = false
     private var mediaPermissionCallback: MethodChannel.Result? = null
     private var mediaRequestedPermissions: List<String> = emptyList()
     private var incomingChannel: MethodChannel? = null
@@ -43,6 +45,22 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         captureExternalIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        micActivityVisible = true
+    }
+
+    override fun onPause() {
+        micActivityVisible = false
+        nativeMic.stop()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        nativeMic.stop()
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -152,34 +170,65 @@ class MainActivity : FlutterActivity() {
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannelName)
             .setMethodCallHandler { call, result ->
-                if (call.method != "requestMediaPermissions") {
-                    result.notImplemented()
-                } else {
-                    val names = call.argument<List<String>>("types")
-                    if (names.isNullOrEmpty() || names.size != names.toSet().size ||
-                        names.any { it != "camera" && it != "microphone" }) {
-                        result.error("MEDIA_TYPES_UNSUPPORTED",
-                            "Camera/microphone are the only supported media resources", null)
-                    } else if (mediaPermissionCallback != null) {
-                        result.error("MEDIA_PERMISSION_BUSY",
-                            "A media permission prompt is already open", null)
-                    } else {
-                        val requested = names.map {
-                            if (it == "camera") Manifest.permission.CAMERA
-                            else Manifest.permission.RECORD_AUDIO
-                        }
-                        if (requested.all {
-                                ContextCompat.checkSelfPermission(this, it) ==
-                                    PackageManager.PERMISSION_GRANTED
-                            }) {
-                            result.success(true)
+                when (call.method) {
+                    "startNativeMic" -> {
+                        if (!micActivityVisible ||
+                            ContextCompat.checkSelfPermission(this,
+                                Manifest.permission.RECORD_AUDIO) !=
+                                PackageManager.PERMISSION_GRANTED) {
+                            result.error("NATIVE_MIC_NOT_ALLOWED",
+                                "Foreground and Android microphone permission required", null)
                         } else {
-                            mediaRequestedPermissions = requested
-                            mediaPermissionCallback = result
-                            ActivityCompat.requestPermissions(this,
-                                requested.toTypedArray(), mediaPermissionRequestCode)
+                            try {
+                                result.success(nativeMic.start())
+                            } catch (error: SecurityException) {
+                                result.error("NATIVE_MIC_PERMISSION", "Android denied audio input", null)
+                            } catch (error: Exception) {
+                                result.error("NATIVE_MIC_START_FAILED",
+                                    error.message ?: "AudioRecord unavailable", null)
+                            }
                         }
                     }
+                    "readNativeMic" -> {
+                        if (!micActivityVisible) {
+                            nativeMic.stop()
+                            result.success(mapOf("running" to false))
+                        } else {
+                            result.success(nativeMic.levels())
+                        }
+                    }
+                    "stopNativeMic" -> {
+                        nativeMic.stop()
+                        result.success(true)
+                    }
+                    "requestMediaPermissions" -> {
+                        val names = call.argument<List<String>>("types")
+                        if (names.isNullOrEmpty() || names.size != names.toSet().size ||
+                            names.any { it != "camera" && it != "microphone" }) {
+                            result.error("MEDIA_TYPES_UNSUPPORTED",
+                                "Camera/microphone are the only supported media resources", null)
+                        } else if (mediaPermissionCallback != null) {
+                            result.error("MEDIA_PERMISSION_BUSY",
+                                "A media permission prompt is already open", null)
+                        } else {
+                            val requested = names.map {
+                                if (it == "camera") Manifest.permission.CAMERA
+                                else Manifest.permission.RECORD_AUDIO
+                            }
+                            if (requested.all {
+                                    ContextCompat.checkSelfPermission(this, it) ==
+                                        PackageManager.PERMISSION_GRANTED
+                                }) {
+                                result.success(true)
+                            } else {
+                                mediaRequestedPermissions = requested
+                                mediaPermissionCallback = result
+                                ActivityCompat.requestPermissions(this,
+                                    requested.toTypedArray(), mediaPermissionRequestCode)
+                            }
+                        }
+                    }
+                    else -> result.notImplemented()
                 }
             }
 
