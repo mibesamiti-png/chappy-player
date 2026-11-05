@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 const html = fs.readFileSync('sample_apps/media_probe/index.html', 'utf8');
-const scripts = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)];
+const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
 assert.equal(scripts.length, 1, 'expected one inline Media Lab script');
 new vm.Script(scripts[0][1], {filename: 'media_probe/index.html'});
 for (const fragment of [
