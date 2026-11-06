@@ -198,7 +198,8 @@ const _bootScript = r'''
         stop: () => call('video.stop', {}),
         dark: (enabled) => call('video.dark', {enabled: enabled === true}),
         list: () => call('video.list', {}),
-        open: (id) => call('video.open', {id: String(id)})
+        open: (id) => call('video.open', {id: String(id)}),
+        delete: (id) => call('video.delete', {id: String(id)})
       }),
       log: (message) => call('log', {message: String(message)})
     })
