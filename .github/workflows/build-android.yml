@@ -73,7 +73,11 @@ jobs:
           name: chappy-media-probe
           path: media-probe.chappy
           if-no-files-found: error
-      - name: Build installable APK (debug signed; personal test only)
+      - name: Verify isolated debug APK preparation on both Gradle formats
+        run: python3 tools/test_prepare_debug_variant.py
+      - name: Separate debug app from the installed permanently signed release
+        run: python3 tools/prepare_debug_variant.py
+      - name: Build installable APK (debug signed; side-by-side personal test only)
         run: flutter build apk --debug
       - uses: actions/upload-artifact@v4
         with:
