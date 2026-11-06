@@ -37,5 +37,21 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   assert.equal(sent[5].method, 'microphone.stop');
   window.__chappyResolve({requestId: sent[5].requestId, ok: true, value: true});
   assert.equal(await stop, true);
-  console.log('Bridge smoke tests passed: storage, error capture and native microphone API');
+  const sample = window.Chappy.motion.sample('gyroscope');
+  assert.equal(sent[6].method, 'motion.sample');
+  assert.equal(sent[6].params.type, 'gyroscope');
+  window.__chappyResolve({requestId: sent[6].requestId, ok: true,
+    value: {available: true, values: [1, 2, 3]}});
+  assert.equal((await sample).available, true);
+  const haptic = window.Chappy.haptics.play('tick');
+  assert.equal(sent[7].method, 'haptics.play');
+  assert.equal(sent[7].params.effect, 'tick');
+  window.__chappyResolve({requestId: sent[7].requestId, ok: true, value: true});
+  assert.equal(await haptic, true);
+  const exportVideo = window.Chappy.video.export('Chappy_20261106_123456_001.mp4');
+  assert.equal(sent[8].method, 'video.export');
+  window.__chappyResolve({requestId: sent[8].requestId, ok: true,
+    value: {status: 'cancelled'}});
+  assert.equal((await exportVideo).status, 'cancelled');
+  console.log('Bridge smoke tests passed: storage, microphone, scoped motion/haptics and user-picked video export');
 })().catch(err => { console.error(err); process.exit(1); });

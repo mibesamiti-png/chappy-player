@@ -32,6 +32,10 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   static const MethodChannel _mediaChannel =
       MethodChannel('dev.chappy.player/media_permissions');
   bool _mediaPermissionPending = false;
+  bool _nativeCapabilityPromptPending = false;
+  final Set<String> _approvedNativeCapabilities = <String>{};
+  final Stopwatch _nativeApiClock = Stopwatch()..start();
+  int _lastMotionSampleAt = -1000;
   bool _nativeMicPending = false;
   bool _nativeMicActive = false;
   bool _videoStartPending = false;
@@ -185,6 +189,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     _darkVideoPollTimer?.cancel();
     _darkVideoPollTimer = null;
     _darkSessionArmed = false;
+    _approvedNativeCapabilities.clear();
     _lastVideoOptions = null;
     _nativeMicActive = false;
     _nativeVideoActive = false;
@@ -492,6 +497,89 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     }
   }
 
+  /// A one-time foreground-session user confirmation, in addition to an
+  /// install-time per-mini-app manifest capability. No Android permission is
+  /// necessary for low-frequency motion sensors; vibration uses normal VIBRATE.
+  Future<void> _approveNativeCapability(String capability, String label) async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        !widget.app.permissions.contains(capability)) {
+      throw StateError('Native capability $capability not declared by mini-app');
+    }
+    if (_approvedNativeCapabilities.contains(capability)) return;
+    if (_nativeCapabilityPromptPending) {
+      throw StateError('Another native capability confirmation is open');
+    }
+    _nativeCapabilityPromptPending = true;
+    try {
+      final allowed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialog) => AlertDialog(
+          title: Text('$label の使用'),
+          content: Text('ミニアプリ「${widget.app.name}」が$labelを使用します。'
+              'このミニアプリの画面を開いている間だけ許可します。'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('許可しない')),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true),
+                child: const Text('この画面で許可')),
+          ],
+        ),
+      );
+      if (allowed != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        throw StateError('Native capability permission cancelled');
+      }
+      _approvedNativeCapabilities.add(capability);
+    } finally {
+      _nativeCapabilityPromptPending = false;
+    }
+  }
+
+  Future<Map<String, dynamic>> _sampleMotion(Map<String, dynamic> params) async {
+    const permitted = <String>{'accelerometer', 'gyroscope', 'magnetometer'};
+    final type = params['type'];
+    if (type is! String || !permitted.contains(type)) {
+      throw const FormatException('Unknown motion sensor type');
+    }
+    await _approveNativeCapability('motion', '動きセンサー');
+    final now = _nativeApiClock.elapsedMilliseconds;
+    if (now - _lastMotionSampleAt < 100) {
+      throw StateError('Sensor samples are rate-limited to 10 Hz');
+    }
+    _lastMotionSampleAt = now;
+    final output = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'sampleMotion', {'type': type});
+    return Map<String, dynamic>.from(output ?? const {'available': false});
+  }
+
+  Future<bool> _playHaptic(Map<String, dynamic> params) async {
+    const permitted = <String>{'tick', 'click', 'heavy'};
+    final effect = params['effect'];
+    if (effect is! String || !permitted.contains(effect)) {
+      throw const FormatException('Unknown haptic preset');
+    }
+    await _approveNativeCapability('haptics', '振動');
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+      return false;
+    }
+    return await _mediaChannel.invokeMethod<bool>(
+        'playHaptic', {'effect': effect}) ?? false;
+  }
+
+  Future<Map<String, dynamic>> _exportPrivateVideo(
+      Map<String, dynamic> params) async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        !canRequestChappyMedia(widget.app.permissions, ['camera']) ||
+        params['id'] is! String) {
+      throw StateError('Video export requires foreground camera capability');
+    }
+    final result = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'exportPrivateVideo',
+        {'owner': widget.app.id, 'id': params['id']});
+    return Map<String, dynamic>.from(result ?? const {'status': 'cancelled'});
+  }
+
   Future<List<Map<String, dynamic>>> _listPrivateVideos() async {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
         !canRequestChappyMedia(widget.app.permissions, ['camera'])) {
@@ -791,6 +879,15 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           break;
         case 'video.delete':
           value = await _deletePrivateVideo(params);
+          break;
+        case 'video.export':
+          value = await _exportPrivateVideo(params);
+          break;
+        case 'motion.sample':
+          value = await _sampleMotion(params);
+          break;
+        case 'haptics.play':
+          value = await _playHaptic(params);
           break;
         case 'log':
           final text = params['message'];

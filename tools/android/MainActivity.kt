@@ -38,6 +38,8 @@ class MainActivity : FlutterActivity() {
     private val mediaPermissionRequestCode = 0x44FA
     private val nativeMic = NativeMicCapture()
     private val nativeVideo = NativeVideoRecorder(this)
+    private val miniDevices = NativeMiniAppDevices(this)
+    private val videoExporter = NativeVideoExport(this)
     @Volatile private var micActivityVisible = false
     private var mediaPermissionCallback: MethodChannel.Result? = null
     private var mediaRequestedPermissions: List<String> = emptyList()
@@ -55,10 +57,12 @@ class MainActivity : FlutterActivity() {
         super.onResume()
         micActivityVisible = true
         nativeVideo.onResume()
+        miniDevices.onResume()
     }
 
     override fun onPause() {
         micActivityVisible = false
+        miniDevices.onPause()
         nativeMic.stop()
         nativeVideo.onPause()
         super.onPause()
@@ -66,6 +70,8 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         nativeMic.stop()
+        miniDevices.onDestroy()
+        videoExporter.onDestroy()
         nativeVideo.onDestroy()
         super.onDestroy()
     }
@@ -308,6 +314,39 @@ class MainActivity : FlutterActivity() {
                             result.success(nativeVideo.setDarkBrightness(brightness))
                         }
                     }
+                    "sampleMotion" -> {
+                        if (!micActivityVisible) {
+                            result.error("MOTION_NOT_FOREGROUND",
+                                "Motion sample requires a visible app", null)
+                        } else {
+                            miniDevices.sample(call.argument<String>("type") ?: "", result)
+                        }
+                    }
+                    "playHaptic" -> {
+                        if (!micActivityVisible) {
+                            result.error("HAPTICS_NOT_FOREGROUND",
+                                "Haptic feedback requires a visible app", null)
+                        } else {
+                            result.success(miniDevices.haptic(
+                                call.argument<String>("effect") ?: ""))
+                        }
+                    }
+                    "exportPrivateVideo" -> {
+                        if (!micActivityVisible) {
+                            result.error("VIDEO_EXPORT_NOT_FOREGROUND",
+                                "Export needs a visible app", null)
+                        } else {
+                            try {
+                                val source = nativeVideo.privateExportSource(
+                                    call.argument<String>("owner") ?: "",
+                                    call.argument<String>("id") ?: "")
+                                videoExporter.begin(source, result)
+                            } catch (error: Exception) {
+                                result.error("VIDEO_EXPORT_NOT_ALLOWED",
+                                    error.message, null)
+                            }
+                        }
+                    }
                     "requestMediaPermissions" -> {
                         val names = call.argument<List<String>>("types")
                         if (names.isNullOrEmpty() || names.size != names.toSet().size ||
@@ -435,6 +474,7 @@ class MainActivity : FlutterActivity() {
 
     @Deprecated("Deprecated in Android SDK, used for document picker result")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (videoExporter.onResult(requestCode, resultCode, data)) return
         if (requestCode != backupRequestCode) {
             @Suppress("DEPRECATION")
             super.onActivityResult(requestCode, resultCode, data)

@@ -24,7 +24,7 @@ if not any(el.get(permission) == 'android.permission.INTERNET' for el in root.fi
 # This is a normal Android manifest permission, NOT a .chappy capability;
 # never expose raw AudioManager controls to untrusted mini-app JavaScript.
 for name in ('android.permission.CAMERA', 'android.permission.RECORD_AUDIO',
-             'android.permission.MODIFY_AUDIO_SETTINGS'):
+             'android.permission.MODIFY_AUDIO_SETTINGS', 'android.permission.VIBRATE'):
     if not any(item.get(permission) == name for item in root.findall('uses-permission')):
         root.insert(0, ET.Element('uses-permission', {permission: name}))
 # Camera/microphone are optional hardware; don't exclude devices without them.
@@ -166,6 +166,16 @@ if not video_source.is_file():
     raise SystemExit('Missing native CameraX video recorder')
 video_target.write_bytes(video_source.read_bytes())
 print('Installed foreground-only native video recorder (private by default)')
+
+# These privileged capabilities are mediated by the Flutter .chappy manifest
+# policy and first-use user approval. Motion sampling is single-shot only and
+# vibration has native rate limits. Private MP4 export requires SAF picker.
+for filename in ('NativeMiniAppDevices.kt', 'NativeVideoExport.kt'):
+    source = Path('tools/android') / filename
+    if not source.is_file():
+        raise SystemExit(f'Missing native mini-app capability host: {filename}')
+    native_target.with_name(filename).write_bytes(source.read_bytes())
+print('Installed scoped motion/haptics and user-picked private video export hosts')
 
 # Ship only the private update cache path; never share all cache or app data.
 paths_src = Path('tools/android/chappy_update_paths.xml')

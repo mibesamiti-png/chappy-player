@@ -41,7 +41,7 @@ get('videoAudio').checked = true;
 get('libraryPanel').hidden = true;
 const docCallbacks = new Map();
 const winCallbacks = new Map();
-const log = {start:[],stop:0,dark:[],list:0,open:[],delete:[],storage:0};
+const log = {start:[],stop:0,dark:[],list:0,open:[],export:[],delete:[],storage:0};
 let current='idle', removed=false;
 const video = {
   async storageInfo(){log.storage++;return {totalBytes:128000000000,availableBytes:32000000000}},
@@ -53,6 +53,7 @@ const video = {
   async list(){log.list++;return removed?[]:[{
     id:'Chappy_20261106_123456_001.mp4',bytes:6000000,createdMs:Date.now()}]},
   async open(id){log.open.push(id);return true},
+  async export(id){log.export.push(id);return {status:'saved',sizeBytes:6000000}},
   async delete(id){log.delete.push(id);removed=true;return true}
 };
 const w={Chappy:{video},addEventListener(n,cb){winCallbacks.set(n,cb)}};
@@ -99,6 +100,9 @@ const click = async id => {
   await buttons[0].callback('click')();await settle();
   assert.deepEqual(log.open,['Chappy_20261106_123456_001.mp4']);
   await buttons[1].callback('click')();await settle();
+  assert.deepEqual(log.export,['Chappy_20261106_123456_001.mp4']);
+  assert.match(get('message').textContent,/書き出しました/);
+  await buttons[2].callback('click')();await settle();
   assert.deepEqual(log.delete,['Chappy_20261106_123456_001.mp4']);
   assert.match(get('libraryList').textContent,/まだありません/);
   await click('toggleLibrary');

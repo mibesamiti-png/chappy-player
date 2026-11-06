@@ -96,10 +96,14 @@ jobs:
         run: flutter test
       - name: CameraX permissions and private video storage safety contract
         run: python3 tools/test_native_video_contract.py
+      - name: Motion, haptics, and verified MP4 export native safety contract
+        run: python3 tools/test_native_miniapp_capabilities.py
       - name: Android camera and microphone permissions manifest checks
         run: python3 tools/test_android_media_manifest.py
       - name: Chappy Recorder standalone mini-app UI smoke test
         run: node tools/test_chappy_recorder.js
+      - name: Chappy Device Lab motion/haptics UI smoke test
+        run: node tools/test_device_lab.js
       - name: Media Lab recording regression smoke test
         run: node tools/test_media_lab_video.js
       - name: Existing offline mini-app JS bridge regression

@@ -60,7 +60,8 @@ def build_catalog(root):
             permissions = manifest.get("permissions")
             if (manifest.get("entry") != "index.html" or not isinstance(permissions, list) or
                     len(permissions) != len(set(map(str, permissions))) or
-                    any(value not in ("camera", "microphone") for value in permissions)):
+                    any(value not in ("camera", "microphone", "motion", "haptics")
+                        for value in permissions)):
                 raise ValueError(f"unsupported .chappy permissions or entry: {path.name}")
             if (channel, app_id) in keys:
                 raise ValueError(f"duplicated app ID in {channel}: {app_id}")

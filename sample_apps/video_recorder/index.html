@@ -100,7 +100,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     <button id="toggleLibrary" class="secondary" type="button" aria-expanded="false">一覧を表示</button>
   </div>
   <section id="libraryPanel" hidden>
-    <p class="hint">このミニアプリで非公開保存した動画のみ表示します。Media Labの動画とは保存領域が別です。ギャラリー保存は対象外です。</p>
+    <p class="hint">このミニアプリで非公開保存した動画のみ表示します。再生・削除に加え、Androidの保存先選択画面からMP4を書き出せます（対応プレイヤーが必要）。Media Labとは保存領域が別で、ギャラリー保存は対象外です。</p>
     <button id="refreshLibrary" class="secondary" type="button">一覧を更新</button>
     <div id="libraryList"></div>
   </section>
@@ -221,7 +221,33 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
             notify('動画の削除に失敗：' + String(error.message || error), true);
           }
         });
-        buttons.appendChild(play); buttons.appendChild(remove);
+        const exportButton = document.createElement('button');
+        exportButton.type = 'button'; exportButton.className = 'secondary';
+        exportButton.textContent = '書き出し';
+        exportButton.disabled = typeof video.export !== 'function';
+        exportButton.addEventListener('click', async () => {
+          if (typeof video.export !== 'function') {
+            notify('書き出しには新しいChappy Player本体が必要です。', true);
+            return;
+          }
+          exportButton.disabled = true;
+          try {
+            const result = await video.export(file.id);
+            if (result && result.status === 'saved') {
+              notify('動画を保存先へ書き出しました：' +
+                  fileSizeText(result.sizeBytes));
+            } else {
+              notify('書き出しをキャンセルしました');
+            }
+          } catch (error) {
+            notify('動画の書き出しに失敗：' +
+                String(error.message || error), true);
+          } finally {
+            exportButton.disabled = false;
+          }
+        });
+        buttons.appendChild(play); buttons.appendChild(exportButton);
+        buttons.appendChild(remove);
         row.appendChild(label); row.appendChild(meta); row.appendChild(buttons);
         root.appendChild(row);
       });
