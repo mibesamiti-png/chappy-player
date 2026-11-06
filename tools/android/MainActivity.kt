@@ -43,6 +43,7 @@ class MainActivity : FlutterActivity() {
     private val zipBackup = NativeVideoZipBackup(this)
     private val zipRestore = NativeVideoZipRestore(this)
     private val miniDocuments = NativeMiniAppDocuments(this)
+    private val miniAssets = NativeMiniAppAssets(this)
     @Volatile private var micActivityVisible = false
     private var mediaPermissionCallback: MethodChannel.Result? = null
     private var mediaRequestedPermissions: List<String> = emptyList()
@@ -78,6 +79,7 @@ class MainActivity : FlutterActivity() {
         zipBackup.onDestroy()
         zipRestore.onDestroy()
         miniDocuments.onDestroy()
+        miniAssets.onDestroy()
         nativeVideo.onDestroy()
         super.onDestroy()
     }
@@ -320,6 +322,43 @@ class MainActivity : FlutterActivity() {
                             result.success(nativeVideo.setDarkBrightness(brightness))
                         }
                     }
+                    "importBinaryAsset" -> {
+                        if (!micActivityVisible) {
+                            result.error("ASSET_NOT_FOREGROUND", "File import needs visible app", null)
+                        } else {
+                            miniAssets.importAsset(call.argument<String>("owner") ?: "", result)
+                        }
+                    }
+                    "listBinaryAssets" -> {
+                        if (!micActivityVisible) {
+                            result.error("ASSET_NOT_FOREGROUND", "Asset list needs visible app", null)
+                        } else {
+                            try {
+                                result.success(miniAssets.list(
+                                    call.argument<String>("owner") ?: ""))
+                            } catch (error: Exception) {
+                                result.error("ASSET_LIST_FAILED", error.message, null)
+                            }
+                        }
+                    }
+                    "exportBinaryAsset" -> {
+                        if (!micActivityVisible) {
+                            result.error("ASSET_NOT_FOREGROUND", "File export needs visible app", null)
+                        } else {
+                            miniAssets.exportAsset(
+                                call.argument<String>("owner") ?: "",
+                                call.argument<String>("id") ?: "", result)
+                        }
+                    }
+                    "deleteBinaryAsset" -> {
+                        if (!micActivityVisible) {
+                            result.error("ASSET_NOT_FOREGROUND", "Deletion needs visible app", null)
+                        } else {
+                            miniAssets.deleteAsset(
+                                call.argument<String>("owner") ?: "",
+                                call.argument<String>("id") ?: "", result)
+                        }
+                    }
                     "pickDocumentText" -> {
                         if (!micActivityVisible) {
                             result.error("DOCUMENT_NOT_FOREGROUND",
@@ -534,6 +573,7 @@ class MainActivity : FlutterActivity() {
         if (zipBackup.onResult(requestCode, resultCode, data)) return
         if (zipRestore.onResult(requestCode, resultCode, data)) return
         if (miniDocuments.onResult(requestCode, resultCode, data)) return
+        if (miniAssets.onResult(requestCode, resultCode, data)) return
         if (requestCode != backupRequestCode) {
             @Suppress("DEPRECATION")
             super.onActivityResult(requestCode, resultCode, data)
