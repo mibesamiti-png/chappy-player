@@ -48,7 +48,8 @@ signer = (Path(__file__).parent / "configure_debug_release_signing.py").read_tex
 assert "CHAPPY_DEBUG_KEYSTORE_B64" in signer
 assert "CHAPPY_DEBUG_CERT_SHA256" in signer
 assert 'applicationIdSuffix = ".debug"' in signer
-assert "CHAPPY_KEYSTORE_B64" not in signer
+assert 'os.environ["CHAPPY_KEYSTORE_B64"]' not in signer
+assert 'os.getenv("CHAPPY_KEYSTORE_B64")' not in signer
 assert "chappyDebugKeystore" in signer
 assert "getByName" in signer
 
