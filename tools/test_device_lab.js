@@ -76,7 +76,7 @@ vm.runInNewContext(match[1],{
  events.visibilitychange();
  assert.equal(intervalActive,false);
  assert.equal(elements.tiltToggle.textContent,'傾き操作を開始');
- assert.equal(calls.length,10);
+ assert.equal(calls.length,11);
  assert.equal(calls[0][1],'accelerometer');
  assert.equal(calls[1][1],'gyroscope');
  assert.equal(calls[2][1],'magnetometer');
