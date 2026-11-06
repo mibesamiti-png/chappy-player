@@ -158,7 +158,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             Text('接続先: ${device.address}:${device.port}'),
             const SizedBox(height: 12),
             const Text(
-              'PCでChappy Companionの --start --pair --qr を起動してください。\n'
+              'QRモードはPCで --start --pair --qr を起動。\n'
+              '旧手入力モードの場合は --start --pair で起動してください。\n'
               'PC画面に表示される証明書SHA-256指紋64文字を入力します。'
               'この指紋は毎回変わり、端末名だけでは本人確認できません。',
             ),
