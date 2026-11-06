@@ -322,6 +322,24 @@ class MainActivity : FlutterActivity() {
                             result.success(nativeVideo.setDarkBrightness(brightness))
                         }
                     }
+                    "binaryAssetTransferStatus" -> {
+                        if (!micActivityVisible) {
+                            result.error("ASSET_NOT_FOREGROUND",
+                                "Transfer progress requires foreground app", null)
+                        } else {
+                            result.success(miniAssets.transferStatus(
+                                call.argument<String>("owner") ?: ""))
+                        }
+                    }
+                    "cancelBinaryAssetTransfer" -> {
+                        if (!micActivityVisible) {
+                            result.error("ASSET_NOT_FOREGROUND",
+                                "Transfer cancellation requires foreground app", null)
+                        } else {
+                            result.success(miniAssets.cancelTransfer(
+                                call.argument<String>("owner") ?: ""))
+                        }
+                    }
                     "importBinaryAsset" -> {
                         if (!micActivityVisible) {
                             result.error("ASSET_NOT_FOREGROUND", "File import needs visible app", null)
