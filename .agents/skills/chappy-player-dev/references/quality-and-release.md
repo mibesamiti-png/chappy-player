@@ -35,7 +35,7 @@ For relevant changes, also run any new tests from tools/test_*.py and compare th
 
 ## Signed APK update checks
 
-- Source repository: private `mibesamiti-png/chappy-player`; public signed-APK-only destination: `mibesamiti-png/chappy-player-updates`.
+- Source repository: public `mibesamiti-png/chappy-player`; separate public signed-APK-only destination: `mibesamiti-png/chappy-player-updates`. Keep all signing keys and publishing credentials in restricted Actions Secrets, never in public source or logs.
 - Publication workflow: .github/workflows/publish-signed-apks.yml; manually triggered, only after the owner approves release.
 - Same Android package ID, pinned certificate and signing key across all production versions.
 - Flutter --split-per-abi Android versionCode uses the release build sequence plus: armeabi-v7a +1000, arm64-v8a +2000, x86_64 +4000. The update feed's cross-ABI buildNumber is not the installed ARM64 versionCode.
