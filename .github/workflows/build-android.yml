@@ -42,6 +42,10 @@ jobs:
         run: python3 tools/test_native_video_contract.py
       - name: Motion, haptics and private video export safety contracts
         run: python3 tools/test_native_miniapp_capabilities.py
+      - name: Game server TLS/WSS policy and sandbox contracts
+        run: python3 tools/test_game_network_contract.py
+      - name: Example game server protocol and abuse guards
+        run: python3 tools/test_game_server_example.py
       - name: Scoped Android SAF document import/export contract
         run: python3 tools/test_native_documents_contract.py
       - name: Native large binary asset vault boundary and checksum checks
@@ -89,6 +93,23 @@ jobs:
         run: node tools/test_chappy_recorder.js
       - name: Native motion and haptics demo app smoke test
         run: node tools/test_device_lab.js
+      - name: Game Server Lab manual HTTPS/WSS client smoke test
+        run: node tools/test_game_server_lab.js
+      - name: Package Game Server Lab preview
+        run: |
+          python3 tools/pack_html_chappy.py \
+            --source sample_apps/game_server_lab \
+            --id local.chappy.game_server_lab \
+            --name 'Chappy Game Server Lab' \
+            --version 0.1.0 \
+            --permission network --permission motion --permission haptics \
+            --output chappy-game-server-lab.chappy
+      - name: Upload Game Server Lab preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: chappy-game-server-lab
+          path: chappy-game-server-lab.chappy
+          if-no-files-found: error
       - name: File Lab user-picked documents smoke test
         run: node tools/test_file_lab.js
       - name: Package standalone Chappy Recorder

@@ -29,6 +29,11 @@ void main() {
     final files = ChappyPackage.parse(valid.replaceFirst(
         '"permissions": []', '"permissions": ["files"]'));
     expect(chappyPermissionsLabel(files.permissions), 'ファイルの選択・保存');
+    final network = ChappyPackage.parse(valid.replaceFirst(
+        '"permissions": []', '"permissions": ["network", "motion", "haptics"]'));
+    expect(network.permissions, ['network', 'motion', 'haptics']);
+    expect(chappyPermissionsLabel(network.permissions),
+        '暗号化サーバー通信・動きセンサー・振動');
   });
   test('reject unknown, duplicate and malformed privileges', () {
     for (final list in [

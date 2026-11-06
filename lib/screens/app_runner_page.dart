@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:chappy_player/core/local_app_server.dart';
 import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/core/media_permission_policy.dart';
+import 'package:chappy_player/core/miniapp_game_network.dart';
 import 'package:chappy_player/core/package_model.dart';
 import 'package:chappy_player/core/package_repository.dart';
 import 'package:chappy_player/core/storage_service.dart';
@@ -34,6 +35,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   bool _mediaPermissionPending = false;
   bool _nativeCapabilityPromptPending = false;
   final Set<String> _approvedNativeCapabilities = <String>{};
+  final Set<String> _approvedGameOrigins = <String>{};
+  bool _gameOriginPromptPending = false;
+  final MiniAppGameNetwork _gameNetwork = MiniAppGameNetwork();
   final Stopwatch _nativeApiClock = Stopwatch()..start();
   int _lastMotionSampleAt = -1000;
   bool _nativeMicPending = false;
@@ -190,6 +194,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     _darkVideoPollTimer = null;
     _darkSessionArmed = false;
     _approvedNativeCapabilities.clear();
+    _approvedGameOrigins.clear();
+    _gameNetwork.pause();
     _lastVideoOptions = null;
     _nativeMicActive = false;
     _nativeVideoActive = false;
@@ -223,7 +229,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed) {
+      _gameNetwork.resume();
+    } else {
       unawaited(_stopMedia());
     }
   }
@@ -648,6 +656,95 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         data ?? const {'status': 'cancelled'});
   }
 
+  /// Mini-apps may only call a TLS game server after declaring network
+  /// permission and the user approves this exact server for this foreground
+  /// session. Incoming messages cannot invoke privileged host operations.
+  Future<Uri> _approveGameOrigin(String url, {required bool websocket}) async {
+    final uri = GameNetworkPolicy.validate(url, websocket: websocket);
+    await _approveNativeCapability('network', '暗号化サーバー通信');
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+      throw StateError('Game server permission dialog requires foreground app');
+    }
+    final origin = GameNetworkPolicy.origin(uri);
+    if (_approvedGameOrigins.contains(origin)) return uri;
+    if (_gameOriginPromptPending) {
+      throw StateError('Another game server approval is already open');
+    }
+    _gameOriginPromptPending = true;
+    try {
+      final approved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialog) => AlertDialog(
+          title: const Text('ゲームサーバーへの接続確認'),
+          content: Text('ミニアプリ「${widget.app.name}」が次のサーバーへ通信しようとしています。\n\n'
+              '$origin\n\n送信したデータはサーバー管理者に届きます。'
+              '信頼できる接続先だけ許可してください。'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('拒否')),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true),
+                child: const Text('この画面だけ許可')),
+          ],
+        ),
+      );
+      if (approved != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true ||
+          !widget.app.permissions.contains('network')) {
+        throw StateError('Game server connection denied');
+      }
+      _approvedGameOrigins.add(origin);
+      return uri;
+    } finally {
+      _gameOriginPromptPending = false;
+    }
+  }
+
+  bool _gameNetworkAllowed() =>
+      mounted && ModalRoute.of(context)?.isCurrent == true &&
+      widget.app.permissions.contains('network') &&
+      _approvedNativeCapabilities.contains('network');
+
+  Future<Map<String, dynamic>> _gameHttpRequest(
+      Map<String, dynamic> params) async {
+    final url = params['url'];
+    final method = params['method'] ?? 'GET';
+    final body = params['body'] ?? '';
+    if (url is! String || method is! String || body is! String ||
+        (method != 'GET' && method != 'POST') ||
+        utf8.encode(body).length > GameNetworkPolicy.maxMessageBytes) {
+      throw const FormatException('Invalid HTTPS request');
+    }
+    final uri = await _approveGameOrigin(url, websocket: false);
+    return _gameNetwork.request(uri, method, body);
+  }
+
+  Future<Map<String, dynamic>> _gameSocketConnect(
+      Map<String, dynamic> params) async {
+    final url = params['url'];
+    if (url is! String) throw const FormatException('Invalid WSS URL');
+    final uri = await _approveGameOrigin(url, websocket: true);
+    return _gameNetwork.connect(uri);
+  }
+
+  bool _gameSocketSend(Map<String, dynamic> params) {
+    if (!_gameNetworkAllowed()) return false;
+    final text = params['text'];
+    if (text is! String) {
+      throw const FormatException('Game message must be text');
+    }
+    return _gameNetwork.send(text);
+  }
+
+  Map<String, dynamic> _gameSocketPoll() =>
+      _gameNetworkAllowed() ? _gameNetwork.poll() :
+      const {'connected': false, 'messages': <String>[], 'dropped': 0};
+
+  bool _gameSocketClose() {
+    _gameNetwork.close();
+    return true;
+  }
+
   Future<Map<String, dynamic>> _availableMotionSensors() async {
     await _approveNativeCapability('motion', '動きセンサー');
     final output = await _mediaChannel.invokeMapMethod<String, dynamic>(
@@ -1064,6 +1161,21 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         case 'files.saveText':
           value = await _saveDocumentText(params);
           break;
+        case 'network.request':
+          value = await _gameHttpRequest(params);
+          break;
+        case 'network.connect':
+          value = await _gameSocketConnect(params);
+          break;
+        case 'network.send':
+          value = _gameSocketSend(params);
+          break;
+        case 'network.poll':
+          value = _gameSocketPoll();
+          break;
+        case 'network.close':
+          value = _gameSocketClose();
+          break;
         case 'motion.available':
           value = await _availableMotionSensors();
           break;
@@ -1125,6 +1237,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     WidgetsBinding.instance.removeObserver(this);
     _mediaChannel.setMethodCallHandler(null);
     _darkVideoPollTimer?.cancel();
+    _gameNetwork.pause();
     unawaited(_stopMedia());
     _loadWatchdog?.cancel();
     final server = _server;
