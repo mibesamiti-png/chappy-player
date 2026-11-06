@@ -17,7 +17,7 @@ def check_feed(feed: dict, tag: str):
     version = feed.get("version")
     if not isinstance(build, int) or not 100000 <= build < 2147483647:
         raise ValueError("Bad Debug build number")
-    if not isinstance(version, str) or not re.fullmatch(r"\\d+\\.\\d+\\.\\d+", version):
+    if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Invalid Debug version")
     if tag != f"debug-v{version}-b{build}":
         raise ValueError("Debug tag mismatch")
