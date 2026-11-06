@@ -38,7 +38,8 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
                  "NativeMicCapture.kt", "NativeVideoRecorder.kt",
                  "NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
-                 "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt"]:
+                 "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt",
+                 "NativeNetworkDiscovery.kt"]:
         (templates / name).write_bytes(
             (PROJECT / "tools/android" / name).read_bytes()
         )
@@ -57,7 +58,8 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     ).read_bytes()
     for name in ("NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
-                 "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt"):
+                 "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt",
+                 "NativeNetworkDiscovery.kt"):
         copied = native_class.with_name(name)
         assert copied.read_bytes() == (PROJECT / "tools/android" / name).read_bytes()
     gradle_text = gradle.read_text(encoding="utf-8")
@@ -76,6 +78,8 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.VIBRATE",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CHANGE_WIFI_MULTICAST_STATE",
     ]:
         assert actual.count(permission) == 1, (permission, actual)
     assert "android.permission.FOREGROUND_SERVICE_MICROPHONE" not in actual
