@@ -171,7 +171,7 @@ print('Installed foreground-only native video recorder (private by default)')
 # policy and first-use user approval. Motion sampling is single-shot only and
 # vibration has native rate limits. Private MP4 export requires SAF picker.
 for filename in ('NativeMiniAppDevices.kt', 'NativeVideoExport.kt',
-                 'NativeMiniAppDocuments.kt'):
+                 'NativeMiniAppDocuments.kt', 'NativeVideoZipBackup.kt'):
     source = Path('tools/android') / filename
     if not source.is_file():
         raise SystemExit(f'Missing native mini-app capability host: {filename}')
