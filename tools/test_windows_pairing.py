@@ -37,6 +37,98 @@ class PairingTests(unittest.TestCase):
         self.assertFalse(session.claim())
         self.assertFalse(session.finished.is_set())
 
+    def test_short_lived_qr_invitation_payload(self):
+        fingerprint = "a" * 64
+        invitation = "b" * 32
+        encoded = pairing.invite_payload(
+            "192.168.1.7", 49152, fingerprint, invitation, 1800000000
+        )
+        self.assertEqual(
+            encoded,
+            "chappy-pair://v2?ip=192.168.1.7&port=49152&fp="
+            + fingerprint + "&inv=" + invitation + "&exp=1800000000",
+        )
+        self.assertLess(len(encoded), 256)
+        for invalid_ip in ("8.8.8.8", "localhost"):
+            with self.assertRaises(ValueError):
+                pairing.invite_payload(
+                    invalid_ip, 49152, fingerprint, invitation, 1800000000
+                )
+        for invalid_token in ("short", "X" * 32, ""):
+            with self.assertRaises(ValueError):
+                pairing.invite_payload(
+                    "192.168.1.7", 49152, fingerprint, invalid_token,
+                    1800000000,
+                )
+
+    def test_qr_invite_one_shot_and_expiry(self):
+        import time
+        token = "b" * 32
+        session = pairing.PairingSession(
+            invitation=token, expires_at=time.time() + 300
+        )
+        self.assertFalse(session.claim())
+        self.assertFalse(session.claim("c" * 32))
+        self.assertFalse(session.claim(token.upper()))
+        self.assertTrue(session.claim(token))
+        self.assertFalse(session.claim(token))
+        expired = pairing.PairingSession(
+            invitation=token, expires_at=time.time() - 1,
+        )
+        self.assertFalse(expired.claim(token))
+
+    def test_qr_display_builds_matrix_if_dependency_present(self):
+        try:
+            import qrcode
+        except ImportError:
+            self.skipTest("qrcode installed for Windows EXE CI")
+        payload = pairing.invite_payload(
+            "192.168.1.7", 49152, "a" * 64, "b" * 32, 1800000000,
+        )
+        matrix = pairing.render_qr(payload)
+        self.assertIn("\u2588", matrix)
+        self.assertGreater(len(matrix.splitlines()), 20)
+        self.assertLess(max(len(row) for row in matrix.splitlines()), 90)
+
+    def test_qr_server_requires_token_before_user_confirmation(self):
+        import time
+        token = "a" * 32
+        session = pairing.PairingSession(
+            invitation=token, expires_at=time.time() + 120
+        )
+        server = ThreadingHTTPServer(
+            ("127.0.0.1", 0), pairing.make_handler(session),
+        )
+        runner = threading.Thread(target=server.serve_forever, daemon=True)
+        runner.start()
+        def payload(token_value):
+            return {
+                "protocol": "pair-qr-v2",
+                "nonce": NONCE,
+                "invitation": token_value,
+            }
+        try:
+            with mock.patch.object(
+                pairing, "_ask_pc_user", return_value=True,
+            ) as approval:
+                for bad in (None, "b" * 32):
+                    with self.assertRaises(urllib.error.HTTPError) as error:
+                        self._request(server.server_port, payload(bad))
+                    self.assertIn(error.exception.code, (400, 403))
+                self.assertFalse(session.claimed)
+                approval.assert_not_called()
+                with self._request(server.server_port, payload(token)) as response:
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(json.load(response)["protocol"], "pair-qr-v2")
+                approval.assert_called_once_with(NONCE)
+                with self.assertRaises(urllib.error.HTTPError) as replay:
+                    self._request(server.server_port, payload(token))
+                self.assertEqual(replay.exception.code, 403)
+        finally:
+            server.shutdown()
+            server.server_close()
+            runner.join(timeout=2)
+
     def test_certificate_generated_with_ip_san_and_fresh_pin(self):
         try:
             from cryptography import x509
