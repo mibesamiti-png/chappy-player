@@ -56,6 +56,15 @@ python3 tools/pack_html_chappy.py --source sample_apps/media_probe \
 10. システム設定で権限を取り消してから再起動すると再び許可が必要になる
 11. カメラのない端末や別のWebViewバージョンでもクラッシュせず理由を表示する
 
+## 調査中: マイクの NotReadableError と Android 権限
+
+- 実機ではWebViewのカメラ表示が成功。一方マイクはAndroidの権限ダイアログで承認されても `NotReadableError: Could not start audio source` が発生
+- `media-permission: Granted` は**WebViewへリソース取得を許可した事実**のみを示し、音声デバイスが起動できたことを保証しない
+- AndroidManifestに `android.permission.MODIFY_AUDIO_SETTINGS` を明示する修正案を別PRで作成。これはAndroidのnormal権限であり、ミニアプリへのAPI公開ではない
+- この修正が根本原因かは **未確認**。本体の次の正式署名APKで実機比較が必要。保存データは削除しない
+- 失敗時はマイクのプライバシー設定、他の録音アプリ、Bluetooth/USBマイクの接続状態、Android System WebViewバージョンを記録し、音声データそのものは収集しない
+- バックグラウンド録音はこの改修に含まない
+
 ## 制限
 
 - 初期段階の対象は信頼できる自作ミニアプリ。任意の第三者製パッケージ用の完全な安全サンドボックスではない

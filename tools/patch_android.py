@@ -19,7 +19,12 @@ if not any(el.get(permission) == 'android.permission.INTERNET' for el in root.fi
     root.insert(0, item)
 # Hardware is opt-in per mini-app: Android permissions are requested only
 # after the user approves an individual camera/microphone request.
-for name in ('android.permission.CAMERA', 'android.permission.RECORD_AUDIO'):
+# Some Android WebView/WebRTC audio devices require MODIFY_AUDIO_SETTINGS
+# in addition to runtime RECORD_AUDIO (NotReadableError after OS consent).
+# This is a normal Android manifest permission, NOT a .chappy capability;
+# never expose raw AudioManager controls to untrusted mini-app JavaScript.
+for name in ('android.permission.CAMERA', 'android.permission.RECORD_AUDIO',
+             'android.permission.MODIFY_AUDIO_SETTINGS'):
     if not any(item.get(permission) == name for item in root.findall('uses-permission')):
         root.insert(0, ET.Element('uses-permission', {permission: name}))
 # Camera/microphone are optional hardware; don't exclude devices without them.
