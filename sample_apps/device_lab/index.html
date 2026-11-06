@@ -1,0 +1,68 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chappy Device Lab</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui;background:#0c1422;color:#eef5ff}
+body{margin:0;padding:22px;max-width:620px;margin-inline:auto}
+header{margin:10px 0 28px}h1{margin:0;font-size:25px}
+p{color:#a7b7d0;line-height:1.7}
+section{background:#182438;border:1px solid #334560;border-radius:18px;padding:20px;margin:15px 0}
+h2{margin:0 0 12px;font-size:17px}
+button{margin:4px;border:1px solid #4b6486;background:#2e4565;color:#fff;
+border-radius:12px;padding:13px 15px;font-size:14px}
+button:disabled{opacity:.45}button:focus-visible{outline:2px solid #9fd1ff}
+pre{background:#111a28;border-radius:12px;padding:16px;white-space:pre-wrap;overflow-wrap:anywhere}
+small{color:#92a8c5}
+</style></head><body>
+<header><h1>Chappy Device Lab</h1>
+<p>動きセンサーと振動のネイティブ実験室。初回のみ利用確認が表示されます。</p></header>
+<section><h2>端末の動きセンサー</h2>
+<button data-sensor="accelerometer">加速度 XYZ</button>
+<button data-sensor="gyroscope">ジャイロ XYZ</button>
+<button data-sensor="magnetometer">磁気 XYZ</button>
+<pre id="sensorResult">ボタンを押すと、センサーを1回だけ読み取ります。</pre>
+<small>アプリ画面が前面にあるときだけ測定。位置情報やGPSは取得しません。連続ログ保存は行いません。</small>
+</section>
+<section><h2>触覚・振動テスト</h2>
+<button data-haptic="tick">軽い振動</button>
+<button data-haptic="click">クリック</button>
+<button data-haptic="heavy">強いクリック</button>
+<pre id="hapticResult">振動を試すボタンを押してください。</pre>
+<small>端末の対応状況により振動の強さが変わります。振動の連続再生は制限されています。</small>
+</section>
+<script>
+(() => {
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const capabilities=window.Chappy || {};
+  for(const button of document.querySelectorAll('[data-sensor]')){
+    button.addEventListener('click',async()=>{
+      if(!capabilities.motion){$('sensorResult').textContent='対応プレイヤーの更新が必要です。';return;}
+      button.disabled=true;
+      try{
+        const sample=await capabilities.motion.sample(button.dataset.sensor);
+        if(!sample.available){
+          $('sensorResult').textContent=button.dataset.sensor+': この端末では非対応';
+        }else{
+          const axis=sample.values || [];
+          $('sensorResult').textContent=button.dataset.sensor+'\n' +
+            ['X','Y','Z'].map((name,i)=>name+' = '+Number(axis[i]).toFixed(3)).join('\n')+
+            '\n精度: '+sample.accuracy;
+        }
+      }catch(e){$('sensorResult').textContent='取得失敗: '+String(e.message||e);}
+      finally{button.disabled=false;}
+    });
+  }
+  for(const button of document.querySelectorAll('[data-haptic]')){
+    button.addEventListener('click',async()=>{
+      if(!capabilities.haptics){$('hapticResult').textContent='対応プレイヤーの更新が必要です。';return;}
+      button.disabled=true;
+      try{
+        const ok=await capabilities.haptics.play(button.dataset.haptic);
+        $('hapticResult').textContent=ok?'振動を実行しました':'非対応または短時間の連続振動制限中です';
+      }catch(e){$('hapticResult').textContent='振動できません: '+String(e.message||e);}
+      finally{button.disabled=false;}
+    });
+  }
+})();
+</script></body></html>
