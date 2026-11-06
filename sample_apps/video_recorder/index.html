@@ -104,8 +104,9 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     <div class="row">
       <button id="refreshLibrary" class="secondary" type="button">一覧を更新</button>
       <button id="backupVideos" class="secondary" type="button">非公開動画をまとめてZIP保存</button>
+      <button id="restoreVideos" class="secondary" type="button">バックアップZIPから復元</button>
     </div>
-    <p class="hint">このミニアプリ内の動画をまとめてバックアップします（最大100本・合計4GiB）。保存先は自分で選択。バックアップしても元の動画は残ります。<strong>ZIPは暗号化されないため保存先に注意してください。</strong> 対応する新しいプレイヤー本体が必要です。</p>
+    <p class="hint">このミニアプリ内の動画をまとめてバックアップします（最大100本・合計4GiB）。保存先は自分で選択。バックアップしても元の動画は残ります。<strong>ZIPは暗号化されないため保存先に注意してください。</strong> 復元するZIPは読み込み前に内容を検証し、既存の録画は上書きしません。 対応する新しいプレイヤー本体が必要です。</p>
     <div id="libraryList"></div>
   </section>
 </section>
@@ -368,6 +369,33 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
       }
     } catch (error) {
       notify('ZIPバックアップに失敗：' + String(error.message || error), true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $('restoreVideos').addEventListener('click', async () => {
+    const button = $('restoreVideos');
+    if (!video || typeof video.restoreZip !== 'function') {
+      notify('ZIP復元には対応する新しいChappy Player本体が必要です。', true);
+      return;
+    }
+    button.disabled = true;
+    try {
+      notify('Androidで復元するバックアップZIPを選択してください…');
+      const result = await video.restoreZip();
+      if (result && result.status === 'restored') {
+        notify('ZIP復元完了：新規 ' + result.restored +
+            '本、既存と一致してスキップ ' + result.skipped +
+            '本。既存動画は上書きしていません。');
+        if (libraryExpanded) await refreshLibrary();
+        await refreshCapacity();
+      } else {
+        notify('ZIP復元をキャンセルしました');
+      }
+    } catch (error) {
+      notify('ZIP復元できませんでした：' +
+          String(error.message || error), true);
     } finally {
       button.disabled = false;
     }
