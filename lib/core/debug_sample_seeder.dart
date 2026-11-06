@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:chappy_player/core/package_repository.dart';
 import 'package:crypto/crypto.dart';
@@ -16,7 +15,7 @@ import 'package:path/path.dart' as p;
 class DebugSampleSeeder {
   static const manifestAsset = 'debug_sample_assets/index.json';
   final AssetBundle bundle;
-  const DebugSampleSeeder({this.bundle = rootBundle});
+  DebugSampleSeeder({AssetBundle? bundle}) : bundle = bundle ?? rootBundle;
 
   Future<DebugSeedReport> seed(PackageRepository repository) async {
     final raw = await bundle.loadString(manifestAsset);
