@@ -62,6 +62,17 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
         assert json.loads(archive.read("manifest.json"))["permissions"] == ["files"]
         assert b"files.pickText()" in archive.read("index.html")
     assert len(json.loads(build_catalog(public))["entries"]) == 4
+    game_package = stable / "game-server-lab.chappy"
+    game_source = Path(__file__).resolve().parent.parent / "sample_apps/game_server_lab"
+    package_html(game_source, game_package, "local.chappy.game_server_lab",
+                 "Chappy Game Server Lab", "0.1.0",
+                 ["network", "motion", "haptics"])
+    with zipfile.ZipFile(game_package) as archive:
+        game_manifest = json.loads(archive.read("manifest.json"))
+        assert game_manifest["permissions"] == ["network", "motion", "haptics"]
+        assert b"Chappy Game Server Lab" in archive.read("index.html")
+    assert len(json.loads(build_catalog(public))["entries"]) == 5
+
 
     try:
         package_html(html, public / "invalid.chappy", "local.chappy.invalid", "Invalid", "0.1.0",
