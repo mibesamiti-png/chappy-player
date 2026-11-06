@@ -53,3 +53,15 @@ Run `Start-ChappyPairing.cmd` instead of `Start-ChappyCompanion.cmd`, or execute
 The basic `Start-ChappyCompanion.cmd` is still discovery-only and cannot complete a TLS pairing request. **Do not treat a service name or short confirmation code as identity evidence without the full TLS fingerprint copied from the PC display.**
 
 Protocol details, Android 17 restrictions, threat model and QA: [NETLAB-03A one-session pinned TLS preview](../../docs/network-lab-session-pairing.md). Android APK source integration is not a published signed Android update. The preview EXE is also unsigned and needs owner-initiated local testing.
+
+## QRで一回限りの接続確認（追加の試作機能）
+
+1. Windowsのプレビュー成果物から `ChappyCompanion.exe` と `Start-ChappyPairingQR.cmd` を同じフォルダーに展開して、PC上で後者を自分で起動する。Pythonのインストールは不要。コマンド操作なら `ChappyCompanion.exe --start --pair --qr --minutes 10`。
+2. PC画面に有効期限付きのQR画像が開き、一時TLS証明書の完全なSHA-256指紋もコンソールに表示される。
+3. 対応するAndroid開発版Chappy Playerの **Network Lab → PC画面のQRを読み取って接続確認** からカメラでQRを読む。通常のWebリンクとして開かず、プライベートIPv4・期限・指紋・招待IDを厳格に検査する。
+4. 確認画面でスマホ側のボタンを押し、PC側に表示される6文字コードと一致するのを確かめてPC側で `YES` を入力する。PC側で承認するまでは接続成功にはならない。
+5. QRは1セッション用で、期限切れ・招待ID不一致・再利用は拒否される。PCの通信内容の監視・ファイル転送・遠隔操作・永続ペアリングはできない。
+
+QR画像は一時フォルダーに生成され、プログラム終了時に削除を試みる。Windowsの画像ビューアが画像ファイルをロックしている場合は削除に失敗することがあるので、ビューアを閉じて一時ファイルが残っていないか確認すること。実機Wi-Fi・ファイアウォール・Androidカメラのテストは未実施。**正式配布済みのAndroid APKにはまだ入っていない。**
+
+仕様と脅威モデル：[NETLAB-03B-1 QR招待と本人確認](../../docs/network-lab-qr-bootstrap.md)。
