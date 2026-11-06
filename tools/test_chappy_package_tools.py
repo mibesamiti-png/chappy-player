@@ -47,6 +47,13 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
         assert json.loads(archive.read("manifest.json"))["permissions"] == ["camera", "microphone"]
     catalog = json.loads(build_catalog(public))
     assert len(catalog["entries"]) == 2
+    device_package = stable / "motion-haptic-test.chappy"
+    package_html(html, device_package, "local.chappy.device_lab", "Device Lab",
+                 "0.1.0", ["motion", "haptics"])
+    with zipfile.ZipFile(device_package) as archive:
+        assert json.loads(archive.read("manifest.json"))["permissions"] == [
+            "motion", "haptics"]
+
     try:
         package_html(html, public / "invalid.chappy", "local.chappy.invalid", "Invalid", "0.1.0",
                      ["location"])
