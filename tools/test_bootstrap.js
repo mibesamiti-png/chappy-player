@@ -98,5 +98,15 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   assert.equal(sent[16].method,'files.deleteAsset');
   window.__chappyResolve({requestId:sent[16].requestId,ok:true,value:true});
   assert.equal(await deleted,true);
-  console.log('Bridge smoke tests passed: storage, media, SAF, ZIP and scoped binary file vault');
+  const transfer = window.Chappy.files.transferStatus();
+  assert.equal(sent[17].method,'files.transferStatus');
+  window.__chappyResolve({requestId:sent[17].requestId,ok:true,
+    value:{active:true,phase:'copying',bytesDone:1024,totalBytes:4096,
+      cancelable:true,cancelRequested:false}});
+  assert.equal((await transfer).bytesDone,1024);
+  const cancel = window.Chappy.files.cancelTransfer();
+  assert.equal(sent[18].method,'files.cancelTransfer');
+  window.__chappyResolve({requestId:sent[18].requestId,ok:true,value:true});
+  assert.equal(await cancel,true);
+  console.log('Bridge smoke tests passed: media, SAF, ZIP and binary progress/cancel');
 })().catch(err => { console.error(err); process.exit(1); });
