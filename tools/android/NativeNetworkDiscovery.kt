@@ -76,6 +76,13 @@ class NativeNetworkDiscovery(private val activity: Activity) {
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
+    // Separate foreground/network guard for user-confirmed TLS PC pairing.
+    // Never grants raw LAN access to untrusted mini-app JavaScript.
+    fun pairingAllowed(): Boolean =
+        foreground && hasLocalNetwork() &&
+            !(Build.VERSION.SDK_INT >= 37 &&
+              activity.applicationInfo.targetSdkVersion >= 37)
+
     fun start(type: String): Map<String, Any?> {
         if (!foreground) throw IllegalStateException("Network Lab requires foreground")
         if (running || discovery != null) {
