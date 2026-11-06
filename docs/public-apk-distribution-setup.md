@@ -1,6 +1,6 @@
 # Chappy Player 公開APK配布の初期設定
 
-2026-11-04。ソースコードの`mibesamiti-png/chappy-player`は**非公開のまま**にする。
+2026-11-06追記。ソースコードの`mibesamiti-png/chappy-player`は**Public**に変更済み。署名鍵・パスワード・公開用トークンは引き続きGitHub Actions Secretsで非公開管理する。
 
 ## 配布専用の公開リポジトリ
 
@@ -13,11 +13,9 @@ GitHubの「New repository」から作成し、必ず以下を選ぶ。
 
 **公開するもの**：署名付きの`ChappyPlayer-arm64-v8a.apk`等、
 リリースノート、バージョン情報`update.json`、配布リポジトリの説明。
-**公開しないもの**：Flutter/Dart/Kotlinのソース、秘密の署名鍵、
-GitHubトークン、デバッグログ、個人メモデータ。
+**公開しないもの**：秘密の署名鍵、GitHubトークン、デバッグログ、個人メモデータ。Flutter/Dart/Kotlinソースは別の公開リポジトリで管理する。
 
-注意：APKは逆解析可能。ソースのリポジトリを非公開にしても、
-配布したAPK内の実装や素材を完全に隠せるわけではない。
+注意：公開ソース・コミット履歴・公開ビルドログは第三者から閲覧可能。署名鍵・個人情報・トークンをソースやCIログに書き込まない。
 
 ### 公式のダウンロードURL
 
@@ -51,7 +49,7 @@ keytool -genkeypair -v -keystore chappy-release.jks \
 base64 -w 0 chappy-release.jks > chappy-release.b64
 ```
 
-GitHubの非公開開発リポジトリで
+公開ソースリポジトリの
 `Settings → Secrets and variables → Actions → Repository secrets`を開き、
 次の4件を登録する。
 
@@ -87,7 +85,7 @@ GitHubの `Settings → Developer settings → Personal access tokens → Fine-g
 
 このトークンは秘密の署名鍵とは別物で、公開GitHubリポジトリに
 APKと`update.json`を書き込むため**だけ**に使う。
-`mibesamiti-png/chappy-player`（非公開の開発リポジトリ）の
+`mibesamiti-png/chappy-player`（公開ソースリポジトリ）の
 `Settings → Secrets and variables → Actions → Repository secrets`へ
 `CHAPPY_PUBLISH_TOKEN`という名前で登録する。
 **トークンをチャットやソースコードに貼り付けない。**
@@ -95,7 +93,7 @@ APKと`update.json`を書き込むため**だけ**に使う。
 ## 公開操作
 
 上記3点（公開配布リポジトリ・固定署名・トークン）が揃ってから、
-**非公開開発リポジトリ**の`Actions → Publish Signed APK Updates → Run workflow`を実行する。
+**公開ソースリポジトリ**の`Actions → Publish Signed APK Updates → Run workflow`を手動実行する。
 
 入力例：
 
@@ -104,7 +102,7 @@ APKと`update.json`を書き込むため**だけ**に使う。
 
 ワークフローが**自動的に**実行する作業：
 
-1. 非公開のソースコードをCI内でチェックアウトし、Flutterテストを実行。
+1. 公開済みのソースコードをCI内でチェックアウトし、Flutterテストを実行。
 2. 固定の署名鍵でARM64 / ARM32 / x86_64のリリースAPKを生成。
 3. Android公式の`apksigner`で署名が正しいか確認し、
    登録した証明書SHA-256と完全一致するか検証。
@@ -142,5 +140,5 @@ APKと`update.json`を書き込むため**だけ**に使う。
 - GitHub Releasesの正規CDNへのHTTPSリダイレクトのみ許可。
 - 更新前にAndroidがAPKのアプリID・署名証明書・新しいビルド番号を確認。
 - アプリはAndroidのインストール確認画面を開くだけ。無承認の上書きはしない。
-- ソースの非公開設定は変更しない。
+- ソースはPublicのまま。署名鍵・個人メモ・診断ログなどの秘密情報は公開コミットとGitHub Actionsログに含めない。
 - 公開リリースにはデータ・デバッグレポート・署名鍵を絶対含めない。
