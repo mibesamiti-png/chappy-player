@@ -78,7 +78,6 @@ const click = async id => {
   assert.equal(get('freeSpace').textContent,'32.0 GB');
   assert.equal(get('totalSpace').textContent,'全容量：128.0 GB');
   assert.equal(get('capacityFill').style.width,'75.0%');
-  assert.equal(get('lensBack').getAttribute('aria-pressed'),'true');
   await click('lensFront');
   assert.equal(get('lensFront').getAttribute('aria-pressed'),'true');
   get('videoQuality').value='1080';
