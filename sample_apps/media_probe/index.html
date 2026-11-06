@@ -81,7 +81,7 @@ textarea[hidden]{display:none}
 <div class="status" id="videoStatus">停止中（まだ録画されていません）</div>
 <button class="secondary" id="videoList">プライベート動画を表示</button>
 <div id="videoLibrary"></div>
-<small>暗転モードでは画面がONのまま黒くなります。カメラ使用インジケーターは隠さず、黒画面でも停止・復帰できます。</small>
+<small>暗転モードは画面ONのまま黒くなります。右上の小さな赤点＝録画中、緑点＝停止中。音量＋で再録画（毎回確認あり）、音量－で停止、右上の点付近をダブルタップで復帰。OSのカメラ使用表示はそのままです。</small>
 </section>
 <section>
 <h2>マイク・波形</h2>
@@ -446,7 +446,22 @@ textarea[hidden]{display:none}
           try { await Chappy.video.open(file.id); }
           catch (error) { mark('動画再生失敗：' + describe(error)); }
         });
-        row.appendChild(label); row.appendChild(button); root.appendChild(row);
+        const remove = document.createElement('button');
+        remove.className = 'secondary';
+        remove.textContent = '削除';
+        remove.addEventListener('click', async () => {
+          try {
+            const deleted = await Chappy.video.delete(file.id);
+            if (deleted) {
+              mark('非公開動画を削除しました：' + file.id);
+              await listPrivateVideos();
+            } else {
+              mark('動画削除はキャンセルされました');
+            }
+          } catch (error) { mark('動画削除失敗：' + describe(error)); }
+        });
+        row.appendChild(label); row.appendChild(button);
+        row.appendChild(remove); root.appendChild(row);
       });
     } catch (error) {
       mark('非公開動画一覧の取得失敗：' + describe(error));
@@ -545,6 +560,20 @@ textarea[hidden]{display:none}
       if (!active) mark('暗転モードを開始できません。録画状態を確認してください。');
     } catch (error) { mark('暗転モード失敗：' + describe(error)); }
   }
+  // Native host sends this after volume-up restarts with fresh consent.
+  window.addEventListener('chappy-native-video-started', () => {
+    videoRecording = true;
+    videoStopRequested = false;
+    $('videoOn').disabled = true;
+    $('videoOff').disabled = false;
+    $('videoDark').disabled = false;
+    ['videoStorage', 'videoQuality', 'videoLens', 'videoAudio']
+      .forEach(id => { $(id).disabled = true; });
+    clearInterval(videoTimer);
+    videoTimer = setInterval(() => { void pollVideo(); }, 400);
+    void pollVideo();
+    mark('音量＋から動画の再録画を開始しました');
+  });
   $('videoOn').addEventListener('click', () => { void startVideoRecording(); });
   $('videoOff').addEventListener('click', () => { void stopVideoRecording(); });
   $('videoDark').addEventListener('click', () => { void darkVideoRecording(); });
