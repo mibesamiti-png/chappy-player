@@ -6,7 +6,7 @@ execution. Android Gradle CI and actual Android SAF-provider tests remain separa
 from pathlib import Path
 import hashlib
 import io
-import os
+import random
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -68,7 +68,7 @@ assert "FileOutputStream(uri" not in native
 # The UI must not imply that all files necessarily become smaller.
 fixtures = [
     (b"CHAPPY-ASSET-COMPRESSION-TEST\n" * 10000, True),
-    (os.urandom(128 * 1024), False),
+    (random.Random(20261107).randbytes(128 * 1024), False),
 ]
 for original, should_compress in fixtures:
     for level in (1, 6, 9):
