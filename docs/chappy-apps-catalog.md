@@ -4,7 +4,7 @@
 
 AndroidのChappy Player本体とは別に、`.chappy` ミニアプリだけを配布するための**公開GitHubリポジトリ** `mibesamiti-png/chappy-apps` を想定。ソースを置く非公開 `chappy-player` と、正式署名APK専用 `chappy-player-updates` はそのまま分離する。
 
-**注意：2026-11-04時点で `chappy-apps` は未作成。** 新規公開リポジトリの作成はリポジトリ所有者がGitHubで行う。作成前はプレイヤーの「Chappy Apps」画面に取得エラーが出る。空の `catalog.json` を最初に置けば接続テストできる。
+**現状（2026-11-07）：公開リポジトリ [chappy-apps](https://github.com/mibesamiti-png/chappy-apps) は作成済み。** `main/catalog.json` にはStable 2種類（ASMR Sound Lab / Chappy Recorder）とDebug 8種類の自作ミニアプリが掲載されている。アプリ内では **Chappy Apps 公開ライブラリ → Debug → 更新** から任意のミニアプリを選んで導入できる。プレイヤー本体のDebug APKに全部を自動インストールする仕様ではない。
 
 ```text
 chappy-apps/ (Public, main)

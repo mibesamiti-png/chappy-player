@@ -26,6 +26,15 @@ def check():
     )
     assert "prepare_debug_samples.py" not in release
     assert OUTPUT not in release
+    # Public Debug catalog is the authoritative user-selected install path.
+    # Never silently pre-seed apps from a locally bundled Debug APK.
+    main_source = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
+    debug_ci = (ROOT / ".github/workflows/build-android.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "DebugSampleSeeder" not in main_source
+    assert "run: python3 tools/prepare_debug_samples.py" not in debug_ci
+    assert "run: python3 tools/verify_debug_sample_apk.py" not in debug_ci
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
     assert OUTPUT + "/" in gitignore
     with tempfile.TemporaryDirectory(prefix="chappy_seed_test_") as tmp:

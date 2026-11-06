@@ -10,48 +10,45 @@ Created 2026-11-06. Experimental camera video verification often needs an unsign
 - Android app storage is isolated by package ID. A new Debug installation cannot overwrite or delete the existing production app's notes, mini-apps, or private camera recordings.
 - Updates from the production update.json should be rejected in the Debug variant because its Android package name differs. Do **not** expect in-app production updates in Debug.
 
-## Debug-only first-launch mini-app library (8 offline examples)
+## Eight mini-apps in the *public* Debug catalog
 
-Starting with the debug APK that includes this feature, the **first launch**
-of `Chappy Player Debug` installs eight repository-owned `.chappy` examples
-into the **debug package's separate library**. No GitHub catalog connection or
-separate ZIP import is required. This is a debugging convenience, not a
-production catalog publication.
+The user-selected samples live in the public
+[Chappy Apps Debug catalog](https://github.com/mibesamiti-png/chappy-apps/blob/main/catalog.json).
+They are **not automatically installed** when a Debug APK opens, and the
+Debug APK need not be rebuilt simply to change this public mini-app list.
 
-| Built-in debug sample | Declared permissions | Useful test |
+In **Chappy Player → Chappy Apps 公開ライブラリ → Debug**, tap refresh
+and select the mini-apps you actually want to install. The following eight
+Debug entries are published and have verified package hashes:
+
+| Debug mini-app | Permission(s) | Test purpose |
 | --- | --- | --- |
-| メモ帳 | none | Save/edit a note and verify private data persists |
-| Chappy Media Lab | camera, microphone | Video/microphone/camera diagnostics |
-| Chappy Recorder | camera, microphone | Local private recordings and video library |
-| Chappy Device Lab | motion, haptics | Accelerometer/gyroscope and vibration |
-| Chappy File Lab | files | User-selected documents and asset import |
-| Chappy Game Server Lab | network, motion, haptics | Optional HTTPS/WSS connection to a user-supplied server |
-| Chappy Touch Lab | none | Multitouch, pointer events, gesture trails |
-| Chappy Color Lab | none | RGB sliders, rendering, clipboard test |
+| メモ帳 | none | Notes and saved app data |
+| Chappy Media Lab | camera, microphone | Microphone and camera capture |
+| Chappy Recorder | camera, microphone | Private video recording |
+| Chappy Device Lab | motion, haptics | Motion sensors and vibration |
+| Chappy File Lab | files | User-approved documents |
+| Chappy Game Server Lab | network, motion, haptics | Explicit HTTPS/WSS game server testing |
+| Chappy Touch Lab | none | Multi-touch pointer trails |
+| Chappy Color Lab | none | RGB gradients and drawing response |
 
-No sample starts a camera, microphone, network connection, or remote command
-just because it is installed. The recorder and other permissioned apps still
-need runtime Android permissions and user action where appropriate. Use only
-your own test data and servers.
+Stable still includes ASMR Sound Lab and the separately versioned
+Chappy Recorder. Installing a package from either channel always needs the
+user's confirmation, and permissions are requested by the host only on
+explicit use. App ID collisions between channels follow the standard
+update/confirmation flow; back up notes before intentionally switching an
+installed app between channels.
 
-**Data protection**: Seeds run exactly once per seed-version in the
-`dev.chappy.chappy_player.debug` data sandbox. Already-installed app IDs are
-never replaced or downgraded, and private app data is not touched. If you
-delete a seed app later, subsequent launches do **not** silently reinstall it.
-An incomplete first run can retry missing apps without overwriting successes.
-Signed production APKs do not execute the seeder or bundle the extra assets.
-
-Implementation: `tools/prepare_debug_samples.py` creates SHA-256 checked
-ZIP archives in ignored `debug_sample_assets/` and adds that asset directory
-to pubspec **only after the debug test stage, before the debug build**.
-`lib/core/debug_sample_seeder.dart` verifies manifest, ZIP and checksums
-again before the first installation.
+If you previously installed a Debug APK containing the one-time bundled
+samples, its **already-installed apps remain in its own Debug data storage**.
+A subsequent Debug APK update does not delete those apps, their recordings,
+or their user data. No new automatic samples will be installed on future starts.
 
 ## How to test the camera prototype safely
 
 1. Download the `chappy-player-debug-apk` ZIP artifact from a **successful** `Build Android APK` workflow on the relevant commit. Unzip and install `app-debug.apk`. Do not uninstall the currently signed production application.
 2. Confirm there are now **two separate launcher icons**: `Chappy Player Debug` and the existing `Chappy Player`.
-3. On the new Debug APK, Media Lab and the other seven demos should already appear in **MY APPS** after first launch. For older Debug APK builds without this feature, import `media-probe.chappy` from the workflow artifact manually.
+3. Open **Chappy Apps 公開ライブラリ → Debug → 更新**, choose **Chappy Media Lab** and install it. Other examples can be installed individually from the same public list.
 4. In Debug, choose the native video recording camera, desired 720/1080 quality and private storage. Allow Camera and optionally Microphone; test recording, stopping, dark mode recovery and in-app playback. Then verify Gallery/Google Photos does not index private MP4s.
 5. Uninstall **only** `Chappy Player Debug` when done; doing so deletes Debug-only private recordings. It does not touch the production app.
 
