@@ -22,6 +22,10 @@ void main() {
     expect(app.permissions, ['camera', 'microphone']);
     expect(chappyPermissionsLabel(app.permissions), 'カメラ・マイク');
     expect(chappyPermissionsLabel([]), '追加権限なし');
+    final tools = ChappyPackage.parse(valid.replaceFirst(
+        '"permissions": []', '"permissions": ["motion", "haptics"]'));
+    expect(tools.permissions, ['motion', 'haptics']);
+    expect(chappyPermissionsLabel(tools.permissions), '動きセンサー・振動');
   });
   test('reject unknown, duplicate and malformed privileges', () {
     for (final list in [
