@@ -362,6 +362,22 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         return true
     }
 
+    /** Return only a verified file owned by the calling mini-app.
+     * Exposed solely to the native system-document picker, never JavaScript.
+     */
+    fun privateExportSource(appId: String, id: String): File {
+        if (state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
+            throw IllegalArgumentException("VIDEO_EXPORT_NOT_ALLOWED")
+        }
+        val root = privateDirectory(appId).canonicalFile
+        val file = File(root, id).canonicalFile
+        if (file.parentFile != root || !file.isFile ||
+            file.length() <= 0 || file.length() > 1024L * 1024 * 1024) {
+            throw IllegalArgumentException("VIDEO_FILE_UNAVAILABLE")
+        }
+        return file
+    }
+
     fun openPrivate(appId: String, id: String): Boolean {
         if (state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
             throw IllegalArgumentException("VIDEO_OPEN_NOT_ALLOWED")
