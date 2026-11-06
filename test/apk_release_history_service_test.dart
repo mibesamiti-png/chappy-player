@@ -63,7 +63,7 @@ void main() {
         throwsFormatException);
   });
   test('Debug prerelease list never mixes with production release history', () {
-    final tag = 'debug-v0.1.0-b22';
+    final tag = 'debug-v0.1.0-b100022';
     final debug = {
       'tag_name': tag, 'draft': false, 'prerelease': true,
       'body': 'Android Debug APK',
@@ -79,7 +79,7 @@ void main() {
     final testDebug = const ApkReleaseHistoryService(debug: true).parse(releases);
     expect(testDebug.length, 1);
     expect(testDebug.single.packageId, chappyDebugPackageId);
-    expect(testDebug.single.buildNumber, 22);
+    expect(testDebug.single.buildNumber, 100022);
     expect(testDebug.single.forAbi('arm64-v8a')!.abi, 'universal');
     expect(service.parse(releases).length, 1);
     final malformed = Map<String, dynamic>.from(debug);
