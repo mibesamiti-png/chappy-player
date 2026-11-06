@@ -72,6 +72,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
     fun cancelTransfer(owner: String): Boolean {
         val current = pending ?: return false
         if (closed || !copying || current.owner != owner ||
+            transferPhase !in setOf("copying", "verifying") ||
             !ownerPattern.matches(owner)) return false
         current.cancelRequested = true
         return true
@@ -314,7 +315,6 @@ class NativeMiniAppAssets(private val activity: Activity) {
                         request.owner, request.item
                             ?: throw IOException("Asset selection missing"), uri, request)
                 }
-                checkTransferActive(request)
                 activity.runOnUiThread {
                     pending = null
                     copying = false
@@ -397,6 +397,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
             }
             checkTransferActive(request)
             if (size <= 0) throw IOException("Empty files cannot be imported")
+            transferPhase = "finalizing"
             if (!staging.renameTo(body)) {
                 throw IOException("Could not commit private file")
             }
@@ -411,7 +412,6 @@ class NativeMiniAppAssets(private val activity: Activity) {
                 put("sha256", record.sha)
                 put("createdMs", record.createdMs)
             }.toString(), Charsets.UTF_8)
-            checkTransferActive(request)
             return mapOf("status" to "imported", "file" to record.exposed())
         } catch (error: Exception) {
             staging.delete()
@@ -476,6 +476,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
             throw IOException("Exported asset failed SHA-256 verification")
         }
         checkTransferActive(request)
+        transferPhase = "finalizing"
         return mapOf("status" to "saved", "sizeBytes" to bytes,
             "sha256" to record.sha)
     }
