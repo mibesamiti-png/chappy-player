@@ -264,6 +264,7 @@ def run_pairing(ip: str, minutes: int, *, qr: bool = False) -> None:
         crt.unlink(missing_ok=True)
 
         session = PairingSession()
+        image_file = Path(folder) / "chappy-pair-invite.png"
         with BoundedHttpsServer((address, 0), make_handler(session)) as server:
             server.context = context
             port = server.server_address[1]
