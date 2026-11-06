@@ -170,7 +170,9 @@ const _bootScript = r'''
       // Do not time out while the user is deciding: Android/Flutter will
       // reject a cancelled request and always stop capture on background.
       const timer = (method === 'microphone.start' || method === 'video.start' ||
-                     method === 'video.delete' || method === 'video.export')
+                     method === 'video.delete' || method === 'video.export' ||
+                      method === 'files.pickText' || method === 'files.saveText' ||
+                      method === 'motion.sample' || method === 'haptics.play')
         ? null : setTimeout(() => {
         pending.delete(requestId);
         reject(new Error('Chappy API timeout'));
@@ -203,6 +205,11 @@ const _bootScript = r'''
         open: (id) => call('video.open', {id: String(id)}),
         delete: (id) => call('video.delete', {id: String(id)}),
         export: (id) => call('video.export', {id: String(id)})
+      }),
+      files: Object.freeze({
+        pickText: () => call('files.pickText', {}),
+        saveText: (fileName, text) =>
+          call('files.saveText', {fileName: String(fileName), text: String(text)})
       }),
       motion: Object.freeze({
         sample: type => call('motion.sample', {type: String(type)})
