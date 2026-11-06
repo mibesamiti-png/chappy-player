@@ -33,7 +33,7 @@ class GameNetworkPolicy {
   }
 
   static String origin(Uri uri) =>
-      uri.scheme + '://' + uri.host + ':' + (uri.hasPort ? uri.port : 443).toString();
+      '${uri.scheme}://${uri.host}:${uri.hasPort ? uri.port : 443}';
 
   static bool isPublicAddress(InternetAddress ip) {
     final a = ip.rawAddress;
