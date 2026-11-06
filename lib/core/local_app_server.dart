@@ -227,10 +227,12 @@ const _bootScript = r'''
         cancelTransfer: () => call('files.cancelTransfer', {})
       }),
       motion: Object.freeze({
-        sample: type => call('motion.sample', {type: String(type)})
+        sample: type => call('motion.sample', {type: String(type)}),
+        available: () => call('motion.available', {})
       }),
       haptics: Object.freeze({
-        play: effect => call('haptics.play', {effect: String(effect)})
+        play: effect => call('haptics.play', {effect: String(effect)}),
+        available: () => call('haptics.available', {})
       }),
       log: (message) => call('log', {message: String(message)})
     })
