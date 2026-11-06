@@ -35,7 +35,8 @@ class CompanionQrInvitation {
         uri.host != 'v2' ||
         uri.path.isNotEmpty ||
         uri.hasFragment ||
-        uri.userInfo.isNotEmpty) {
+        uri.userInfo.isNotEmpty ||
+        uri.hasPort) {
       throw const FormatException('Chappy PC用のQRではありません');
     }
     const expected = <String>{'ip', 'port', 'fp', 'inv', 'exp'};
