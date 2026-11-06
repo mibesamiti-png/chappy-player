@@ -65,5 +65,11 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   window.__chappyResolve({requestId: sent[10].requestId, ok: true,
     value: {status: 'saved', sizeBytes: 15}});
   assert.equal((await saveText).status, 'saved');
-  console.log('Bridge smoke tests passed: storage, microphone, motion/haptics, verified video export and selected document text I/O');
+  const zip = window.Chappy.video.backupZip();
+  assert.equal(sent[11].method, 'video.backupZip');
+  assert.deepEqual(sent[11].params, {});
+  window.__chappyResolve({requestId: sent[11].requestId, ok: true,
+    value: {status: 'saved', files: 2, sizeBytes: 3000000}});
+  assert.equal((await zip).files, 2);
+  console.log('Bridge smoke tests passed: storage, microphone, motion/haptics, selected file I/O and owner-scoped ZIP backup');
 })().catch(err => { console.error(err); process.exit(1); });
