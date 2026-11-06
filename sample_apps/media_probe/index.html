@@ -77,11 +77,11 @@ textarea[hidden]{display:none}
 <small>プライベート動画はChappy Playerをアンインストール／データ削除すると消えます。現在は専用画面で再生できますが、外部へのエクスポートは次の開発段階です。</small>
 <button id="videoOn">動画録画を開始</button>
 <button class="secondary" id="videoOff" disabled>録画を停止</button>
-<button class="secondary" id="videoDark" disabled>暗転モード</button>
+<button class="secondary" id="videoDark">暗転モードで録画</button>
 <div class="status" id="videoStatus">停止中（まだ録画されていません）</div>
 <button class="secondary" id="videoList">プライベート動画を表示</button>
 <div id="videoLibrary"></div>
-<small>暗転モードは画面ONのまま黒くなります。右上の小さな赤点＝録画中、緑点＝停止中。音量＋で再録画（毎回確認あり）、音量－で停止、右上の点付近をダブルタップで復帰。OSのカメラ使用表示はそのままです。</small>
+<small>「暗転モードで録画」は初回許可後すぐ黒画面になります。右上の赤点＝録画中、緑点＝停止中。暗転中は音量＋で確認なしの再録画、音量－で停止、右上をダブルタップで復帰。上下のシステムバーは端からスワイプすると一時表示されます。Androidのカメラ使用表示はOS管理のままです。</small>
 </section>
 <section>
 <h2>マイク・波形</h2>
@@ -119,7 +119,7 @@ textarea[hidden]{display:none}
   let cameraStream = null, micStream = null, audioContext = null;
   let nativeMicRunning = false, nativeMicTimer = 0, nativeMicBusy = false;
   let animation = 0, analyser = null;
-  let videoRecording = false, videoBusy = false, videoTimer = 0, videoStopRequested = false;
+  let videoRecording = false, videoBusy = false, videoStartBusy = false, videoTimer = 0, videoStopRequested = false;
   const diagnosticHistory = [];
   const maxHistory = 40;
   let nativeFramesBefore = 0, nativeLastProgressAt = 0;
@@ -484,7 +484,7 @@ textarea[hidden]{display:none}
         videoRecording = false;
         $('videoOn').disabled = false;
         $('videoOff').disabled = true;
-        $('videoDark').disabled = true;
+        $('videoDark').disabled = !(window.Chappy && Chappy.video);
         $('videoStorage').disabled = false;
         $('videoQuality').disabled = false;
         $('videoLens').disabled = false;
@@ -501,17 +501,18 @@ textarea[hidden]{display:none}
       mark('動画録画の状態取得失敗：' + describe(error));
       $('videoOn').disabled = false;
       $('videoOff').disabled = true;
-      $('videoDark').disabled = true;
+      $('videoDark').disabled = !(window.Chappy && Chappy.video);
     } finally {
       videoBusy = false;
     }
   }
-  async function startVideoRecording() {
+  async function startVideoRecording(startDark = false) {
     if (!(window.Chappy && Chappy.video)) {
       mark('このChappy Player本体はネイティブ動画録画に未対応です。');
       return;
     }
-    if (videoRecording) return;
+    if (videoRecording || videoStartBusy) return;
+    videoStartBusy = true;
     if (cameraStream) stopCamera();
     if (micStream) await stopMic();
     if (nativeMicRunning) await stopNativeMic();
@@ -522,6 +523,7 @@ textarea[hidden]{display:none}
       storage: $('videoStorage').value,
     };
     $('videoOn').disabled = true;
+    $('videoDark').disabled = true;
     ['videoStorage', 'videoQuality', 'videoLens', 'videoAudio']
       .forEach(id => { $(id).disabled = true; });
     status('videoStatus', 'Androidカメラの準備中...');
@@ -538,11 +540,22 @@ textarea[hidden]{display:none}
       mark('CameraX 動画録画開始：' + options.quality + 'p / ' + options.storage +
         ' / 音声=' + options.audio);
       await pollVideo();
+      if (startDark && videoRecording) {
+        try {
+          const active = await Chappy.video.dark(true);
+          if (!active) mark('録画は開始しましたが暗転に失敗しました。');
+        } catch (error) {
+          mark('録画は開始しましたが暗転に失敗：' + describe(error));
+        }
+      }
     } catch (error) {
       mark('動画録画開始失敗：' + describe(error));
       $('videoOn').disabled = false;
+      $('videoDark').disabled = false;
       ['videoStorage', 'videoQuality', 'videoLens', 'videoAudio']
         .forEach(id => { $(id).disabled = false; });
+    } finally {
+      videoStartBusy = false;
     }
   }
   async function stopVideoRecording() {
@@ -554,13 +567,17 @@ textarea[hidden]{display:none}
     catch (error) { mark('動画停止失敗：' + describe(error)); }
   }
   async function darkVideoRecording() {
-    if (!videoRecording || !(window.Chappy && Chappy.video)) return;
+    if (!(window.Chappy && Chappy.video)) return;
+    if (!videoRecording) {
+      await startVideoRecording(true);
+      return;
+    }
     try {
       const active = await Chappy.video.dark(true);
       if (!active) mark('暗転モードを開始できません。録画状態を確認してください。');
     } catch (error) { mark('暗転モード失敗：' + describe(error)); }
   }
-  // Native host sends this after volume-up restarts with fresh consent.
+  // Native host sends this after volume-up restarts within approved dark session.
   window.addEventListener('chappy-native-video-started', () => {
     videoRecording = true;
     videoStopRequested = false;
@@ -607,6 +624,7 @@ textarea[hidden]{display:none}
   });
   $('nativeMicOn').disabled = !(window.Chappy && Chappy.microphone);
   $('videoOn').disabled = !(window.Chappy && Chappy.video);
+  $('videoDark').disabled = !(window.Chappy && Chappy.video);
   $('videoList').disabled = !(window.Chappy && Chappy.video);
   mark('準備完了：ボタンを押して権限を確認してください');
 })();
