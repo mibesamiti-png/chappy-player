@@ -112,7 +112,7 @@ jobs:
             --source sample_apps/device_lab \
             --id local.chappy.device_lab \
             --name 'Chappy Device Lab' \
-            --version 0.1.0 \
+            --version 0.2.0 \
             --permission motion --permission haptics \
             --output chappy-device-lab.chappy
       - name: Upload Chappy Device Lab

@@ -13,6 +13,9 @@ border-radius:12px;padding:13px 15px;font-size:14px}
 button:disabled{opacity:.45}button:focus-visible{outline:2px solid #9fd1ff}
 pre{background:#111a28;border-radius:12px;padding:16px;white-space:pre-wrap;overflow-wrap:anywhere}
 small{color:#92a8c5}
+#tiltPad{position:relative;width:min(100%,260px);height:160px;background:#0c1727;border:1px solid #4b6486;border-radius:14px;overflow:hidden;margin:10px 0}
+#tiltDot{position:absolute;left:calc(50% - 12px);top:calc(50% - 12px);width:24px;height:24px;border-radius:50%;background:#67c5ff;transition:transform .12s linear}
+#tiltStatus{min-height:20px;font-size:13px}
 </style></head><body>
 <header><h1>Chappy Device Lab</h1>
 <p>動きセンサーと振動のネイティブ実験室。初回のみ利用確認が表示されます。</p></header>
@@ -20,13 +23,20 @@ small{color:#92a8c5}
 <button data-sensor="accelerometer">加速度 XYZ</button>
 <button data-sensor="gyroscope">ジャイロ XYZ</button>
 <button data-sensor="magnetometer">磁気 XYZ</button>
+<button data-sensor="gravity">重力 XYZ</button>
+<button data-sensor="linearAcceleration">線形加速度 XYZ</button>
+<button id="probeSensors">搭載センサーを確認</button>
 <pre id="sensorResult">ボタンを押すと、センサーを1回だけ読み取ります。</pre>
 <small>アプリ画面が前面にあるときだけ測定。位置情報やGPSは取得しません。連続ログ保存は行いません。</small>
+<div id="tiltPad" aria-label="重力センサーのゲーム入力テスト"><div id="tiltDot"></div></div>
+<button id="tiltToggle" type="button">傾き操作を開始</button>
+<p id="tiltStatus">重力センサーで青い球を動かすテストです（約5Hz、記録・送信なし）。</p>
 </section>
 <section><h2>触覚・振動テスト</h2>
 <button data-haptic="tick">軽い振動</button>
 <button data-haptic="click">クリック</button>
 <button data-haptic="heavy">強いクリック</button>
+<button id="probeHaptics" type="button">振動モーターを確認</button>
 <pre id="hapticResult">振動を試すボタンを押してください。</pre>
 <small>端末の対応状況により振動の強さが変わります。振動の連続再生は制限されています。</small>
 </section>
@@ -35,6 +45,50 @@ small{color:#92a8c5}
   'use strict';
   const $=id=>document.getElementById(id);
   const capabilities=window.Chappy || {};
+  $('probeSensors').addEventListener('click',async()=>{
+    try{
+      const available=await capabilities.motion.available();
+      $('sensorResult').textContent=Object.keys(available).map(k=>
+        k+': '+(available[k]?'対応':'非対応')).join('\n');
+    }catch(e){$('sensorResult').textContent='対応状況の取得失敗: '+String(e.message||e);}
+  });
+  $('probeHaptics').addEventListener('click',async()=>{
+    try{
+      const available=await capabilities.haptics.available();
+      $('hapticResult').textContent=available?'振動モーター搭載':'振動モーターなし／使用不可';
+    }catch(e){$('hapticResult').textContent='対応状況の取得失敗: '+String(e.message||e);}
+  });
+  let tiltTimer=null,tiltReading=false;
+  function stopTilt(){
+    if(tiltTimer!==null){clearInterval(tiltTimer);tiltTimer=null;}
+    $('tiltToggle').textContent='傾き操作を開始';
+  }
+  async function updateTilt(){
+    if(tiltReading || (document.hidden===true)){if(document.hidden===true)stopTilt();return;}
+    tiltReading=true;
+    try{
+      const result=await capabilities.motion.sample('gravity');
+      if(!result.available){$('tiltStatus').textContent='重力センサー非対応';stopTilt();return;}
+      const xyz=result.values||[0,0,0];
+      const x=Math.max(-90,Math.min(90,Number(xyz[0])*9));
+      const y=Math.max(-55,Math.min(55,Number(xyz[1])*5.5));
+      $('tiltDot').style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
+      $('tiltStatus').textContent='傾き入力: X='+Number(xyz[0]).toFixed(2)+' / Y='+Number(xyz[1]).toFixed(2);
+    }catch(e){$('tiltStatus').textContent='取得失敗: '+String(e.message||e);stopTilt();}
+    finally{tiltReading=false;}
+  }
+  $('tiltToggle').addEventListener('click',()=>{
+    if(tiltTimer!==null){stopTilt();return;}
+    if(!capabilities.motion){$('tiltStatus').textContent='対応プレイヤーが必要';return;}
+    $('tiltToggle').textContent='傾き操作を停止';
+    tiltTimer=setInterval(()=>{void updateTilt();},200);
+    void updateTilt();
+  });
+  if(typeof document.addEventListener==='function'){
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden)stopTilt();
+    });
+  }
   for(const button of document.querySelectorAll('[data-sensor]')){
     button.addEventListener('click',async()=>{
       if(!capabilities.motion){$('sensorResult').textContent='対応プレイヤーの更新が必要です。';return;}

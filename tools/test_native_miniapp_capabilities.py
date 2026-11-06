@@ -39,6 +39,17 @@ for token in ("Sensor.TYPE_ACCELEROMETER", "Sensor.TYPE_GYROSCOPE",
               "lastHapticAt < 120L", "VibrationEffect.createPredefined",
               "motor.hasVibrator()", "fun onPause()"):
     assert token in devices
+for token in ("Sensor.TYPE_GRAVITY", "Sensor.TYPE_LINEAR_ACCELERATION",
+              "fun availableSensors()", "fun hasHapticMotor()",
+              "foreground &&", "vibrationMotor()"):
+    assert token in devices, token
+assert '"availableMotionSensors"' in host
+assert '"hasHapticMotor"' in host
+assert "'motion.available'" in runner and "'motion.available'" in bridge
+assert "'haptics.available'" in runner and "'haptics.available'" in bridge
+assert "'gravity', 'linearAcceleration'" in runner
+assert "await _approveNativeCapability('motion', '動きセンサー')" in runner
+assert "await _approveNativeCapability('haptics', '振動')" in runner
 assert "activity.getSystemService(Context.SENSOR_SERVICE) as SensorManager" in devices
 assert "by lazy" in devices, "Do not request Android services before Activity.attach()"
 assert "location" not in devices.lower()

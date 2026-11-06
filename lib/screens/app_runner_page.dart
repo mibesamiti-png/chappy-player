@@ -648,8 +648,23 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         data ?? const {'status': 'cancelled'});
   }
 
+  Future<Map<String, dynamic>> _availableMotionSensors() async {
+    await _approveNativeCapability('motion', '動きセンサー');
+    final output = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'availableMotionSensors');
+    return Map<String, dynamic>.from(output ?? const {});
+  }
+
+  Future<bool> _hasHapticMotor() async {
+    await _approveNativeCapability('haptics', '振動');
+    return await _mediaChannel.invokeMethod<bool>('hasHapticMotor') ?? false;
+  }
+
   Future<Map<String, dynamic>> _sampleMotion(Map<String, dynamic> params) async {
-    const permitted = <String>{'accelerometer', 'gyroscope', 'magnetometer'};
+    const permitted = <String>{
+      'accelerometer', 'gyroscope', 'magnetometer',
+      'gravity', 'linearAcceleration',
+    };
     final type = params['type'];
     if (type is! String || !permitted.contains(type)) {
       throw const FormatException('Unknown motion sensor type');
@@ -1048,6 +1063,12 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           break;
         case 'files.saveText':
           value = await _saveDocumentText(params);
+          break;
+        case 'motion.available':
+          value = await _availableMotionSensors();
+          break;
+        case 'haptics.available':
+          value = await _hasHapticMotor();
           break;
         case 'motion.sample':
           value = await _sampleMotion(params);

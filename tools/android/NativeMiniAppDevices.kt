@@ -49,6 +49,31 @@ class NativeMiniAppDevices(private val activity: Activity) {
         previous?.error(code, message, null)
     }
 
+    private val sensorKinds = mapOf(
+        "accelerometer" to Sensor.TYPE_ACCELEROMETER,
+        "gyroscope" to Sensor.TYPE_GYROSCOPE,
+        "magnetometer" to Sensor.TYPE_MAGNETIC_FIELD,
+        "gravity" to Sensor.TYPE_GRAVITY,
+        "linearAcceleration" to Sensor.TYPE_LINEAR_ACCELERATION,
+    )
+
+    fun availableSensors(): Map<String, Boolean> {
+        if (!foreground) return emptyMap()
+        return sensorKinds.mapValues { (_, type) ->
+            sensors.getDefaultSensor(type) != null
+        }
+    }
+
+    private fun vibrationMotor(): Vibrator? = if (Build.VERSION.SDK_INT >= 31) {
+        activity.getSystemService(VibratorManager::class.java)?.defaultVibrator
+    } else {
+        @Suppress("DEPRECATION")
+        activity.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+    }
+
+    fun hasHapticMotor(): Boolean =
+        foreground && (vibrationMotor()?.hasVibrator() == true)
+
     fun sample(type: String, result: MethodChannel.Result) {
         if (!foreground) {
             result.error("MOTION_NOT_FOREGROUND", "App must be visible", null)
@@ -58,14 +83,10 @@ class NativeMiniAppDevices(private val activity: Activity) {
             result.error("MOTION_BUSY", "Previous sensor sample still pending", null)
             return
         }
-        val sensorType = when (type) {
-            "accelerometer" -> Sensor.TYPE_ACCELEROMETER
-            "gyroscope" -> Sensor.TYPE_GYROSCOPE
-            "magnetometer" -> Sensor.TYPE_MAGNETIC_FIELD
-            else -> {
-                result.error("MOTION_TYPE_UNSUPPORTED", "Unknown sensor type", null)
-                return
-            }
+        val sensorType = sensorKinds[type]
+        if (sensorType == null) {
+            result.error("MOTION_TYPE_UNSUPPORTED", "Unknown sensor type", null)
+            return
         }
         val device = sensors.getDefaultSensor(sensorType)
         if (device == null) {
@@ -118,12 +139,7 @@ class NativeMiniAppDevices(private val activity: Activity) {
             "heavy" -> if (Build.VERSION.SDK_INT >= 29) VibrationEffect.EFFECT_HEAVY_CLICK else -1
             else -> return false
         }
-        val motor = if (Build.VERSION.SDK_INT >= 31) {
-            activity.getSystemService(VibratorManager::class.java)?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            activity.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        } ?: return false
+        val motor = vibrationMotor() ?: return false
         if (!motor.hasVibrator()) return false
         lastHapticAt = now
         val duration = when (effect) {

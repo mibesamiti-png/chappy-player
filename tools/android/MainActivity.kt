@@ -406,6 +406,22 @@ class MainActivity : FlutterActivity() {
                             miniDocuments.saveText(fileName, contents, result)
                         }
                     }
+                    "availableMotionSensors" -> {
+                        if (!micActivityVisible) {
+                            result.error("MOTION_NOT_FOREGROUND",
+                                "Sensor availability requires visible app", null)
+                        } else {
+                            result.success(miniDevices.availableSensors())
+                        }
+                    }
+                    "hasHapticMotor" -> {
+                        if (!micActivityVisible) {
+                            result.error("HAPTICS_NOT_FOREGROUND",
+                                "Vibration availability requires visible app", null)
+                        } else {
+                            result.success(miniDevices.hasHapticMotor())
+                        }
+                    }
                     "sampleMotion" -> {
                         if (!micActivityVisible) {
                             result.error("MOTION_NOT_FOREGROUND",

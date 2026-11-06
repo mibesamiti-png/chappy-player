@@ -117,5 +117,20 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
     value:{status:'saved',originalBytes:8192,zipBytes:512,
       savedBytes:7680,percentSmaller:93.75,compressionLevel:9}});
   assert.equal((await compressed).percentSmaller,93.75);
-  console.log('Bridge smoke tests passed: media, SAF, ZIP, progress/cancel and optional lossless compression');
+  const availableMotion=window.Chappy.motion.available();
+  assert.equal(sent[20].method,'motion.available');
+  window.__chappyResolve({requestId:sent[20].requestId,ok:true,
+    value:{gravity:true,linearAcceleration:false,accelerometer:true}});
+  assert.equal((await availableMotion).gravity,true);
+  const availableHaptics=window.Chappy.haptics.available();
+  assert.equal(sent[21].method,'haptics.available');
+  window.__chappyResolve({requestId:sent[21].requestId,ok:true,value:true});
+  assert.equal(await availableHaptics,true);
+  const gravity=window.Chappy.motion.sample('gravity');
+  assert.equal(sent[22].method,'motion.sample');
+  assert.equal(sent[22].params.type,'gravity');
+  window.__chappyResolve({requestId:sent[22].requestId,ok:true,
+    value:{available:true,values:[0,9.8,0]}});
+  assert.equal((await gravity).values[1],9.8);
+  console.log('Bridge smoke tests passed: safe media/files and game motion/haptic availability');
 })().catch(err => { console.error(err); process.exit(1); });
