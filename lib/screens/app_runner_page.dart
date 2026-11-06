@@ -585,6 +585,28 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     return Map<String, dynamic>.from(result ?? const {'status': 'cancelled'});
   }
 
+  Future<Map<String, dynamic>> _exportCompressedAssetZip(
+      Map<String, dynamic> params) async {
+    final id = params['id'];
+    final requestedLevel = params['level'];
+    if (id is! String || !RegExp(r'^[a-f0-9]{32}$').hasMatch(id)) {
+      throw const FormatException('Invalid binary asset ID');
+    }
+    final levels = <String, int>{'fast': 1, 'balanced': 6, 'max': 9};
+    if (requestedLevel is! String || !levels.containsKey(requestedLevel)) {
+      throw const FormatException('Unsupported ZIP compression preset');
+    }
+    await _approveNativeCapability('files', 'ファイルの選択・保存');
+    final result = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'exportCompressedAssetZip', {
+      'owner': widget.app.id,
+      'id': id,
+      'level': levels[requestedLevel],
+    });
+    return Map<String, dynamic>.from(
+        result ?? const {'status': 'cancelled'});
+  }
+
   Future<bool> _deleteBinaryAsset(Map<String, dynamic> params) async {
     final id = params['id'];
     if (id is! String || !RegExp(r'^[a-f0-9]{32}$').hasMatch(id)) {
@@ -1011,6 +1033,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           break;
         case 'files.listAssets':
           value = await _listBinaryAssets();
+          break;
+        case 'files.exportCompressedZip':
+          value = await _exportCompressedAssetZip(params);
           break;
         case 'files.exportAsset':
           value = await _exportBinaryAsset(params);
