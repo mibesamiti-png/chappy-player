@@ -6,6 +6,7 @@ on:
       - "examples/windows_companion/**"
       - "tools/test_windows_companion.py"
       - "tools/test_windows_pairing.py"
+      - "tools/test_windows_qr.py"
       - ".github/workflows/build-windows-companion.yml"
   workflow_dispatch:
 
@@ -28,6 +29,8 @@ jobs:
         run: python tools/test_windows_companion.py
       - name: Test one-session pinned TLS PC confirmation and denial contracts
         run: python tools/test_windows_pairing.py
+      - name: Verify QR invite expiry, ticket misuse and QR generation
+        run: python tools/test_windows_qr.py
       - name: Build console-only, user-invoked Windows preview
         run: python -m PyInstaller --onefile --console --name ChappyCompanion examples/windows_companion/companion.py
       - name: Verify bundled EXE does not start advertising by default
@@ -40,6 +43,7 @@ jobs:
         run: |
           Copy-Item examples/windows_companion/Start-ChappyCompanion.cmd dist/Start-ChappyCompanion.cmd
           Copy-Item examples/windows_companion/Start-ChappyPairing.cmd dist/Start-ChappyPairing.cmd
+          Copy-Item examples/windows_companion/Start-ChappyPairingQR.cmd dist/Start-ChappyPairingQR.cmd
       - name: Upload Windows preview (not a signed release)
         uses: actions/upload-artifact@v4
         with:
@@ -48,4 +52,5 @@ jobs:
             dist/ChappyCompanion.exe
             dist/Start-ChappyCompanion.cmd
             dist/Start-ChappyPairing.cmd
+            dist/Start-ChappyPairingQR.cmd
           if-no-files-found: error
