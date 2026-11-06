@@ -108,5 +108,14 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   assert.equal(sent[18].method,'files.cancelTransfer');
   window.__chappyResolve({requestId:sent[18].requestId,ok:true,value:true});
   assert.equal(await cancel,true);
-  console.log('Bridge smoke tests passed: media, SAF, ZIP and binary progress/cancel');
+  const compressed = window.Chappy.files.exportCompressedZip(
+    '0123456789abcdef0123456789abcdef','max');
+  assert.equal(sent[19].method,'files.exportCompressedZip');
+  assert.equal(sent[19].params.id,'0123456789abcdef0123456789abcdef');
+  assert.equal(sent[19].params.level,'max');
+  window.__chappyResolve({requestId:sent[19].requestId,ok:true,
+    value:{status:'saved',originalBytes:8192,zipBytes:512,
+      savedBytes:7680,percentSmaller:93.75,compressionLevel:9}});
+  assert.equal((await compressed).percentSmaller,93.75);
+  console.log('Bridge smoke tests passed: media, SAF, ZIP, progress/cancel and optional lossless compression');
 })().catch(err => { console.error(err); process.exit(1); });
