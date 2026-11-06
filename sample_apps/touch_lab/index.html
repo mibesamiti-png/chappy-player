@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chappy Touch Lab</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui;background:#0d1523;color:#f1f6ff}
+*{box-sizing:border-box}body{margin:0;padding:18px;max-width:780px;margin-inline:auto}
+h1{font-size:24px;margin:4px 0 8px}p{color:#b4c4da;line-height:1.65}
+.card{background:#19283d;border:1px solid #304865;border-radius:16px;padding:15px;margin:12px 0}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+button{padding:11px 15px;color:#f6f8ff;background:#244768;border:1px solid #4b789f;border-radius:10px;font:inherit}
+button:focus-visible{outline:2px solid #a9d7ff}
+#pad{width:100%;height:320px;display:block;background:#101b2c;border:1px solid #426083;border-radius:14px;touch-action:none;overscroll-behavior:contain}
+#status,#count{font-variant-numeric:tabular-nums}
+#status{color:#b2d9ff;overflow-wrap:anywhere}small{color:#95a7c1}
+</style>
+</head>
+<body>
+<h1>🖐️ Chappy Touch Lab</h1>
+<p>マルチタッチ、スワイプ、長押し、描画の応答を確かめる開発用ミニアプリ。ネットワーク通信・端末権限は不要。</p>
+<section class="card">
+ <div class="row"><strong>同時タッチ：<span id="count">0</span></strong>
+ <button id="clear" type="button">軌跡を消す</button></div>
+ <p>下のエリアを指で操作。複数の指を使うと、それぞれ別の色で線を描くよ。</p>
+ <canvas id="pad" aria-label="マルチタッチ検証キャンバス"></canvas>
+ <p id="status" role="status">タッチ待機中</p>
+ <small>指を離すとアクティブな点は解除。ページを閉じると履歴は破棄されるよ。</small>
+</section>
+<script>
+(()=>{
+ 'use strict';
+ const pad=document.getElementById('pad'),ctx=pad.getContext('2d');
+ const pointers=new Map(), colors=['#77d5ff','#fb91ad','#f5ca72','#9ce5a4','#be9dff'];
+ const status=document.getElementById('status'),count=document.getElementById('count');
+ let assigned=0;
+ function resize(){
+   const rect=pad.getBoundingClientRect(),scale=Math.min(devicePixelRatio||1,2);
+   pad.width=Math.max(1,Math.floor(rect.width*scale));
+   pad.height=Math.max(1,Math.floor(rect.height*scale));
+   ctx.setTransform(scale,0,0,scale,0,0);
+   ctx.lineCap='round';ctx.lineJoin='round';
+ }
+ function point(ev){const r=pad.getBoundingClientRect();return{x:ev.clientX-r.left,y:ev.clientY-r.top};}
+ function refresh(label){count.textContent=String(pointers.size);status.textContent=label;}
+ pad.addEventListener('pointerdown',ev=>{
+   ev.preventDefault();pad.setPointerCapture(ev.pointerId);
+   const p=point(ev);p.color=colors[(assigned++)%colors.length];p.start=performance.now();
+   pointers.set(ev.pointerId,p);
+   ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();
+   refresh('ID '+ev.pointerId+' を検出：'+Math.round(p.x)+', '+Math.round(p.y));
+ });
+ pad.addEventListener('pointermove',ev=>{
+   const previous=pointers.get(ev.pointerId);if(!previous)return;
+   const p=point(ev);ctx.strokeStyle=previous.color;ctx.lineWidth=4;
+   ctx.beginPath();ctx.moveTo(previous.x,previous.y);ctx.lineTo(p.x,p.y);ctx.stroke();
+   previous.x=p.x;previous.y=p.y;
+   refresh('移動 ID '+ev.pointerId+'：'+Math.round(p.x)+', '+Math.round(p.y));
+ });
+ function finish(ev){const p=pointers.get(ev.pointerId);if(!p)return;
+   pointers.delete(ev.pointerId);
+   refresh('ID '+ev.pointerId+' 終了：'+Math.round(performance.now()-p.start)+'ms');
+ }
+ pad.addEventListener('pointerup',finish);pad.addEventListener('pointercancel',finish);
+ pad.addEventListener('lostpointercapture',finish);
+ document.getElementById('clear').addEventListener('click',()=>{
+   ctx.clearRect(0,0,pad.width,pad.height);refresh('軌跡をクリア');
+ });
+ window.addEventListener('resize',resize);
+ document.addEventListener('visibilitychange',()=>{
+   if(document.hidden){pointers.clear();refresh('画面を離れたためリセット');}
+ });
+ resize();
+})();
+</script>
+</body></html>
