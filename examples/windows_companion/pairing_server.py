@@ -15,14 +15,14 @@ import hashlib
 import hmac
 import ipaddress
 import json
- import queue
+import queue
 import secrets
 import socket
 import ssl
 import tempfile
 import threading
 import time
- from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from companion import (
