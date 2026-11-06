@@ -14,6 +14,7 @@ import datetime as dt
 import hashlib
 import ipaddress
 import json
+import os
 import queue
 import secrets
 import socket
@@ -23,6 +24,8 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+from pairing_invite import create_invitation
 
 from companion import (
     MAX_MINUTES,
@@ -37,6 +40,8 @@ MAX_APPROVAL_SECONDS = 25
 class PairingSession:
     def __init__(self) -> None:
         self.claimed = False
+        self.invite_ticket: str | None = None
+        self.expires_at: int | None = None
         self.finished = threading.Event()
         self.lock = threading.Lock()
 
@@ -155,9 +160,11 @@ def make_handler(session: PairingSession):
                 return
             try:
                 data = json.loads(self.rfile.read(length))
-                if not isinstance(data, dict) or set(data) != {
-                    "protocol", "nonce"
-                } or data["protocol"] != "pair-preview-v1":
+                required = {"protocol", "nonce"}
+                if session.invite_ticket is not None:
+                    required.add("ticket")
+                if (not isinstance(data, dict) or set(data) != required or
+                        data["protocol"] != "pair-preview-v1"):
                     raise ValueError("Unsupported request")
                 nonce = data["nonce"]
                 if not isinstance(nonce, str):
@@ -167,6 +174,15 @@ def make_handler(session: PairingSession):
                 self._reply(400, {"status": "bad_request"})
                 return
 
+            if session.invite_ticket is not None:
+                candidate = data.get("ticket")
+                if (not isinstance(candidate, str) or
+                        not secrets.compare_digest(
+                            candidate, session.invite_ticket
+                        ) or session.expires_at is None or
+                        time.time() >= session.expires_at):
+                    self._reply(403, {"status": "invalid_invitation"})
+                    return
             if not session.claim():
                 self._reply(409, {"status": "already_requested"})
                 return
@@ -223,7 +239,7 @@ class BoundedHttpsServer(ThreadingHTTPServer):
             self._active.release()
 
 
-def run_pairing(ip: str, minutes: int) -> None:
+def run_pairing(ip: str, minutes: int, *, qr: bool = False) -> None:
     """Expose a single, explicitly PC-approved HTTPS confirmation session."""
     from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
@@ -248,6 +264,11 @@ def run_pairing(ip: str, minutes: int) -> None:
         with BoundedHttpsServer((address, 0), make_handler(session)) as server:
             server.context = context
             port = server.server_address[1]
+            ticket = secrets.token_hex(16) if qr else None
+            expires_at = int(time.time()) + minutes * 60 if qr else None
+            if qr:
+                session.invite_ticket = ticket
+                session.expires_at = expires_at
             nonce = secrets.token_hex(4)
             details = service_descriptor(address, port, nonce)
             details["properties"] = {
@@ -267,6 +288,23 @@ def run_pairing(ip: str, minutes: int) -> None:
                 print("FULL SHA-256 certificate fingerprint (copy to phone):")
                 print(fingerprint)
                 print("This fingerprint is generated fresh at every start.")
+                if qr:
+                    import qrcode
+                    assert ticket is not None and expires_at is not None
+                    payload = create_invitation(
+                        address, port, fingerprint, expires_at, ticket,
+                    )
+                    image_file = Path(folder) / "chappy-pair-invite.png"
+                    qrcode.make(payload).save(str(image_file))
+                    print("QR invitation: one-time, expires this session.")
+                    print("Image: " + str(image_file))
+                    if os.name == "nt":
+                        try:
+                            os.startfile(str(image_file))
+                        except OSError as error:
+                            print("Open the QR image manually: " + str(error))
+                    else:
+                        print("Open the QR image manually on this PC.")
                 print("Your PC must separately approve one phone request.")
                 print("Auto-stop: " + str(minutes) + " min. Ctrl+C stops.")
                 deadline = time.monotonic() + minutes * 60
