@@ -1,9 +1,9 @@
 """Chappy Companion: opt-in Windows LAN discovery beacon (no PC control).
 
-Starts only with --start. Advertises a fresh, nonpersistent DNS-SD identity
-for up to 30 minutes, with an inert TCP endpoint that never reads or sends
-application data. There is no pairing, command execution, packet capture,
-file transfer, credential store, or background service in this build.
+Starts only with --start. Default is still an inert DNS-SD beacon.
+With explicit --pair, exposes one pinned-TLS PC-approved confirmation exchange;
+it grants no persistent device trust, command execution, packet capture,
+file transfer, credential store, or background service.
 """
 
 from __future__ import annotations
@@ -103,6 +103,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--ip", help="Private IPv4 of this PC's selected Wi-Fi/LAN adapter",
     )
     parser.add_argument(
+        "--pair", action="store_true",
+        help="Use short-lived, fingerprint-verified TLS PC approval instead of an inert beacon",
+    )
+    parser.add_argument(
         "--minutes", type=int, default=DEFAULT_MINUTES,
         help="Automatic stop after 1–30 minutes (default: 10)",
     )
@@ -163,7 +167,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         address = validate_lan_ipv4(args.ip) if args.ip else discover_local_ipv4()
-        run_beacon(address, args.minutes)
+        if args.pair:
+            from pairing_server import run_pairing
+            run_pairing(address, args.minutes)
+        else:
+            run_beacon(address, args.minutes)
         return 0
     except KeyboardInterrupt:
         print("\nStopped by user.")

@@ -30,6 +30,10 @@ class LanDiscoveryClient {
     return LanDiscoverySnapshot.fromWire(result);
   }
 
+  /// Host-only capability check; denies background, non-LAN and target 37+.
+  Future<bool> pairingAllowed() async =>
+      await _channel.invokeMethod<bool>('pairingAllowed') == true;
+
   Future<LanDiscoverySnapshot> stop() async {
     final result = await _channel.invokeMapMethod<String, dynamic>('stop');
     return LanDiscoverySnapshot.fromWire(result);

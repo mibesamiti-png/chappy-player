@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:chappy_player/core/lan_discovery_client.dart';
+import 'package:chappy_player/screens/companion_pairing_page.dart';
+import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:flutter/material.dart';
 
 /// Trusted host UI: never grants arbitrary mini-apps LAN discovery or access.
@@ -155,6 +157,29 @@ class _NetworkLabPageState extends State<NetworkLabPage>
     }
   }
 
+  Future<void> _openPairing(LanDiscoveredService service) async {
+    if (_busy || !CompanionPairingClient.isPrivateIpv4(service.address) ||
+        service.port < 1 || service.port > 65535 || !mounted) {
+      return;
+    }
+    _epoch++;
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    try {
+      await widget.client.stop();
+    } catch (_) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _snapshot = null);
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => CompanionPairingPage(
+        service: service,
+        discoveryClient: widget.client,
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final services = _snapshot?.services ?? const <LanDiscoveredService>[];
@@ -256,6 +281,20 @@ class _NetworkLabPageState extends State<NetworkLabPage>
                     '${service.port > 0 ? ':${service.port}' : ''}',
                   ),
                   isThreeLine: true,
+                  trailing: service.type == '_workstation._tcp.' &&
+                          service.name.startsWith('Chappy PC ') &&
+                          service.resolved &&
+                          CompanionPairingClient.isPrivateIpv4(service.address) &&
+                          service.port > 0
+                      ? const Icon(Icons.verified_user_outlined)
+                      : null,
+                  onTap: service.type == '_workstation._tcp.' &&
+                          service.name.startsWith('Chappy PC ') &&
+                          service.resolved &&
+                          CompanionPairingClient.isPrivateIpv4(service.address) &&
+                          service.port > 0
+                      ? () => _openPairing(service)
+                      : null,
                 ),
               ),
             ),

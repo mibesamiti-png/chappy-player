@@ -233,6 +233,10 @@ class MainActivity : FlutterActivity() {
                     "snapshot" -> {
                         result.success(networkDiscovery.snapshot())
                     }
+                    "pairingAllowed" -> {
+                        result.success(micActivityVisible &&
+                            networkDiscovery.pairingAllowed())
+                    }
                     "stop" -> {
                         result.success(networkDiscovery.stop())
                     }
