@@ -33,6 +33,14 @@ def validated_packet(raw):
         if not isinstance(room, str) or not re.fullmatch(r"[a-z0-9_-]{1,20}", room):
             raise ValueError("Room must be 1-20 simple characters")
         return {"type": "join", "room": room}
+    if kind == "gravity":
+        values = packet.get("values")
+        if not isinstance(values, list) or len(values) != 3:
+            raise ValueError("Gravity needs X/Y/Z")
+        if any(isinstance(v, bool) or not isinstance(v, (int, float)) or
+               not -30 <= v <= 30 for v in values):
+            raise ValueError("Gravity values out of range")
+        return {"type": "gravity", "values": [round(float(v), 3) for v in values]}
     if kind == "state":
         axes = packet.get("position")
         if not isinstance(axes, dict) or set(axes) != {"x", "y"}:
@@ -45,7 +53,7 @@ def validated_packet(raw):
                 raise ValueError("Position must be bounded numbers")
             normalized[axis] = round(float(value), 3)
         return {"type": "state", "position": normalized}
-    raise ValueError("Only ping, join and state messages are supported")
+    raise ValueError("Only ping, join, gravity and state messages are supported")
 
 
 async def handler(socket):
@@ -69,6 +77,10 @@ async def handler(socket):
                 continue
             if packet["type"] == "ping":
                 await socket.send(json.dumps({"type": "pong"}))
+            elif packet["type"] == "gravity":
+                await socket.send(json.dumps({
+                    "type": "gravity_ack", "values": packet["values"]
+                }))
             elif packet["type"] == "join":
                 new_room = packet["room"]
                 members = ROOMS[new_room]
