@@ -135,7 +135,9 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             future.addListener({
                 if (requestToken != token || state != "initializing" ||
                     registry.currentState != Lifecycle.State.RESUMED) {
-                    if (state == "initializing") { state = "idle" }
+                    if (requestToken == token && state == "initializing") {
+                        state = "idle"
+                    }
                     temp?.delete()
                     result.error("VIDEO_CANCELLED", "Camera request was cancelled", null)
                     return@addListener
@@ -177,7 +179,9 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
                     recording = session.start(ContextCompat.getMainExecutor(activity)) { event ->
                         when (event) {
                             is VideoRecordEvent.Start -> {
-                                if (state == "starting") state = "recording"
+                                if (state == "starting" || state == "initializing") {
+                                    state = "recording"
+                                }
                             }
                             is VideoRecordEvent.Status -> {
                                 elapsedMs = event.recordingStats.recordedDurationNanos / 1000000L
@@ -286,8 +290,8 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         val attrs = window.attributes
         if (enabled) {
             originalBrightness = attrs.screenBrightness
-            originalKeepOn = window.attributes.flags and
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON != 0
+            originalKeepOn = (window.attributes.flags and
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) != 0
             attrs.screenBrightness = 0.01f
             window.attributes = attrs
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
