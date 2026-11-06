@@ -132,5 +132,31 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   window.__chappyResolve({requestId:sent[22].requestId,ok:true,
     value:{available:true,values:[0,9.8,0]}});
   assert.equal((await gravity).values[1],9.8);
-  console.log('Bridge smoke tests passed: safe media/files and game motion/haptic availability');
+  const ws=window.Chappy.network.connect('wss://game.example.org/play');
+  assert.equal(sent[23].method,'network.connect');
+  assert.equal(sent[23].params.url,'wss://game.example.org/play');
+  window.__chappyResolve({requestId:sent[23].requestId,ok:true,
+    value:{connected:true,origin:'wss://game.example.org:443'}});
+  assert.equal((await ws).connected,true);
+  const send=window.Chappy.network.send('{"hello":1}');
+  assert.equal(sent[24].method,'network.send');
+  assert.equal(sent[24].params.text,'{"hello":1}');
+  window.__chappyResolve({requestId:sent[24].requestId,ok:true,value:true});
+  assert.equal(await send,true);
+  const poll=window.Chappy.network.poll();
+  assert.equal(sent[25].method,'network.poll');
+  window.__chappyResolve({requestId:sent[25].requestId,ok:true,
+    value:{connected:true,messages:['{"welcome":true}'],dropped:0}});
+  assert.equal((await poll).messages[0],'{"welcome":true}');
+  const http=window.Chappy.network.request('https://game.example.org/state','GET','');
+  assert.equal(sent[26].method,'network.request');
+  assert.equal(sent[26].params.url,'https://game.example.org/state');
+  window.__chappyResolve({requestId:sent[26].requestId,ok:true,
+    value:{status:200,text:'{"players":1}'}});
+  assert.equal((await http).status,200);
+  const close=window.Chappy.network.close();
+  assert.equal(sent[27].method,'network.close');
+  window.__chappyResolve({requestId:sent[27].requestId,ok:true,value:true});
+  assert.equal(await close,true);
+  console.log('Bridge smoke tests passed: game motion/haptics and permission-gated HTTPS/WSS protocol');
 })().catch(err => { console.error(err); process.exit(1); });
