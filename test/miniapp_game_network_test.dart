@@ -58,7 +58,7 @@ void main() {
         '224.0.0.1', '::1', 'fe80::1', 'fd00::123',
         '2001:db8::1', '2001:2::1', '2002:c000:0201::1',
         '3fff::1', '3f00::1', '2d00::1', '2000::1',
-        '2600:ffff::1', '2400:ffff::1',
+        '2640:ffff::1', '2420:ffff::1',
       ]) {
         expect(GameNetworkPolicy.isPublicAddress(InternetAddress(ip)),
             false, reason: ip);
