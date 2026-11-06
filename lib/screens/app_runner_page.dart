@@ -536,6 +536,43 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     }
   }
 
+  /// Native SAF transports binary file bytes; JS only gets opaque handles.
+  Future<Map<String, dynamic>> _importBinaryAsset() async {
+    await _approveNativeCapability('files', 'ファイルの選択・保存');
+    final result = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'importBinaryAsset', {'owner': widget.app.id});
+    return Map<String, dynamic>.from(result ?? const {'status': 'cancelled'});
+  }
+
+  Future<List<Map<String, dynamic>>> _listBinaryAssets() async {
+    await _approveNativeCapability('files', 'ファイルの選択・保存');
+    final values = await _mediaChannel.invokeListMethod<dynamic>(
+        'listBinaryAssets', {'owner': widget.app.id});
+    return (values ?? const [])
+        .map((entry) => Map<String, dynamic>.from(entry as Map)).toList();
+  }
+
+  Future<Map<String, dynamic>> _exportBinaryAsset(Map<String, dynamic> params) async {
+    final id = params['id'];
+    if (id is! String || !RegExp(r'^[a-f0-9]{32}$').hasMatch(id)) {
+      throw const FormatException('Invalid asset ID');
+    }
+    await _approveNativeCapability('files', 'ファイルの選択・保存');
+    final result = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'exportBinaryAsset', {'owner': widget.app.id, 'id': id});
+    return Map<String, dynamic>.from(result ?? const {'status': 'cancelled'});
+  }
+
+  Future<bool> _deleteBinaryAsset(Map<String, dynamic> params) async {
+    final id = params['id'];
+    if (id is! String || !RegExp(r'^[a-f0-9]{32}$').hasMatch(id)) {
+      throw const FormatException('Invalid asset ID');
+    }
+    await _approveNativeCapability('files', 'ファイルの選択・保存');
+    return await _mediaChannel.invokeMethod<bool>(
+        'deleteBinaryAsset', {'owner': widget.app.id, 'id': id}) ?? false;
+  }
+
   Future<Map<String, dynamic>> _pickDocumentText() async {
     await _approveNativeCapability('files', 'ファイルの選択・保存');
     final data = await _mediaChannel.invokeMapMethod<String, dynamic>(
@@ -940,6 +977,18 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           break;
         case 'video.restoreZip':
           value = await _restorePrivateVideosZip();
+          break;
+        case 'files.importAsset':
+          value = await _importBinaryAsset();
+          break;
+        case 'files.listAssets':
+          value = await _listBinaryAssets();
+          break;
+        case 'files.exportAsset':
+          value = await _exportBinaryAsset(params);
+          break;
+        case 'files.deleteAsset':
+          value = await _deleteBinaryAsset(params);
           break;
         case 'files.pickText':
           value = await _pickDocumentText();

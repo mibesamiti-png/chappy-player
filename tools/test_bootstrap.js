@@ -77,5 +77,26 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   window.__chappyResolve({requestId: sent[12].requestId, ok: true,
     value: {status: 'restored', restored: 2, skipped: 1, total: 3}});
   assert.equal((await restore).restored, 2);
-  console.log('Bridge smoke tests passed: storage, media, SAF, bounded ZIP backup and explicit ZIP restore');
+  const importAsset = window.Chappy.files.importAsset();
+  assert.equal(sent[13].method,'files.importAsset');
+  window.__chappyResolve({requestId:sent[13].requestId,ok:true,
+    value:{status:'imported',file:{id:'0123456789abcdef0123456789abcdef',
+      name:'project.blend',sizeBytes:2048}}});
+  assert.equal((await importAsset).file.name,'project.blend');
+  const listed = window.Chappy.files.listAssets();
+  assert.equal(sent[14].method,'files.listAssets');
+  window.__chappyResolve({requestId:sent[14].requestId,ok:true,
+    value:[{id:'0123456789abcdef0123456789abcdef',name:'project.blend'}]});
+  assert.equal((await listed)[0].name,'project.blend');
+  const exported = window.Chappy.files.exportAsset('0123456789abcdef0123456789abcdef');
+  assert.equal(sent[15].method,'files.exportAsset');
+  assert.equal(sent[15].params.id,'0123456789abcdef0123456789abcdef');
+  window.__chappyResolve({requestId:sent[15].requestId,ok:true,
+    value:{status:'saved',sizeBytes:2048}});
+  assert.equal((await exported).status,'saved');
+  const deleted = window.Chappy.files.deleteAsset('0123456789abcdef0123456789abcdef');
+  assert.equal(sent[16].method,'files.deleteAsset');
+  window.__chappyResolve({requestId:sent[16].requestId,ok:true,value:true});
+  assert.equal(await deleted,true);
+  console.log('Bridge smoke tests passed: storage, media, SAF, ZIP and scoped binary file vault');
 })().catch(err => { console.error(err); process.exit(1); });

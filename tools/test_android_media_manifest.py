@@ -38,7 +38,7 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
                  "NativeMicCapture.kt", "NativeVideoRecorder.kt",
                  "NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
-                 "NativeVideoZipRestore.kt"]:
+                 "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt"]:
         (templates / name).write_bytes(
             (PROJECT / "tools/android" / name).read_bytes()
         )
@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     ).read_bytes()
     for name in ("NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
-                 "NativeVideoZipRestore.kt"):
+                 "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt"):
         copied = native_class.with_name(name)
         assert copied.read_bytes() == (PROJECT / "tools/android" / name).read_bytes()
     gradle_text = gradle.read_text(encoding="utf-8")

@@ -23,7 +23,7 @@ The player's WebView CSP `connect-src 'none'` and local-only server remain uncha
 ## Phase 2 — generic file import/export
 
 - **NATIVE-FILES-02 (implemented in source, device QA pending):** `Chappy.files.pickText()` and `Chappy.files.saveText(name, text)` for user-picked UTF-8 documents via Android SAF; initial 64KiB read / 32KiB JS write limits. Uses a dedicated `files` manifest capability and first-use consent. See `docs/native-saf-text-file-io.md`.
-- NATIVE-FILES-02B (not implemented): streamed handles for large audio, video, binary and ZIP files, instead of passing contents through JavaScript messages.
+- **NATIVE-FILES-02B (implemented in source, Android device QA pending):** Scoped binary asset vault for user-picked ZIP/audio/images/3D data via `Chappy.files.importAsset/listAssets/exportAsset/deleteAsset`; opaque handles, 256MiB/file, 512MiB/app and 32 files/app, streaming SHA-256 import and verified export. See `docs/native-binary-asset-vault.md`.
 - NATIVE-FILES-03: per-app project export/import with manifest version and checksum; clear error/recovery behavior, no silent overwrite, no bulk private storage exposure.
 - NATIVE-FILES-04: optional directory export and batch backup with Android SAF `ACTION_OPEN_DOCUMENT_TREE`, only for user-chosen directories and explicit selection. Verify all files and show progress.
 
