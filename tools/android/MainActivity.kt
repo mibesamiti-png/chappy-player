@@ -35,10 +35,12 @@ class MainActivity : FlutterActivity() {
     private val backupChannel = "dev.chappy.player/backup_export"
     private val externalChannelName = "dev.chappy.player/external_chappy"
     private val mediaChannelName = "dev.chappy.player/media_permissions"
+    private val networkLabChannelName = "dev.chappy.player/network_lab"
     private val mediaPermissionRequestCode = 0x44FA
     private val nativeMic = NativeMicCapture()
     private val nativeVideo = NativeVideoRecorder(this)
     private val miniDevices = NativeMiniAppDevices(this)
+    private val networkDiscovery = NativeNetworkDiscovery(this)
     private val videoExporter = NativeVideoExport(this)
     private val zipBackup = NativeVideoZipBackup(this)
     private val zipRestore = NativeVideoZipRestore(this)
@@ -62,11 +64,13 @@ class MainActivity : FlutterActivity() {
         micActivityVisible = true
         nativeVideo.onResume()
         miniDevices.onResume()
+        networkDiscovery.onResume()
     }
 
     override fun onPause() {
         micActivityVisible = false
         miniDevices.onPause()
+        networkDiscovery.onPause()
         nativeMic.stop()
         nativeVideo.onPause()
         super.onPause()
@@ -75,6 +79,7 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         nativeMic.stop()
         miniDevices.onDestroy()
+        networkDiscovery.onDestroy()
         videoExporter.onDestroy()
         zipBackup.onDestroy()
         zipRestore.onDestroy()
@@ -206,6 +211,34 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+        // Trusted Flutter host UI only; never exposed in the untrusted
+        // .chappy JavaScript bridge. Every scan needs user confirmation in UI.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, networkLabChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        if (!micActivityVisible) {
+                            result.error("NETLAB_NOT_FOREGROUND",
+                                "Network discovery needs a visible player", null)
+                        } else {
+                            try {
+                                val kind = call.argument<String>("serviceType") ?: ""
+                                result.success(networkDiscovery.start(kind))
+                            } catch (error: Exception) {
+                                result.error("NETLAB_START_DENIED",
+                                    error.message ?: "Discovery unavailable", null)
+                            }
+                        }
+                    }
+                    "snapshot" -> {
+                        result.success(networkDiscovery.snapshot())
+                    }
+                    "stop" -> {
+                        result.success(networkDiscovery.stop())
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         mediaControlChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannelName)
         mediaControlChannel?.setMethodCallHandler { call, result ->
                 when (call.method) {

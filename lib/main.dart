@@ -10,6 +10,7 @@ import 'package:chappy_player/core/package_repository.dart';
 import 'package:chappy_player/screens/app_runner_page.dart';
 import 'package:chappy_player/screens/chappy_catalog_page.dart';
 import 'package:chappy_player/screens/logs_page.dart';
+import 'package:chappy_player/screens/network_lab_page.dart';
 import 'package:chappy_player/screens/player_update_page.dart';
 import 'package:chappy_player/screens/self_check_page.dart';
 import 'package:file_picker/file_picker.dart';
@@ -416,6 +417,15 @@ class _HomePageState extends State<HomePage> {
               )),
             ),
             icon: const Icon(Icons.system_update_alt_outlined),
+          ),
+          IconButton(
+            tooltip: 'Network Lab（LANサービス発見）',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const NetworkLabPage(),
+              ),
+            ),
+            icon: const Icon(Icons.lan_outlined),
           ),
           IconButton(
             tooltip: '端末セルフチェック',

@@ -24,7 +24,10 @@ if not any(el.get(permission) == 'android.permission.INTERNET' for el in root.fi
 # This is a normal Android manifest permission, NOT a .chappy capability;
 # never expose raw AudioManager controls to untrusted mini-app JavaScript.
 for name in ('android.permission.CAMERA', 'android.permission.RECORD_AUDIO',
-             'android.permission.MODIFY_AUDIO_SETTINGS', 'android.permission.VIBRATE'):
+             'android.permission.MODIFY_AUDIO_SETTINGS', 'android.permission.VIBRATE',
+             # Normal permissions; NSD runs only after the user starts a scan.
+             'android.permission.ACCESS_NETWORK_STATE',
+             'android.permission.CHANGE_WIFI_MULTICAST_STATE'):
     if not any(item.get(permission) == name for item in root.findall('uses-permission')):
         root.insert(0, ET.Element('uses-permission', {permission: name}))
 # Camera/microphone are optional hardware; don't exclude devices without them.
@@ -172,7 +175,8 @@ print('Installed foreground-only native video recorder (private by default)')
 # vibration has native rate limits. Private MP4 export requires SAF picker.
 for filename in ('NativeMiniAppDevices.kt', 'NativeVideoExport.kt',
                  'NativeMiniAppDocuments.kt', 'NativeVideoZipBackup.kt',
-                 'NativeVideoZipRestore.kt', 'NativeMiniAppAssets.kt'):
+                 'NativeVideoZipRestore.kt', 'NativeMiniAppAssets.kt',
+                 'NativeNetworkDiscovery.kt'):
     source = Path('tools/android') / filename
     if not source.is_file():
         raise SystemExit(f'Missing native mini-app capability host: {filename}')
