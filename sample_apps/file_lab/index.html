@@ -17,6 +17,8 @@ button{margin:4px 8px 4px 0;background:#34577e;color:#fff;
 border:1px solid #6593c5;border-radius:11px;padding:12px 15px;cursor:pointer}
 button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
 #status{white-space:pre-wrap;overflow-wrap:anywhere;color:#c6dcfa;min-height:26px}
+#assetProgressBar{display:block;width:100%;height:14px;margin:8px 0}
+#assetTransferLabel{font-size:13px;color:#b8d0f2;margin:7px 0}
 .asset-row{margin:9px 0;padding:12px;background:#0e1725;border:1px solid #334b69;border-radius:12px}
 .asset-name{font-size:14px;overflow-wrap:anywhere;font-weight:600}
 .asset-meta{font-size:12px;color:#a5b8d2;margin:5px 0}
@@ -46,8 +48,11 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
 <p>ZIP・音声・画像・3Dファイルなどを、ミニアプリだけの非公開保管庫に取り込めます。</p>
 <button id="importAsset">ファイルを取り込む</button>
 <button id="listAssets">保管ファイル一覧を更新</button>
+<button id="cancelAssetTransfer" type="button" disabled>転送をキャンセル</button>
+<progress id="assetProgressBar" max="100" value="0"></progress>
+<p id="assetTransferLabel" role="status" aria-live="polite">転送待機中</p>
 <div id="assetList" aria-live="polite">「ファイル一覧を更新」で表示します。</div>
-<small>1ファイル最大256MiB、合計512MiB・32ファイルまで。取り込み元は変更せず、書き出し先は毎回Androidで選択します。ミニアプリの削除やデータ消去で保管庫も消えるので、必要なファイルは書き出してください。</small>
+<small>1ファイル最大256MiB、合計512MiB・32ファイルまで。転送中は処理量を表示し、キャンセルもできます。取り込み元は変更せず、書き出し先は毎回Androidで選択します。ミニアプリの削除やデータ消去で保管庫も消えるので、必要なファイルは書き出してください。</small>
 </section>
 <script>
 (() => {
@@ -61,6 +66,62 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
     try{await fn();}catch(error){status('エラー：'+String(error.message || error));}
     finally{button.disabled=false;}
   }
+  let transferBusy=false;
+  let transferPollToken=0;
+  function formatBytes(bytes){
+    return (Math.max(0,Number(bytes)||0)/1048576).toFixed(1)+' MiB';
+  }
+  function updateAssetProgress(info){
+    if(!transferBusy || !info || !info.active)return;
+    const done=Number(info.bytesDone)||0;
+    const total=Number(info.totalBytes)||-1;
+    const phases={picker:'ファイル選択待ち',copying:'転送中',
+      verifying:'保存データの照合中',finalizing:'保存を確定中'};
+    const detail=total>0 ? formatBytes(done)+' / '+formatBytes(total) :
+      formatBytes(done)+' / サイズ不明';
+    $('assetTransferLabel').textContent=(phases[info.phase]||'処理中')+
+      '：'+detail+(info.cancelRequested?'（中断処理中）':'');
+    $('assetProgressBar').value=total>0 ?
+      Math.min(100,Math.round(done/total*100)):0;
+    $('cancelAssetTransfer').disabled=!info.cancelable||!!info.cancelRequested;
+  }
+  async function monitoredTransfer(task){
+    if(transferBusy)throw new Error('別のファイル転送が進行中です');
+    if(!files || typeof files.transferStatus!=='function')
+      throw new Error('進捗表示に対応する新しいプレイヤーが必要です');
+    transferBusy=true;
+    const token=++transferPollToken;
+    $('assetTransferLabel').textContent='Androidのファイル選択画面を開きます…';
+    $('assetProgressBar').value=0;
+    $('cancelAssetTransfer').disabled=true;
+    const poll=()=>{
+      void files.transferStatus().then(info=>{
+        if(transferBusy&&token===transferPollToken)updateAssetProgress(info);
+      }).catch(()=>{});
+    };
+    const timer=setInterval(poll,350);
+    try{
+      poll();
+      return await task();
+    }finally{
+      clearInterval(timer);
+      transferBusy=false;
+      transferPollToken++;
+      $('assetProgressBar').value=0;
+      $('assetTransferLabel').textContent='転送待機中';
+      $('cancelAssetTransfer').disabled=true;
+    }
+  }
+  $('cancelAssetTransfer').addEventListener('click',()=>{
+    void operation($('cancelAssetTransfer'),async()=>{
+      if(!transferBusy)return;
+      const ok=await files.cancelTransfer();
+      if(ok){
+        $('assetTransferLabel').textContent='キャンセル処理中…';
+        $('cancelAssetTransfer').disabled=true;
+      }else status('転送中のみキャンセルできます');
+    });
+  });
   async function refreshAssetList() {
     if(!files || typeof files.listAssets !== 'function')
       throw new Error('バイナリ保管庫に対応した新しいプレイヤーが必要です');
@@ -86,7 +147,8 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
       exportButton.textContent='書き出し';
       exportButton.addEventListener('click',()=>{
         void operation(exportButton,async()=>{
-          const result=await files.exportAsset(file.id);
+          const result=await monitoredTransfer(
+            ()=>files.exportAsset(file.id));
           status(result.status==='saved' ?
             'ファイルを書き出して照合しました：'+file.name :
             '書き出しをキャンセルしました');
@@ -114,7 +176,7 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
     void operation($('importAsset'),async()=>{
       if(!files || typeof files.importAsset!=='function')
         throw new Error('バイナリ保管庫に対応した新しいプレイヤーが必要です');
-      const result=await files.importAsset();
+      const result=await monitoredTransfer(()=>files.importAsset());
       if(result.status==='imported'){
         status('取り込み完了：'+result.file.name);
         await refreshAssetList();
