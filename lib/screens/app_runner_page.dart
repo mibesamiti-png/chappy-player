@@ -598,6 +598,16 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         'playHaptic', {'effect': effect}) ?? false;
   }
 
+  Future<Map<String, dynamic>> _backupPrivateVideosZip() async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        !canRequestChappyMedia(widget.app.permissions, ['camera'])) {
+      throw StateError('Private video backup requires a foreground camera-enabled mini-app');
+    }
+    final output = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'backupPrivateVideosZip', {'owner': widget.app.id});
+    return Map<String, dynamic>.from(output ?? const {'status': 'cancelled'});
+  }
+
   Future<Map<String, dynamic>> _exportPrivateVideo(
       Map<String, dynamic> params) async {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
@@ -913,6 +923,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           break;
         case 'video.export':
           value = await _exportPrivateVideo(params);
+          break;
+        case 'video.backupZip':
+          value = await _backupPrivateVideosZip();
           break;
         case 'files.pickText':
           value = await _pickDocumentText();
