@@ -58,9 +58,13 @@ class CompanionPairingClient {
     required int port,
     required String fingerprint,
     required String nonce,
+    String? invitation,
   }) async {
     validateTarget(ip, port, fingerprint);
     confirmationCode(nonce);
+    if (invitation != null && !RegExp(r'^[0-9a-f]{32}$').hasMatch(invitation)) {
+      throw const FormatException('QR招待IDが不正です');
+    }
     if (_socket != null) throw StateError('すでに接続確認中です');
     _cancelled = false;
     final pin = normalizeFingerprint(fingerprint);
@@ -79,9 +83,14 @@ class CompanionPairingClient {
       if (cert == null || sha256.convert(cert.der).toString() != pin) {
         throw const HandshakeException('PCの証明書指紋が一致しません');
       }
-      final body = utf8.encode(jsonEncode(<String, String>{
-        'protocol': 'pair-preview-v1', 'nonce': nonce,
-      }));
+      final payload = <String, String>{
+        'protocol': invitation == null ? 'pair-preview-v1' : 'pair-qr-v2',
+        'nonce': nonce,
+      };
+      if (invitation != null) {
+        payload['invitation'] = invitation;
+      }
+      final body = utf8.encode(jsonEncode(payload));
       final header =
           'POST /v1/pair-preview HTTP/1.1\r\n'
           'Host: $ip:$port\r\n'
@@ -95,7 +104,7 @@ class CompanionPairingClient {
       final response = await _readBounded(socket)
           .timeout(const Duration(seconds: 35));
       if (_cancelled) throw StateError('確認がキャンセルされました');
-      return _validateReply(response, nonce);
+      return _validateReply(response, nonce, invitation != null);
     } finally {
       socket?.destroy();
       if (identical(_socket, socket)) _socket = null;
@@ -113,7 +122,9 @@ class CompanionPairingClient {
     return bytes;
   }
 
-  static bool _validateReply(List<int> bytes, String nonce) {
+  static bool _validateReply(
+    List<int> bytes, String nonce, bool qrMode,
+  ) {
     final raw = utf8.decode(bytes);
     final split = raw.indexOf('\r\n\r\n');
     if (split < 0 || split > 1024) {
@@ -138,7 +149,7 @@ class CompanionPairingClient {
     }
     final parsed = jsonDecode(reply);
     if (parsed is! Map || parsed['status'] != 'approved' ||
-        parsed['protocol'] != 'pair-preview-v1' ||
+        parsed['protocol'] != (qrMode ? 'pair-qr-v2' : 'pair-preview-v1') ||
         parsed['nonce'] != nonce) {
       throw const FormatException('PCからの承認結果が不正です');
     }

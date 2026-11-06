@@ -9,12 +9,13 @@ if not exist "ChappyCompanion.exe" (
 )
 echo WARNING: This is a preview for a private LAN you own or manage.
 echo The PC will advertise itself and temporarily accept a PINNED TLS connection.
-echo The app will display a fresh certificate fingerprint for your phone.
+echo The app will display a temporary QR and fresh certificate fingerprint.
 echo The phone must show the SAME six-character code before you type YES.
 echo No files or commands will be shared. Ctrl+C stops this console.
 echo.
 pause
-"ChappyCompanion.exe" --start --pair --minutes 10
+chcp 65001 >nul
+"ChappyCompanion.exe" --start --pair --qr --minutes 10
 echo.
 echo PC confirmation preview is stopped.
 pause
