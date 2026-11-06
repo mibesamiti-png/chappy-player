@@ -428,7 +428,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         if (_darkPollBusy || !mounted) return;
         _darkPollBusy = true;
         unawaited(_nativeVideoStatus().catchError((Object _) => <String, dynamic>{})
-            .whenComplete(() => _darkPollBusy = false));
+            .whenComplete(() { _darkPollBusy = false; }));
       });
     }
     return _videoDark;
