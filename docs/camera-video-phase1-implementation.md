@@ -44,3 +44,12 @@ No hidden camera operation, covert background capture, disable-OS-indicator feat
 - System volume keys behave normally outside dark mode. Android lock screen, background and activity pause still stop the recording and restore brightness. Hardware shortcut interception is device-dependent and needs Xiaomi Android 14 testing.
 - Private video list has **play** and **delete**. Every deletion requires a host-controlled, explicit confirmation, validates owning mini-app ID and a basename-only MP4 ID, allows deletion only when recorder is idle, and cannot be undone. MediaStore/gallery videos are not included in this private delete API.
 - Media Lab Debug version is **v0.1.5**, not a production APK release. Verify CI on the exact branch head, ensure `Chappy Player Debug` installs alongside the existing signed v0.2.4, then test physical volume buttons, 10-second capture, file finalization, green dot, double-tap recovery, private playback and confirmed deletion. Do not uninstall existing production app or publish a signed release without explicit instruction.
+
+## Dark recorder UX update (Debug Media Lab v0.1.6)
+
+- "暗転モードで録画" directly starts the current chosen capture with user confirmation and enters dark mode; the separate normal start remains.
+- While dark, Flutter requests Android immersive-sticky mode: status and navigation bars hide until the user temporarily reveals them with an edge swipe. System camera/microphone indicators remain OS-controlled.
+- The foreground dark session retains its **explicit initial video approval**, bound to the current mini-app and exact audio/camera/quality/storage options. Hardware Volume Up restarts after a successful finalization without re-opening the host dialog; **Android runtime camera/mic permissions are checked on every start**.
+- Volume Down stops, the upper-right 8px LED is green only after native MP4 finalization, and double-tap near the LED leaves dark mode and invalidates the approval. App backgrounding/exit also invalidates it. A new session again requires explicit approval.
+- Background/locked screen recording, automatic recording without a foreground user action, and disabling Android OS privacy indicators remain unsupported. Existing private-library playback and confirmation-gated deletion are unchanged.
+- Needs Android 14 real-device checks: bars reveal via swipe, hardware keys don't change volume during dark mode, start/stop/restart does not prompt again until the dark session ends, consent is never reused after app switch, native MP4 finalizes before the green LED.

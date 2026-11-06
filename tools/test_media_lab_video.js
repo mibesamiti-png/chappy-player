@@ -19,6 +19,12 @@ function newElement(id) {
     getContext(){return {fillRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}};},
     pause(){}, play(){return Promise.resolve();}, focus(){}, select(){}
   };
+  // Match real DOM behavior: assigning textContent removes previous children.
+  let currentText = '';
+  Object.defineProperty(element, 'textContent', {
+    get() { return currentText; },
+    set(value) { currentText = String(value); element.children = []; }
+  });
   return element;
 }
 function get(id) {if (!nodes.has(id))nodes.set(id,newElement(id));return nodes.get(id);}
@@ -56,8 +62,10 @@ const video = {
 const window = {Chappy:{video, microphone:{
   async start(){return {running:false}},async levels(){return {running:false}},
   async stop(){return true;}},log:()=>Promise.resolve()},addEventListener:()=>{}};
+let videoPollCallback = null;
 const ctx={document,window,Chappy:window.Chappy,navigator:{clipboard:{writeText:async()=>{}}},
-  setInterval:()=>21,clearInterval:()=>{},setTimeout:()=>1,clearTimeout:()=>{},
+  setInterval:(callback)=>{videoPollCallback=callback;return 21;},
+  clearInterval:()=>{},setTimeout:()=>1,clearTimeout:()=>{},
   requestAnimationFrame:()=>1,cancelAnimationFrame:()=>{},Uint8Array};
 vm.runInNewContext(found[1],ctx,{timeout:2000});
 const click = id=>{
@@ -80,9 +88,18 @@ const settle = async()=>{
   assert.deepEqual(events.dark,[true]);
   await click('videoOff');await settle();
   assert.equal(events.stop,1);
-  // The real UI polls periodically; advance one poll by exposing the
-  // callback registered by the mock timer when possible.
   assert.equal(get('videoOff').disabled,true);
+  // Once the old MP4 is finalized, the button must be available directly
+  // from idle: one tap both starts CameraX and enters dark mode.
+  assert.equal(typeof videoPollCallback,'function');
+  videoPollCallback();await settle();
+  assert.equal(get('videoDark').disabled,false);
+  await click('videoDark');await settle();
+  assert.equal(events.videoStart.length,2);
+  assert.deepEqual(events.dark,[true,true]);
+  assert.equal(get('videoOff').disabled,false);
+  await click('videoOff');await settle();
+  videoPollCallback();await settle();
   await click('videoList');await settle();
   assert.equal(get('videoLibrary').children.length,1);
   const row=get('videoLibrary').children[0];
@@ -92,5 +109,5 @@ const settle = async()=>{
   await row.children[2].callback('click')();await settle();
   assert.deepEqual(events.remove,['Chappy_20261106_092500_001.mp4']);
   assert.match(get('videoLibrary').textContent,/プライベート動画はまだありません/);
-  console.log('Video UI smoke test passed: private MP4 dark mode, playback, confirmed delete and refreshed library');
+  console.log('Video UI smoke test passed: direct dark capture, normal start, playback, confirmed delete and refreshed library');
 })().catch(error=>{console.error(error);process.exit(1);});

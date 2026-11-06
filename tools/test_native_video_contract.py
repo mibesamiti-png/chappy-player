@@ -69,6 +69,15 @@ assert 'videoVolumeShortcut' in activity and 'videoVolumeShortcut' in dart
 assert '_darkSessionArmed' in dart
 assert 'onDoubleTap: () => unawaited(_setVideoDark(false))' in dart
 assert 'Colors.redAccent : Colors.greenAccent' in dart
+assert 'SystemUiMode.immersiveSticky' in dart
+assert 'SystemUiMode.edgeToEdge' in dart
+assert 'reuseDarkSessionConsent: true' in dart
+assert 'if (!canReuseDarkConsent)' in dart
+assert 'previous[\'audio\'] == audio' in dart
+assert 'if (!enabled) _darkSessionArmed = false' in dart
+assert '暗転モードで録画' in html
+assert 'startVideoRecording(true)' in html
+
 assert "Chappy.video.start(options)" in html
 assert "Chappy.video.list()" in html
 assert "Chappy.video.open(file.id)" in html
