@@ -52,6 +52,8 @@ jobs:
         run: python3 tools/test_update_feed.py
       - name: Public APK feed publisher safety smoke test
         run: python3 tools/test_publish_update_catalog.py
+      - name: Dedicated Debug release publishing safety checks
+        run: python3 tools/test_debug_release_flow.py
       - name: Media Lab JavaScript syntax and feature smoke test
         run: node tools/test_media_probe.js
       - name: Media Lab copyable diagnostics behavior smoke test
