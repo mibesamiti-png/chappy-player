@@ -45,8 +45,8 @@ if hashlib.sha256(cert.stdout).hexdigest() != pinned:
 def prop(value: str) -> str:
     if "\n" in value or "\r" in value:
         raise SystemExit("Invalid multiline signing secret")
-    return (value.replace("\\", "\\\\").replace("=", "\=")
-            .replace(":", "\:").replace("#", "\#").replace("!", "\!"))
+    return (value.replace("\\", "\\\\").replace("=", "\\=")
+            .replace(":", "\\:").replace("#", "\\#").replace("!", "\\!"))
 
 PROPERTY_FILE.write_text(
     "storePassword=" + prop(os.environ["CHAPPY_DEBUG_STORE_PASSWORD"]) + "\n" +
