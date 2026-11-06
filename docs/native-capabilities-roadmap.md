@@ -30,10 +30,10 @@ The player's WebView CSP `connect-src 'none'` and local-only server remain uncha
 
 ## Phase 3 — network and file transfers
 
-- NATIVE-NET-01: per-mini-app HTTPS request and authenticated WebSocket API for multiplayer games, realtime control and notifications. Require declared `network` permission, approved HTTPS/WSS origin allowlists, user-visible consent, TLS certificates, caps/timeouts and foreground/background lifecycle controls. Keep WebView remote `connect-src` disabled; expose requests through a rate-limited, scoped native broker.
+- **NATIVE-NET-01 (source candidate; CI and device QA pending):** Per-mini-app `Chappy.network.request/connect/send/poll/close` for bounded HTTPS GET/POST and WSS text messaging. Requires declared `network` permission, explicit per-origin user consent, verified TLS with public-IP-pinned DNS, rate/message limits and shutdown on background. Keeps WebView remote `connect-src` disabled. No automatic reconnect or credential storage yet. See `docs/game-server-transport.md`.
 - NATIVE-TRANSFER-01: SFTP (SSH) and/or FTPS file transfer, configured by the user for a chosen server. Prefer secure protocols; **plain FTP without encryption is not enabled** because it exposes credentials and file contents. Never embed passwords in public mini-apps or expose stored credentials to untrusted JS. Android KeyStore for credentials, explicit uploads, host key pinning for SFTP.
 - NATIVE-LAN-01: paired, authenticated Wi-Fi/LAN device connectivity and discovery for later smartphone↔PC integration. Require explicit pairing and mutual authorization, with user-friendly revoke.
-- NATIVE-GAME-01: multiplayer game transport on the shared HTTPS/WebSocket broker. Restrict remote messages to app-scoped protocol; server content must not execute arbitrary native device actions. Ideally server-authoritative state, latency metrics and reconnection.
+- **NATIVE-GAME-01 (protocol demo only):** Chappy Game Server Lab v0.1.0 preview + optional loopback-only Python ping/join/state room server (source only). Real multiplayer service, server-authoritative game simulation, user authentication, latency metrics, reconnection and production hosting remain **not implemented**. Remote data never executes native device actions.
 
 ## Phase 4 — PC companion and remote operations (deferred)
 
