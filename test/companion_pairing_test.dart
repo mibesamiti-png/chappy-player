@@ -45,11 +45,11 @@ void main() {
     }
     expect(
       CompanionPairingClient.normalizeFingerprint(
-        'AB:' * 31 + 'AB',
+        List<String>.filled(31, 'AB:').join() + 'AB',
       ),
-      'ab' * 32,
+      List<String>.filled(32, 'ab').join(),
     );
-    for (final badPin in ['', 'abc123', 'Z' * 64]) {
+    for (final badPin in ['', 'abc123', List<String>.filled(64, 'Z').join()]) {
       expect(
         () => CompanionPairingClient.validateTarget(
           '192.168.1.7', 49152, badPin,
@@ -59,13 +59,13 @@ void main() {
     }
     expect(
       () => CompanionPairingClient.validateTarget(
-        '8.8.8.8', 49152, 'a' * 64,
+        '8.8.8.8', 49152, List<String>.filled(64, 'a').join(),
       ),
       throwsFormatException,
     );
     expect(
       () => CompanionPairingClient.validateTarget(
-        '192.168.1.7', 0, 'a' * 64,
+        '192.168.1.7', 0, List<String>.filled(64, 'a').join(),
       ),
       throwsFormatException,
     );
