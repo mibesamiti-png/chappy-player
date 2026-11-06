@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:chappy_player/core/lan_discovery_client.dart';
 import 'package:chappy_player/screens/companion_pairing_page.dart';
+import 'package:chappy_player/screens/companion_qr_scan_page.dart';
+import 'package:chappy_player/core/companion_qr_invite.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:flutter/material.dart';
 
@@ -157,6 +159,48 @@ class _NetworkLabPageState extends State<NetworkLabPage>
     }
   }
 
+  Future<void> _scanPcQr() async {
+    if (!mounted || _busy) return;
+    try {
+      if (!await widget.client.pairingAllowed()) {
+        throw StateError('Wi-Fi接続中の前面画面のみ対応しています');
+      }
+      _epoch++;
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      await widget.client.stop();
+      if (!mounted) return;
+      setState(() => _snapshot = null);
+      final invitation = await Navigator.of(context).push<CompanionQrInvite>(
+        MaterialPageRoute<CompanionQrInvite>(
+          builder: (_) => const CompanionQrScanPage(),
+        ),
+      );
+      if (!mounted || invitation == null) return;
+      if (invitation.isExpired()) {
+        throw const FormatException('QRの期限が切れています');
+      }
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => CompanionPairingPage(
+          service: LanDiscoveredService(
+            id: 'qr-pc',
+            name: 'QRで読み取ったChappy PC',
+            type: '_workstation._tcp.',
+            address: invitation.ip,
+            port: invitation.port,
+            resolved: true,
+          ),
+          discoveryClient: widget.client,
+          invitation: invitation,
+        ),
+      ));
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = 'QR読み取りを開始できません: $error');
+      }
+    }
+  }
+
   Future<void> _openPairing(LanDiscoveredService service) async {
     if (_busy || !CompanionPairingClient.isPrivateIpv4(service.address) ||
         service.port < 1 || service.port > 65535 || !mounted) {
@@ -195,6 +239,19 @@ class _NetworkLabPageState extends State<NetworkLabPage>
             const Text(
               '機器が公開しているDNS-SDサービスだけを探します。'
               'すべてのWi-Fi端末を列挙する機能ではありません。',
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              key: const Key('netlab_scan_pc_qr'),
+              onPressed: _busy ? null : _scanPcQr,
+              icon: const Icon(Icons.qr_code_scanner_outlined),
+              label: const Text('PC画面のQRを読み取って接続確認'),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'QR方式ではLAN機器一覧に表示されなくても、'
+              '本人のPCが表示する期限付き招待から接続確認できます。',
+              style: TextStyle(fontSize: 12, color: Colors.white60),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
