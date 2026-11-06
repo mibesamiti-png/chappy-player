@@ -57,7 +57,8 @@ void main() {
         '192.0.0.77', '192.88.99.1',
         '224.0.0.1', '::1', 'fe80::1', 'fd00::123',
         '2001:db8::1', '2001:2::1', '2002:c000:0201::1',
-        '3fff::1',
+        '3fff::1', '3f00::1', '2d00::1', '2000::1',
+        '2600:ffff::1', '2400:ffff::1',
       ]) {
         expect(GameNetworkPolicy.isPublicAddress(InternetAddress(ip)),
             false, reason: ip);
@@ -68,6 +69,13 @@ void main() {
           InternetAddress('8.8.8.8')), true);
       expect(GameNetworkPolicy.isPublicAddress(
           InternetAddress('2001:4860:4860::8888')), true);
+      for (final ip in <String>[
+        '2402:1234::1', '2606:4700::1111',
+        '2800::1', '2a03::1', '2c00::1', '2003::1',
+      ]) {
+        expect(GameNetworkPolicy.isPublicAddress(InternetAddress(ip)),
+            true, reason: ip);
+      }
     });
     test('rejects mixed public/private DNS resolutions', () async {
       expect(
