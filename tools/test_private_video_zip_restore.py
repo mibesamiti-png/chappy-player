@@ -26,7 +26,7 @@ for signature in (
     "ZipInputStream", "Manifest", "manifest.json",
     "MAX_FILES = 100", "MAX_ENTRY_BYTES = 1024L * 1024 * 1024",
     "MAX_TOTAL_BYTES = 4L * 1024 * 1024 * 1024",
-    "MAX_MANIFEST_BYTES = 256 * 1024", "sourceFile",
+    "MAX_MANIFEST_BYTES = 256 * 1024",
     "Video content SHA-256 or size mismatch",
     "staging", "UUID.randomUUID()", "FileOutputStream(dest)",
     "entry.name != \"videos/\" + name",
@@ -36,9 +36,6 @@ for signature in (
     "state.unlockRecorder()", "setPositiveButton", "setNegativeButton",
     "ZIP contains excessive or directory entries",
 ):
-    # sourceFile is a deliberately non-required spelling, not a contract.
-    if signature == "sourceFile":
-        continue
     assert signature in native, signature
 
 for marker in (
@@ -110,10 +107,11 @@ for bad_payload, bad_manifest in [
     (content, {**manifest, "ownerId": "local.other.app"}),
     (content, {**manifest, "files": [{**manifest["files"][0], "sha256": "0" * 64}]}),
 ]:
+    rejected = False
     try:
         reference_validation(archive(bad_payload, bad_manifest))
-        raise AssertionError("Corrupt or cross-owner ZIP accepted")
     except (AssertionError, KeyError, ValueError):
-        pass
+        rejected = True
+    assert rejected, "Corrupt or cross-owner ZIP accepted"
 
 print("ZIP restore source boundary checks and fixture format tests passed")
