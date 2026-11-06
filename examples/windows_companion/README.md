@@ -53,3 +53,16 @@ Run `Start-ChappyPairing.cmd` instead of `Start-ChappyCompanion.cmd`, or execute
 The basic `Start-ChappyCompanion.cmd` is still discovery-only and cannot complete a TLS pairing request. **Do not treat a service name or short confirmation code as identity evidence without the full TLS fingerprint copied from the PC display.**
 
 Protocol details, Android 17 restrictions, threat model and QA: [NETLAB-03A one-session pinned TLS preview](../../docs/network-lab-session-pairing.md). Android APK source integration is not a published signed Android update. The preview EXE is also unsigned and needs owner-initiated local testing.
+
+
+## QR code invitation (NETLAB-03B-1 preview)
+
+The `Start-ChappyPairing.cmd` launcher now runs `ChappyCompanion.exe --start --pair --qr --minutes 10`. In this mode Windows displays a scannable **temporary QR code** in the console. Open Network Lab on Android, discover/select **Chappy PC ...**, tap **PCの招待QRをカメラで読み取る**, then aim at the QR on your *own physical PC screen*. The Android application refuses QR payloads with a different IP/port than the selected discovered PC.
+
+The QR encodes a private LAN IP/port, the full freshly generated TLS certificate fingerprint, a fresh 128-bit invitation identifier, and an expiry timestamp (maximum 10 minutes). It is a short-lived secret: don't publish screenshots. Android validates its format, time, pin and discovery endpoint before sending a one-shot TLS request. Windows rejects missing, wrong, expired and repeated identifiers before prompting the PC user for the separate **YES** approval. The 6-character comparison code must still match on both devices.
+
+For older builds without a QR reader, the legacy **manual fingerprint-only** preview is still available using `ChappyCompanion.exe --start --pair --minutes 10` (without `--qr`). QR mode never silently falls back to this older mode.
+
+Windows console uses `chcp 65001` for the block-character QR. If the rendered QR is corrupted or the camera cannot read it, use the non-QR legacy preview instead. The first QR preview does **not** register persistent device keys, work in background, transfer files, or grant PC/phone access. A successful scan is not proof of persistent pairing.
+
+See [QR security, expiry, device test and remaining work](../../docs/network-lab-qr-bootstrap.md).
