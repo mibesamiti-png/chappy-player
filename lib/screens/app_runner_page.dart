@@ -662,6 +662,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   Future<Uri> _approveGameOrigin(String url, {required bool websocket}) async {
     final uri = GameNetworkPolicy.validate(url, websocket: websocket);
     await _approveNativeCapability('network', '暗号化サーバー通信');
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+      throw StateError('Game server permission dialog requires foreground app');
+    }
     final origin = GameNetworkPolicy.origin(uri);
     if (_approvedGameOrigins.contains(origin)) return uri;
     if (_gameOriginPromptPending) {
@@ -674,9 +677,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         barrierDismissible: false,
         builder: (dialog) => AlertDialog(
           title: const Text('ゲームサーバーへの接続確認'),
-          content: Text('ミニアプリ「' + widget.app.name +
-              '」が次のサーバーへ通信しようとしています。\n\n' +
-              origin + '\n\n送信したデータはサーバー管理者に届きます。'
+          content: Text('ミニアプリ「${widget.app.name}」が次のサーバーへ通信しようとしています。\n\n'
+              '${origin}\n\n送信したデータはサーバー管理者に届きます。'
               '信頼できる接続先だけ許可してください。'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialog, false),
