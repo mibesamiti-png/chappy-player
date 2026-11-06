@@ -1,4 +1,5 @@
 import 'package:chappy_player/core/companion_pairing_client.dart';
+import 'package:chappy_player/core/companion_qr_invite.dart';
 import 'package:chappy_player/core/lan_discovery_client.dart';
 import 'package:flutter/material.dart';
 
@@ -6,10 +7,12 @@ import 'package:flutter/material.dart';
 class CompanionPairingPage extends StatefulWidget {
   final LanDiscoveredService service;
   final LanDiscoveryClient discoveryClient;
+  final CompanionQrInvite? invitation;
   const CompanionPairingPage({
     super.key,
     required this.service,
     this.discoveryClient = const LanDiscoveryClient(),
+    this.invitation,
   });
   @override
   State<CompanionPairingPage> createState() => _CompanionPairingPageState();
@@ -28,6 +31,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   @override
   void initState() {
     super.initState();
+    _fingerprint.text = widget.invitation?.fingerprint ?? '';
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -62,6 +66,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       CompanionPairingClient.validateTarget(
         widget.service.address, widget.service.port, _fingerprint.text,
       );
+      if (widget.invitation?.isExpired() ?? false) {
+        throw const FormatException('QRの有効期限が切れています');
+      }
       if (!await widget.discoveryClient.pairingAllowed()) {
         throw StateError('Wi-Fi接続中の前面画面のみ対応しています');
       }
@@ -79,6 +86,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         port: widget.service.port,
         fingerprint: _fingerprint.text,
         nonce: nonce,
+        invitationTicket: widget.invitation?.ticket,
+        expiresAt: widget.invitation?.expiresAt,
       );
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -126,6 +135,18 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
               'PC画面に表示される証明書SHA-256指紋64文字を入力します。'
               'この指紋は毎回変わり、端末名だけでは本人確認できません。',
             ),
+            if (widget.invitation != null)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    'PC画面のQRから接続先と証明書指紋を読み取りました。'
+                    '期限付き招待IDも確認要求へ含めます。'
+                    '続いてPC側の6文字コードを照合してYESを入力してください。',
+                    key: Key('pair_qr_imported'),
+                  ),
+                ),
+              ),
             const SizedBox(height: 16),
             TextField(
               key: const Key('pair_fingerprint'),
@@ -139,6 +160,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                 border: OutlineInputBorder(),
               ),
               enabled: !_busy,
+              readOnly: widget.invitation != null,
             ),
             FilledButton.icon(
               key: const Key('pair_confirm'),
