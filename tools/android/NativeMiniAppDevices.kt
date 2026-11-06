@@ -21,8 +21,10 @@ import io.flutter.plugin.common.MethodChannel
  * Never creates a long-lived motion logger or collects background readings.
  */
 class NativeMiniAppDevices(private val activity: Activity) {
-    private val sensors =
+    // MainActivity fields initialize before Activity.attach(); obtain services lazily.
+    private val sensors by lazy {
         activity.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    }
     private val handler = Handler(Looper.getMainLooper())
     private var foreground = false
     private var activeListener: SensorEventListener? = null
@@ -124,17 +126,20 @@ class NativeMiniAppDevices(private val activity: Activity) {
         } ?: return false
         if (!motor.hasVibrator()) return false
         lastHapticAt = now
-        val vibration = if (Build.VERSION.SDK_INT >= 29 && kind != -1) {
-            VibrationEffect.createPredefined(kind)
-        } else {
-            val duration = when (effect) {
-                "tick" -> 12L
-                "heavy" -> 45L
-                else -> 22L
-            }
-            VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE)
+        val duration = when (effect) {
+            "tick" -> 12L
+            "heavy" -> 45L
+            else -> 22L
         }
-        motor.vibrate(vibration)
+        if (Build.VERSION.SDK_INT >= 29 && kind != -1) {
+            motor.vibrate(VibrationEffect.createPredefined(kind))
+        } else if (Build.VERSION.SDK_INT >= 26) {
+            motor.vibrate(VibrationEffect.createOneShot(
+                duration, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            motor.vibrate(duration)
+        }
         return true
     }
 }
