@@ -64,7 +64,9 @@ class NativeMiniAppAssets(private val activity: Activity) {
             "phase" to transferPhase,
             "bytesDone" to transferDoneBytes,
             "totalBytes" to transferTotalBytes,
-            "cancelable" to copying,
+            "cancelable" to (copying &&
+                transferPhase in setOf("copying", "verifying") &&
+                !current.cancelRequested),
             "cancelRequested" to current.cancelRequested,
         )
     }
