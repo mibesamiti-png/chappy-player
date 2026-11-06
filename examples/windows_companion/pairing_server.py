@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import hmac
 import ipaddress
 import json
+import sys
 import queue
 import secrets
 import socket
@@ -21,6 +23,7 @@ import ssl
 import tempfile
 import threading
 import time
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -32,17 +35,35 @@ from companion import (
 
 MAX_REQUEST = 256
 MAX_APPROVAL_SECONDS = 25
+MAX_INVITE_SECONDS = 600
 
 
 class PairingSession:
-    def __init__(self) -> None:
+    def __init__(
+        self, invitation: str | None = None, expires_at: float = 0.0
+    ) -> None:
+        if invitation is not None and not (
+            len(invitation) == 32 and all(c in "0123456789abcdef" for c in invitation)
+        ):
+            raise ValueError("Invite token must be 16 random bytes in lowercase hex")
+        self.invitation = invitation
+        self.expires_at = expires_at
         self.claimed = False
         self.finished = threading.Event()
         self.lock = threading.Lock()
 
-    def claim(self) -> bool:
+    def claim(self, invitation: str | None = None) -> bool:
         with self.lock:
             if self.claimed:
+                return False
+            if self.invitation is not None:
+                if (
+                    not isinstance(invitation, str)
+                    or not hmac.compare_digest(invitation, self.invitation)
+                    or time.time() >= self.expires_at
+                ):
+                    return False
+            elif invitation is not None:
                 return False
             self.claimed = True
             return True
@@ -111,6 +132,47 @@ def _ask_pc_user(nonce: str) -> bool:
         return False
 
 
+def invite_payload(ip: str, port: int, fingerprint: str,
+                   token: str, expires_at: int) -> str:
+    """Strict, short-lived QR transfer string; nothing grants PC commands."""
+    validate_lan_ipv4(ip)
+    if not 1 <= port <= 65535:
+        raise ValueError("Invalid port")
+    if len(fingerprint) != 64 or any(c not in "0123456789abcdef" for c in fingerprint):
+        raise ValueError("Invalid certificate pin")
+    if len(token) != 32 or any(c not in "0123456789abcdef" for c in token):
+        raise ValueError("Invalid invitation")
+    if expires_at <= 0:
+        raise ValueError("Invalid expiry")
+    return (
+        "chappy-pair://v2?ip=" + ip + "&port=" + str(port)
+        + "&fp=" + fingerprint + "&inv=" + token + "&exp=" + str(expires_at)
+    )
+
+
+def render_qr(invitation: str) -> str:
+    """Half-height block QR to fit a standard 80-column Windows terminal."""
+    import qrcode
+
+    qr = qrcode.QRCode(border=4, error_correction=qrcode.constants.ERROR_CORRECT_M)
+    qr.add_data(invitation)
+    qr.make(fit=True)
+    cells = qr.get_matrix()
+    rows = []
+    for y in range(0, len(cells), 2):
+        row = ""
+        for x in range(len(cells[0])):
+            top = cells[y][x]
+            bottom = cells[y + 1][x] if y + 1 < len(cells) else False
+            row += (
+                "\u2588" if top and bottom else
+                "\u2580" if top else
+                "\u2584" if bottom else " "
+            )
+        rows.append(row)
+    return "\n".join(rows)
+
+
 def make_handler(session: PairingSession):
     class PairHandler(BaseHTTPRequestHandler):
         server_version = "ChappyPairPreview/1.0"
@@ -155,10 +217,14 @@ def make_handler(session: PairingSession):
                 return
             try:
                 data = json.loads(self.rfile.read(length))
-                if not isinstance(data, dict) or set(data) != {
-                    "protocol", "nonce"
-                } or data["protocol"] != "pair-preview-v1":
-                    raise ValueError("Unsupported request")
+                if not isinstance(data, dict):
+                    raise ValueError("Invalid JSON object")
+                if session.invitation is None:
+                    if set(data) != {"protocol", "nonce"} or data["protocol"] != "pair-preview-v1":
+                        raise ValueError("Unsupported legacy request")
+                else:
+                    if set(data) != {"protocol", "nonce", "invitation"} or data["protocol"] != "pair-qr-v2":
+                        raise ValueError("QR invitation required")
                 nonce = data["nonce"]
                 if not isinstance(nonce, str):
                     raise ValueError("Invalid nonce")
@@ -167,7 +233,12 @@ def make_handler(session: PairingSession):
                 self._reply(400, {"status": "bad_request"})
                 return
 
-            if not session.claim():
+            if session.invitation is not None:
+                supplied = data.get("invitation")
+                if not isinstance(supplied, str) or not session.claim(supplied):
+                    self._reply(403, {"status": "invalid_or_expired_invitation"})
+                    return
+            elif not session.claim():
                 self._reply(409, {"status": "already_requested"})
                 return
             try:
@@ -175,7 +246,8 @@ def make_handler(session: PairingSession):
                 self._reply(
                     200 if approved else 403,
                     {"status": "approved" if approved else "denied",
-                     "protocol": "pair-preview-v1", "nonce": nonce},
+                     "protocol": "pair-qr-v2" if session.invitation is not None
+                        else "pair-preview-v1", "nonce": nonce},
                 )
             finally:
                 session.finished.set()
@@ -223,7 +295,7 @@ class BoundedHttpsServer(ThreadingHTTPServer):
             self._active.release()
 
 
-def run_pairing(ip: str, minutes: int) -> None:
+def run_pairing(ip: str, minutes: int, qr: bool = False) -> None:
     """Expose a single, explicitly PC-approved HTTPS confirmation session."""
     from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
@@ -244,7 +316,10 @@ def run_pairing(ip: str, minutes: int) -> None:
         pem_key.unlink(missing_ok=True)
         crt.unlink(missing_ok=True)
 
-        session = PairingSession()
+        lifetime_seconds = min(minutes * 60, MAX_INVITE_SECONDS) if qr else minutes * 60
+        expires_at = int(time.time() + lifetime_seconds)
+        invitation = secrets.token_hex(16) if qr else None
+        session = PairingSession(invitation=invitation, expires_at=expires_at)
         with BoundedHttpsServer((address, 0), make_handler(session)) as server:
             server.context = context
             port = server.server_address[1]
@@ -266,10 +341,22 @@ def run_pairing(ip: str, minutes: int) -> None:
                 print("Service: " + info.name)
                 print("FULL SHA-256 certificate fingerprint (copy to phone):")
                 print(fingerprint)
+                if qr:
+                    assert invitation is not None
+                    invite_text = invite_payload(
+                        address, port, fingerprint, invitation, expires_at
+                    )
+                    print("Scan this QR on your Android Chappy Network Lab:")
+                    # The terminal may use a legacy encoding. Do not log the
+                    # raw invitation token in that fallback.
+                    try:
+                        print(render_qr(invite_text))
+                    except UnicodeEncodeError:
+                        print("Terminal lacks UTF-8 QR glyphs. Run chcp 65001.")
                 print("This fingerprint is generated fresh at every start.")
                 print("Your PC must separately approve one phone request.")
                 print("Auto-stop: " + str(minutes) + " min. Ctrl+C stops.")
-                deadline = time.monotonic() + minutes * 60
+                deadline = time.monotonic() + lifetime_seconds
                 while time.monotonic() < deadline and not session.finished.is_set():
                     server.handle_request()
             finally:
