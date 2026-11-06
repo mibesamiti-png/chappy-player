@@ -57,7 +57,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
     private var dimmed = false
     private var originalBrightness: Float? = null
     private var originalKeepOn = false
-    private val ownerPattern = Regex("^[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+$")
+    private val ownerPattern = Regex("^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$")
 
     fun onCreate() { registry.currentState = Lifecycle.State.CREATED }
     fun onResume() { registry.currentState = Lifecycle.State.RESUMED }
@@ -222,7 +222,12 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         provider = null
         elapsedMs = event.recordingStats.recordedDurationNanos / 1000000L
         bytes = event.recordingStats.numBytesRecorded
-        if (event.hasError()) {
+        // The recorder may still produce a valid, finalized MP4 when it
+        // reaches our explicit 1 GiB limit; preserve it rather than deleting
+        // the user's long recording.
+        val usableLimitReached =
+            event.error == VideoRecordEvent.Finalize.ERROR_FILE_SIZE_LIMIT_REACHED
+        if (event.hasError() && !usableLimitReached) {
             lastError = "CAMERAX_FINALIZE_${event.error}"
             pendingFile?.delete()
             if (storage == "gallery") {
