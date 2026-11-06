@@ -38,17 +38,22 @@ class GameNetworkPolicy {
   static bool isPublicAddress(InternetAddress ip) {
     final a = ip.rawAddress;
     if (a.length == 16) {
-      // 2000::/3 contains reserved and documentation prefixes too.
-      // Reject them rather than treating every global-unicast-shaped IP
-      // as safe for an app-controlled outbound connection.
-      if (a[0] < 0x20 || a[0] > 0x3f) return false;
+      // Fail closed for IPv6 blocks not allocated for global unicast by IANA.
+      // 2000::/3 alone includes reserved/documentation ranges.
+      final allocated =
+          (a[0] == 0x20 && (a[1] == 0x01 ||
+              (a[1] == 0x03 && a[2] < 0x40))) ||
+          (a[0] == 0x24 && a[1] < 0x20) || // 2400::/12, 2410::/12
+          (a[0] == 0x26 && (a[1] < 0x10 ||
+              ((a[1] == 0x10 || a[1] == 0x20) && a[2] < 2) ||
+              (a[1] >= 0x30 && a[1] < 0x40))) ||
+          (a[0] == 0x28 && a[1] < 0x10) || // 2800::/12
+          (a[0] == 0x2a && a[1] < 0x20) || // 2a00/12, 2a10/12
+          (a[0] == 0x2c && a[1] < 0x10);   // 2c00::/12
+      if (!allocated) return false;
       if (a[0] == 0x20 && a[1] == 0x01 &&
           (a[2] <= 0x01 || (a[2] == 0x0d && a[3] == 0xb8))) {
         return false; // 2001::/23 special-purpose; 2001:db8::/32 docs.
-      }
-      if (a[0] == 0x20 && a[1] == 0x02) return false; // 2002::/16 6to4.
-      if (a[0] == 0x3f && a[1] == 0xff && (a[2] & 0xf0) == 0) {
-        return false; // 3fff::/20 documentation.
       }
       return true;
     }
@@ -60,9 +65,8 @@ class GameNetworkPolicy {
         x == 192 && y == 168 ||
         x == 100 && y >= 64 && y <= 127 ||
         x == 198 && (y == 18 || y == 19) ||
-        x == 192 && y == 0 || // 192.0.0.0/24 protocol assignments.
+        (x == 192 && y == 0) || // 192.0.0.0/24 protocol assignments.
         x == 192 && y == 88 && z == 99 || // Deprecated 6to4 relay.
-        x == 192 && y == 0 && z == 2 ||
         x == 198 && y == 51 && z == 100 ||
         x == 203 && y == 0 && z == 113);
   }
