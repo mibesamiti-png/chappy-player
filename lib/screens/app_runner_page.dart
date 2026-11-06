@@ -37,6 +37,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   bool _videoStartPending = false;
   bool _nativeVideoActive = false;
   bool _videoDark = false;
+  double _darkHorizontalDrag = 0;
+
   // Armed only after the user explicitly enters dark recording mode.
   bool _darkSessionArmed = false;
   bool _volumeStartPending = false;
@@ -457,6 +459,37 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     return _videoDark;
   }
 
+  /// Disk statistics for the app's private MP4 storage volume; no paths.
+  Future<Map<String, dynamic>> _videoStorageInfo() async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        !canRequestChappyMedia(widget.app.permissions, ['camera'])) {
+      throw StateError('Video storage information unavailable');
+    }
+    final info = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'readVideoStorage', {'owner': widget.app.id});
+    if (info == null || info['totalBytes'] is! num ||
+        info['availableBytes'] is! num) {
+      throw const FormatException('Invalid Android storage information');
+    }
+    return Map<String, dynamic>.from(info);
+  }
+
+  Future<void> _setDarkSwipeBrightness(double brightness) async {
+    if (!_videoDark || !mounted || !_darkSessionArmed ||
+        ModalRoute.of(context)?.isCurrent != true) return;
+    try {
+      final changed = await _mediaChannel.invokeMethod<bool>(
+          'setVideoBrightness', {'brightness': brightness});
+      if (changed != true) {
+        unawaited(widget.logs.add(widget.app.id, 'warning', 'dark-brightness',
+            'Dark brightness gesture was not applied'));
+      }
+    } catch (error) {
+      unawaited(widget.logs.add(widget.app.id, 'warning', 'dark-brightness',
+          'Brightness change failed: $error'));
+    }
+  }
+
   Future<List<Map<String, dynamic>>> _listPrivateVideos() async {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
         !canRequestChappyMedia(widget.app.permissions, ['camera'])) {
@@ -745,6 +778,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         case 'video.dark':
           value = await _setVideoDark(params['enabled'] == true);
           break;
+        case 'video.storageInfo':
+          value = await _videoStorageInfo();
+          break;
         case 'video.list':
           value = await _listPrivateVideos();
           break;
@@ -874,14 +910,29 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         if (_videoDark)
           Positioned.fill(child: ColoredBox(
             color: Colors.black,
-            // Subtle 8px red/green status LED in the top-right. The 64px
-            // invisible touch target supports double-tap accessibility.
+            // Visible 8px red/green LED with a larger invisible gesture zone.
+            // Double tap restores the UI; horizontal right = max and
+            // horizontal left = min per-window brightness while dark.
             child: SafeArea(child: Align(
               alignment: Alignment.topRight,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onDoubleTap: () => unawaited(_setVideoDark(false)),
-                child: SizedBox(width: 64, height: 64,
+                onHorizontalDragStart: (_) => _darkHorizontalDrag = 0,
+                onHorizontalDragUpdate: (details) {
+                  _darkHorizontalDrag += details.delta.dx;
+                },
+                onHorizontalDragEnd: (_) {
+                  final swipe = _darkHorizontalDrag;
+                  _darkHorizontalDrag = 0;
+                  if (swipe >= 24) {
+                    unawaited(_setDarkSwipeBrightness(1.0));
+                  } else if (swipe <= -24) {
+                    unawaited(_setDarkSwipeBrightness(0.01));
+                  }
+                },
+                onHorizontalDragCancel: () => _darkHorizontalDrag = 0,
+                child: SizedBox(width: 96, height: 88,
                   child: Align(alignment: Alignment.topRight,
                     child: Padding(
                       padding: const EdgeInsets.all(14),
