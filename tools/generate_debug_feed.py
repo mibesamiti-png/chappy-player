@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 PACKAGE = "dev.chappy.chappy_player.debug"
 def generate(apk: Path, version: str, build: int, url: str, notes: str) -> dict:
-    if not re.fullmatch(r"\\d+\\.\\d+\\.\\d+", version):
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Invalid Debug version")
     if not 100000 <= build < 2147483647:
         raise ValueError("Invalid high/monotonic Debug versionCode")
@@ -46,7 +46,7 @@ def main():
     feed = generate(args.apk, args.version, args.build_number,
                     args.url, args.release_notes)
     args.output.write_text(
-        json.dumps(feed, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+        json.dumps(feed, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("Generated verified Debug package feed")
 if __name__ == "__main__":
     main()
