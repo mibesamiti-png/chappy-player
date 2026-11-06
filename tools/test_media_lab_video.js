@@ -19,6 +19,12 @@ function newElement(id) {
     getContext(){return {fillRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}};},
     pause(){}, play(){return Promise.resolve();}, focus(){}, select(){}
   };
+  // Match real DOM behavior: assigning textContent removes previous children.
+  let currentText = '';
+  Object.defineProperty(element, 'textContent', {
+    get() { return currentText; },
+    set(value) { currentText = String(value); element.children = []; }
+  });
   return element;
 }
 function get(id) {if (!nodes.has(id))nodes.set(id,newElement(id));return nodes.get(id);}
