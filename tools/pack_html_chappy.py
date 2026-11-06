@@ -100,7 +100,7 @@ def main():
     parser.add_argument("--name", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--permission", action="append", choices=["camera", "microphone", "motion", "haptics"],
+    parser.add_argument("--permission", action="append", choices=["camera", "microphone", "motion", "haptics", "files"],
                         default=[], help="Explicit Android media capability")
     args = parser.parse_args()
     output = package_html(args.source, args.output, args.id, args.name, args.version,
