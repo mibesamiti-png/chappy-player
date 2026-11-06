@@ -1,4 +1,6 @@
 import 'package:chappy_player/core/companion_pairing_client.dart';
+import 'package:chappy_player/core/companion_qr_invitation.dart';
+import 'package:chappy_player/screens/companion_qr_scanner_page.dart';
 import 'package:chappy_player/core/lan_discovery_client.dart';
 import 'package:flutter/material.dart';
 
@@ -23,6 +25,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   bool _verified = false;
   String? _code;
   String? _error;
+  CompanionQrInvitation? _invite;
   int _generation = 0;
 
   @override
@@ -55,6 +58,30 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     super.dispose();
   }
 
+  Future<void> _scanQr() async {
+    if (_busy || ModalRoute.of(context)?.isCurrent != true) return;
+    final invite = await Navigator.of(context).push<CompanionQrInvitation>(
+      MaterialPageRoute(builder: (_) => const CompanionQrScannerPage()),
+    );
+    if (!mounted || invite == null) return;
+    // mDNS is never an identity provider. Refuse an invitation that changes
+    // the endpoint selected by the user from the discovery result.
+    if (invite.ip != widget.service.address ||
+        invite.port != widget.service.port) {
+      setState(() {
+        _invite = null;
+        _error = 'QRのPCと発見したPCの接続先が違います。再確認してください。';
+      });
+      return;
+    }
+    setState(() {
+      _fingerprint.text = invite.fingerprint;
+      _invite = invite;
+      _error = null;
+      _verified = false;
+    });
+  }
+
   Future<void> _confirm() async {
     if (_busy || ModalRoute.of(context)?.isCurrent != true) return;
     final generation = ++_generation;
@@ -62,6 +89,14 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       CompanionPairingClient.validateTarget(
         widget.service.address, widget.service.port, _fingerprint.text,
       );
+      final invite = _invite;
+      if (invite != null) {
+        final current = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        if (invite.expiresUnix <= current ||
+            invite.fingerprint != _fingerprint.text) {
+          throw const FormatException('QR招待の期限が切れたか内容が変更されました');
+        }
+      }
       if (!await widget.discoveryClient.pairingAllowed()) {
         throw StateError('Wi-Fi接続中の前面画面のみ対応しています');
       }
@@ -79,6 +114,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         port: widget.service.port,
         fingerprint: _fingerprint.text,
         nonce: nonce,
+        invitation: _invite?.invitation,
       );
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -122,14 +158,28 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             Text('接続先: ${device.address}:${device.port}'),
             const SizedBox(height: 12),
             const Text(
-              'PCでChappy Companionの --start --pair を起動してください。\n'
+              'PCでChappy Companionの --start --pair --qr を起動してください。\n'
               'PC画面に表示される証明書SHA-256指紋64文字を入力します。'
               'この指紋は毎回変わり、端末名だけでは本人確認できません。',
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('pair_scan_qr'),
+              onPressed: _busy ? null : _scanQr,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('PCの招待QRをカメラで読み取る'),
+            ),
+            if (_invite != null)
+              const Text('QRを確認しました。内容を確認して接続を開始してください。'),
             const SizedBox(height: 16),
             TextField(
               key: const Key('pair_fingerprint'),
               controller: _fingerprint,
+              onChanged: (_) {
+                if (_invite != null) {
+                  setState(() => _invite = null);
+                }
+              },
               maxLength: 95,
               autocorrect: false,
               enableSuggestions: false,
