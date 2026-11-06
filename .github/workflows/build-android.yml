@@ -79,8 +79,28 @@ jobs:
         run: python3 tools/test_prepare_debug_variant.py
       - name: Separate debug app from the installed permanently signed release
         run: python3 tools/prepare_debug_variant.py
-      - name: Build installable APK (debug signed; side-by-side personal test only)
+      - name: Exercise dedicated Debug signing with a disposable CI-only key
+        run: |
+          keytool -genkeypair -keystore "$RUNNER_TEMP/chappy-ci-debug.jks" \
+            -alias chappyci -keyalg RSA -keysize 2048 -validity 2 -storetype PKCS12 \
+            -storepass 'ci-temporary-only' -keypass 'ci-temporary-only' \
+            -dname 'CN=Chappy temporary CI test key' -noprompt
+          keytool -exportcert -keystore "$RUNNER_TEMP/chappy-ci-debug.jks" \
+            -alias chappyci -storepass 'ci-temporary-only' \
+            -file "$RUNNER_TEMP/chappy-ci-debug.der"
+          export CHAPPY_DEBUG_KEYSTORE_B64="$(base64 -w0 "$RUNNER_TEMP/chappy-ci-debug.jks")"
+          export CHAPPY_DEBUG_STORE_PASSWORD='ci-temporary-only'
+          export CHAPPY_DEBUG_KEY_PASSWORD='ci-temporary-only'
+          export CHAPPY_DEBUG_KEY_ALIAS='chappyci'
+          export CHAPPY_DEBUG_CERT_SHA256="$(sha256sum "$RUNNER_TEMP/chappy-ci-debug.der" | cut -d ' ' -f 1)"
+          python3 tools/configure_debug_release_signing.py
+          echo "CHAPPY_DEBUG_CERT_SHA256=$CHAPPY_DEBUG_CERT_SHA256" >> "$GITHUB_ENV"
+          echo "CHAPPY_DEBUG_VERSION=0.1.0" >> "$GITHUB_ENV"
+          echo "CHAPPY_DEBUG_BUILD_NUMBER=1" >> "$GITHUB_ENV"
+      - name: Build installable APK (ephemeral CI signature, not distributable updates)
         run: flutter build apk --debug
+      - name: Verify Debug APK package ID, versionCode and actual test signer
+        run: python3 tools/verify_debug_release.py
       - uses: actions/upload-artifact@v4
         with:
           name: chappy-player-debug-apk
