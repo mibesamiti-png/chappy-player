@@ -68,7 +68,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         return;
       }
     }
-    if (!mounted || _mediaPermissionPending ||
+    if (!mounted || _mediaPermissionPending || _nativeVideoActive ||
+        _videoStartPending ||
         ModalRoute.of(context)?.isCurrent != true ||
         !canRequestChappyMedia(widget.app.permissions, requested)) {
       await _denyMedia(request, 'not declared, no foreground route, or busy');
@@ -168,6 +169,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   /// declares microphone permission, after user and Android consent.
   Future<Map<String, dynamic>> _startNativeMic() async {
     if (!mounted || _nativeMicPending || _nativeMicActive ||
+        _nativeVideoActive || _videoStartPending ||
         ModalRoute.of(context)?.isCurrent != true ||
         !canRequestChappyMedia(widget.app.permissions, ['microphone'])) {
       throw StateError('Native microphone not permitted or already active');
@@ -255,6 +257,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     final audio = options['audio'] == true;
     final needed = <String>['camera', if (audio) 'microphone'];
     if (!mounted || _videoStartPending || _nativeVideoActive ||
+        _nativeMicPending ||
         ModalRoute.of(context)?.isCurrent != true ||
         !canRequestChappyMedia(widget.app.permissions, needed)) {
       throw StateError('Video camera not permitted or already recording');
