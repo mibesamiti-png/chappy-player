@@ -169,7 +169,8 @@ const _bootScript = r'''
       // Native microphone asks the user in two successive permission dialogs.
       // Do not time out while the user is deciding: Android/Flutter will
       // reject a cancelled request and always stop capture on background.
-      const timer = method === 'microphone.start' ? null : setTimeout(() => {
+      const timer = (method === 'microphone.start' || method === 'video.start')
+        ? null : setTimeout(() => {
         pending.delete(requestId);
         reject(new Error('Chappy API timeout'));
       }, timeoutMs);
@@ -190,6 +191,14 @@ const _bootScript = r'''
         start: () => call('microphone.start', {}),
         levels: () => call('microphone.levels', {}),
         stop: () => call('microphone.stop', {})
+      }),
+      video: Object.freeze({
+        start: (options) => call('video.start', options || {}),
+        status: () => call('video.status', {}),
+        stop: () => call('video.stop', {}),
+        dark: (enabled) => call('video.dark', {enabled: enabled === true}),
+        list: () => call('video.list', {}),
+        open: (id) => call('video.open', {id: String(id)})
       }),
       log: (message) => call('log', {message: String(message)})
     })

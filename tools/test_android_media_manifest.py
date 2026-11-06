@@ -27,10 +27,15 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     kotlin = root / "android/app/src/main/kotlin/dev/chappy/chappy_player/MainActivity.kt"
     kotlin.parent.mkdir(parents=True)
     kotlin.write_text("package dev.chappy.chappy_player\n", encoding="utf-8")
+    gradle = root / "android/app/build.gradle.kts"
+    gradle.write_text(
+        "android { defaultConfig { minSdk = flutter.minSdkVersion } }\n",
+        encoding="utf-8",
+    )
     templates = root / "tools/android"
     templates.mkdir(parents=True)
     for name in ["MainActivity.kt", "chappy_update_paths.xml",
-                 "NativeMicCapture.kt"]:
+                 "NativeMicCapture.kt", "NativeVideoRecorder.kt"]:
         (templates / name).write_bytes(
             (PROJECT / "tools/android" / name).read_bytes()
         )
@@ -43,6 +48,15 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     assert native_class.read_bytes() == (
         PROJECT / "tools/android/NativeMicCapture.kt"
     ).read_bytes()
+    video_class = native_class.with_name("NativeVideoRecorder.kt")
+    assert video_class.read_bytes() == (
+        PROJECT / "tools/android/NativeVideoRecorder.kt"
+    ).read_bytes()
+    gradle_text = gradle.read_text(encoding="utf-8")
+    assert gradle_text.count('androidx.camera:camera-video:1.5.3') == 1
+    assert gradle_text.count('androidx.camera:camera-lifecycle:1.5.3') == 1
+    assert gradle_text.count('androidx.camera:camera-camera2:1.5.3') == 1
+    assert "minSdk = 24" in gradle_text
     parsed = ET.parse(manifest).getroot()
     actual = [
         node.get(ANDROID + "name")

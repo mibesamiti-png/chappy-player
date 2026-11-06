@@ -109,10 +109,30 @@ groovy = Path('android/app/build.gradle')
 if kts.exists():
     body = kts.read_text(encoding='utf-8')
     body = body.replace('minSdk = flutter.minSdkVersion', 'minSdk = 24')
+    # CameraX video Recorder is hosted natively; no third-party JS gets raw
+    # camera frames or direct paths. Keep all CameraX artifacts pinned together.
+    if 'androidx.camera:camera-video:1.5.3' not in body:
+        body += ("""
+// CameraX video recording (native, foreground only).
+dependencies {
+    implementation("androidx.camera:camera-camera2:1.5.3")
+    implementation("androidx.camera:camera-lifecycle:1.5.3")
+    implementation("androidx.camera:camera-video:1.5.3")
+}
+""")
     kts.write_text(body, encoding='utf-8')
 elif groovy.exists():
     body = groovy.read_text(encoding='utf-8')
     body = body.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 24')
+    if 'androidx.camera:camera-video:1.5.3' not in body:
+        body += ("""
+// CameraX video recording (native, foreground only).
+dependencies {
+    implementation 'androidx.camera:camera-camera2:1.5.3'
+    implementation 'androidx.camera:camera-lifecycle:1.5.3'
+    implementation 'androidx.camera:camera-video:1.5.3'
+}
+""")
     groovy.write_text(body, encoding='utf-8')
 
 
@@ -137,6 +157,15 @@ if not mic_source.is_file():
     raise SystemExit('Missing native AudioRecord capture implementation')
 mic_target.write_bytes(mic_source.read_bytes())
 print('Installed foreground-only native microphone capture host')
+
+# CameraX video recorder does not start a foreground service: recordings
+# stop on Activity pause until explicit Android 14 service work is implemented.
+video_source = Path('tools/android/NativeVideoRecorder.kt')
+video_target = native_target.with_name('NativeVideoRecorder.kt')
+if not video_source.is_file():
+    raise SystemExit('Missing native CameraX video recorder')
+video_target.write_bytes(video_source.read_bytes())
+print('Installed foreground-only native video recorder (private by default)')
 
 # Ship only the private update cache path; never share all cache or app data.
 paths_src = Path('tools/android/chappy_update_paths.xml')
