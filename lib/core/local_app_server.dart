@@ -196,6 +196,7 @@ const _bootScript = r'''
       video: Object.freeze({
         start: (options) => call('video.start', options || {}),
         status: () => call('video.status', {}),
+        storageInfo: () => call('video.storageInfo', {}),
         stop: () => call('video.stop', {}),
         dark: (enabled) => call('video.dark', {enabled: enabled === true}),
         list: () => call('video.list', {}),
