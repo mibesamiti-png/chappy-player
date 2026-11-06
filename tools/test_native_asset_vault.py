@@ -38,6 +38,25 @@ for token in (
     'setPositiveButton("削除する")',
     'setNegativeButton("キャンセル")',
     'fun onDestroy()',
+    'fun transferStatus(owner: String)',
+    'fun cancelTransfer(owner: String)',
+    'fun checkTransferActive(request: Pending)',
+    '@Volatile var cancelRequested',
+    '@Volatile private var transferPhase',
+    '@Volatile private var transferDoneBytes',
+    '@Volatile private var transferTotalBytes',
+    'private fun cleanupStaleImports(root: File)',
+    'candidate.lastModified() < cutoff',
+    'candidate.canonicalFile.parentFile == root',
+    'Regex("^[a-f0-9]{32}\\\\.part$")',
+    'cleanupStaleImports(root)',
+    'transferPhase = "copying"',
+    'transferPhase = "verifying"',
+    'transferPhase = "finalizing"',
+    'checkTransferActive(request)',
+    'transferDoneBytes = size',
+    'transferDoneBytes = bytes',
+    'try { activity.contentResolver.delete(uri, null, null) }',
 ):
     assert token in native, token
 
@@ -46,12 +65,15 @@ for token in ('"importBinaryAsset"', '"listBinaryAssets"',
               'miniAssets.importAsset(', 'miniAssets.list(',
               'miniAssets.exportAsset(', 'miniAssets.deleteAsset(',
               'miniAssets.onResult(requestCode, resultCode, data)',
-              'miniAssets.onDestroy()'):
+              'miniAssets.onDestroy()', 'miniAssets.transferStatus(',
+              'miniAssets.cancelTransfer(',
+              '"binaryAssetTransferStatus"', '"cancelBinaryAssetTransfer"'):
     assert token in host, token
 assert 'if (!micActivityVisible)' in host
 
 for method in ('files.importAsset', 'files.listAssets',
-               'files.exportAsset', 'files.deleteAsset'):
+               'files.exportAsset', 'files.deleteAsset',
+               'files.transferStatus', 'files.cancelTransfer'):
     assert f"case '{method}':" in runner, method
     assert f"'{method}'" in bridge, method
 assert runner.count("await _approveNativeCapability('files', 'ファイルの選択・保存')") >= 6
@@ -63,6 +85,9 @@ for action in ('files.importAsset()', 'files.listAssets()',
                'files.exportAsset(file.id)', 'files.deleteAsset(file.id)'):
     assert action in ui
 assert "textContent=file.name" in ui, "File names must be rendered as text"
+assert "files.transferStatus()" in ui and "files.cancelTransfer()" in ui
+assert "clearInterval(timer)" in ui and "setInterval(poll,350)" in ui
+assert "cancelAssetTransfer" in ui
 assert "1ファイル最大256MiB" in ui
 assert "合計512MiB・32ファイル" in ui
 

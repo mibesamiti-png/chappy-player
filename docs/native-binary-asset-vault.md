@@ -19,6 +19,15 @@ The Android native host now provides a *private asset vault* for each installed 
 
 The `id` is an opaque, randomly generated 32-character hex handle. No app-private path, Android `content://` URI, or binary payload is exposed to JavaScript. `Chappy.files.pickText()` and `saveText()` continue to work independently.
 
+## Transfer progress and cancellation (source update)
+
+- `Chappy.files.transferStatus()` reports only the active caller mini-app's current operation: `{active,phase,bytesDone,totalBytes,cancelable,cancelRequested}`. A total of `-1` means the Android document provider did not disclose its file size. No filename, destination URI, path or raw file contents are sent to JavaScript.
+- `Chappy.files.cancelTransfer()` asks Android to stop the current caller's transfer; returns `false` if no cancellable transfer is underway. Only the **copying** and **verifying** phases accept cancellation. The Android file picker itself must be closed/cancelled with its own system UI. Once the private-file commit enters **finalizing**, cancellation is disabled to prevent success after a rollback of completed content.
+- Import checks the cancellation flag at every streamed chunk and just before committing the private item; export checks during copy and SHA-256 readback. Cancellation returns `{status:"cancelled"}`. Failed/aborted imports remove partial data; failed/aborted exports attempt to remove incomplete documents. Some providers disallow deletion, so a partial file may still remain outside the app.
+- The File Lab interface polls status every 350ms while an import/export is pending, shows bytes transferred and an optional percent when total length is known, and has a **転送をキャンセル** button.
+- On the next idle vault listing or import, the Android host removes **only 24-hour-old unfinished `[hex].part` files** under that same mini-app's private directory. Completed `.blob` and `.json` records are never automatically removed.
+- These APIs do **not** yet include a byte-stream handle that JavaScript can read, upload, edit or process; they manage a private vault copy through explicit Android pickers.
+
 ## Permission boundaries
 
 - The mini-app manifest must declare `permissions:["files"]`. The installer displays the capability label; Flutter additionally confirms first use **once per foreground session**.
@@ -35,7 +44,7 @@ The `id` is an opaque, randomly generated 32-character hex handle. No app-privat
 - Export **never silently overwrites a vault item**. Saving outside the vault uses Android's standard file picker. Some document providers cannot be read back for SHA-256 verification; in that case the export reports an error instead of claiming success.
 - **Uninstalling Chappy Player or clearing app data destroys these vault copies.** Export anything important before uninstall.
 - This first stage does not implement automatic backup, directory sync, arbitrary JS binary read/write, incremental chunk APIs, or a restoration manifest for the vault. The existing camera-video ZIP exporter is a separate feature.
-- Large content-provider operations may take time and use additional internal space. On a force-kill, temporary orphaned records can remain; the follow-up task is safe recovery/cleanup and better progress reporting.
+- Large content-provider operations may take time and use additional internal space. 24-hour-old partial import files are cleaned up opportunistically; a force-kill after a body is committed but before its metadata is saved could still leave an orphan. Safely reclaiming orphaned completed bodies is a separate future maintenance task; no automatic deletion of user data has been enabled.
 
 ## QA gates
 

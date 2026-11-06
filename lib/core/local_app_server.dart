@@ -218,7 +218,9 @@ const _bootScript = r'''
         importAsset: () => call('files.importAsset', {}),
         listAssets: () => call('files.listAssets', {}),
         exportAsset: id => call('files.exportAsset', {id: String(id)}),
-        deleteAsset: id => call('files.deleteAsset', {id: String(id)})
+        deleteAsset: id => call('files.deleteAsset', {id: String(id)}),
+        transferStatus: () => call('files.transferStatus', {}),
+        cancelTransfer: () => call('files.cancelTransfer', {})
       }),
       motion: Object.freeze({
         sample: type => call('motion.sample', {type: String(type)})

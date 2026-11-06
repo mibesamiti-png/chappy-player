@@ -42,10 +42,66 @@ class NativeMiniAppAssets(private val activity: Activity) {
     private data class Pending(
         val owner: String, val mode: Mode, val result: MethodChannel.Result,
         val item: Item? = null,
+        @Volatile var cancelRequested: Boolean = false,
     )
     private var pending: Pending? = null
     private var copying = false
     private var closed = false
+
+    // Immutable numeric/status snapshots exposed to the UI, not file contents.
+    @Volatile private var transferPhase = "idle"
+    @Volatile private var transferDoneBytes = 0L
+    @Volatile private var transferTotalBytes = -1L
+
+    fun transferStatus(owner: String): Map<String, Any> {
+        val current = pending
+        if (!ownerPattern.matches(owner) || current == null ||
+            current.owner != owner || closed) {
+            return mapOf("active" to false, "phase" to "idle")
+        }
+        return mapOf(
+            "active" to true,
+            "phase" to transferPhase,
+            "bytesDone" to transferDoneBytes,
+            "totalBytes" to transferTotalBytes,
+            "cancelable" to (copying &&
+                transferPhase in setOf("copying", "verifying") &&
+                !current.cancelRequested),
+            "cancelRequested" to current.cancelRequested,
+        )
+    }
+
+    fun cancelTransfer(owner: String): Boolean {
+        val current = pending ?: return false
+        if (closed || !copying || current.owner != owner ||
+            transferPhase !in setOf("copying", "verifying") ||
+            !ownerPattern.matches(owner)) return false
+        current.cancelRequested = true
+        return true
+    }
+
+    private fun checkTransferActive(request: Pending) {
+        if (closed || request.cancelRequested || Thread.currentThread().isInterrupted) {
+            throw IOException("ASSET_TRANSFER_CANCELLED")
+        }
+    }
+
+    private fun resetProgress() {
+        transferPhase = "idle"
+        transferDoneBytes = 0L
+        transferTotalBytes = -1L
+    }
+
+    private fun declaredSize(uri: Uri): Long {
+        return try {
+            activity.contentResolver.query(
+                uri, arrayOf(OpenableColumns.SIZE), null, null, null
+            )?.use { cursor ->
+                if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getLong(0)
+                else -1L
+            } ?: -1L
+        } catch (_: Exception) { -1L }
+    }
 
     private fun directory(owner: String): File {
         if (!ownerPattern.matches(owner) || owner.length > 120) {
@@ -116,17 +172,37 @@ class NativeMiniAppAssets(private val activity: Activity) {
         return ids.map { load(root, it) }.sortedByDescending { it.createdMs }
     }
 
+    /** Remove only old unfinished import temp files. Never touch completed
+     * assets, and never run while a transfer owns this vault.
+     */
+    private fun cleanupStaleImports(root: File) {
+        if (pending != null || copying) return
+        val cutoff = System.currentTimeMillis() - 24L * 60 * 60 * 1000
+        root.listFiles()?.forEach { candidate ->
+            if (candidate.isFile &&
+                Regex("^[a-f0-9]{32}\\.part$").matches(candidate.name) &&
+                candidate.lastModified() > 0L &&
+                candidate.lastModified() < cutoff &&
+                candidate.canonicalFile.parentFile == root) {
+                candidate.delete()
+            }
+        }
+    }
+
     fun list(owner: String): List<Map<String, Any>> {
         if (closed || pending != null || copying) {
             throw IOException("Asset import or export already in progress")
         }
-        return all(directory(owner)).map { it.exposed() }
+        val root = directory(owner)
+        cleanupStaleImports(root)
+        return all(root).map { it.exposed() }
     }
 
     fun importAsset(owner: String, result: MethodChannel.Result) {
         if (!reserve(result)) return
         try {
             val root = directory(owner)
+            cleanupStaleImports(root)
             val existing = all(root)
             if (existing.size >= MAX_FILES ||
                 existing.sumOf { it.size } >= MAX_STORE_BYTES) {
@@ -135,6 +211,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
             }
             val request = Pending(owner, Mode.IMPORT, result)
             pending = request
+            transferPhase = "picker"
             val picker = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "*/*"
@@ -144,6 +221,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
             activity.startActivityForResult(picker, IMPORT_REQUEST)
         } catch (error: Exception) {
             pending = null
+            resetProgress()
             result.error("ASSET_IMPORT_FAILED", error.message, null)
         }
     }
@@ -155,6 +233,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
             val record = load(root, id)
             val request = Pending(owner, Mode.EXPORT, result, record)
             pending = request
+            transferPhase = "picker"
             val picker = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = record.mime
@@ -166,6 +245,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
             activity.startActivityForResult(picker, EXPORT_REQUEST)
         } catch (error: Exception) {
             pending = null
+            resetProgress()
             result.error("ASSET_EXPORT_FAILED", error.message, null)
         }
     }
@@ -177,6 +257,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
             val record = load(root, id)
             val state = Pending(owner, Mode.EXPORT, result, record)
             pending = state
+            transferPhase = "confirm-delete"
             AlertDialog.Builder(activity)
                 .setTitle("ミニアプリ内のファイルを削除")
                 .setMessage("「" + record.name + "」を削除しますか？" +
@@ -184,6 +265,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
                 .setNegativeButton("キャンセル") { _, _ ->
                     if (pending === state) {
                         pending = null
+                        resetProgress()
                         result.success(false)
                     }
                 }
@@ -200,14 +282,17 @@ class NativeMiniAppAssets(private val activity: Activity) {
                             throw IOException("Unable to delete private asset")
                         }
                         pending = null
+                        resetProgress()
                         result.success(true)
                     } catch (error: Exception) {
                         pending = null
+                        resetProgress()
                         result.error("ASSET_DELETE_FAILED", error.message, null)
                     }
                 }.setCancelable(false).show()
         } catch (error: Exception) {
             pending = null
+            resetProgress()
             result.error("ASSET_DELETE_FAILED", error.message, null)
         }
     }
@@ -233,21 +318,29 @@ class NativeMiniAppAssets(private val activity: Activity) {
         val uri: Uri? = data?.data
         if (resultCode != Activity.RESULT_OK || uri == null || uri.scheme != "content") {
             pending = null
+            resetProgress()
             request.result.success(mapOf("status" to "cancelled"))
             return true
         }
         copying = true
+        transferDoneBytes = 0L
+        transferTotalBytes = if (request.mode == Mode.IMPORT) {
+            declaredSize(uri).takeIf { it > 0L } ?: -1L
+        } else request.item?.size ?: -1L
+        transferPhase = "copying"
         Thread {
             try {
+                checkTransferActive(request)
                 val response = when (request.mode) {
-                    Mode.IMPORT -> copyIntoPrivate(request.owner, uri)
+                    Mode.IMPORT -> copyIntoPrivate(request.owner, uri, request)
                     Mode.EXPORT -> copyOutVerified(
                         request.owner, request.item
-                            ?: throw IOException("Asset selection missing"), uri)
+                            ?: throw IOException("Asset selection missing"), uri, request)
                 }
                 activity.runOnUiThread {
                     pending = null
                     copying = false
+                    resetProgress()
                     if (!closed) request.result.success(response)
                 }
             } catch (error: Exception) {
@@ -260,8 +353,14 @@ class NativeMiniAppAssets(private val activity: Activity) {
                 activity.runOnUiThread {
                     pending = null
                     copying = false
-                    if (!closed) request.result.error("ASSET_TRANSFER_FAILED",
-                        error.message, null)
+                    resetProgress()
+                    if (!closed) {
+                        if (request.cancelRequested ||
+                            error.message == "ASSET_TRANSFER_CANCELLED") {
+                            request.result.success(mapOf("status" to "cancelled"))
+                        } else request.result.error(
+                            "ASSET_TRANSFER_FAILED", error.message, null)
+                    }
                 }
             }
         }.start()
@@ -279,7 +378,9 @@ class NativeMiniAppAssets(private val activity: Activity) {
         return safeName(name)
     }
 
-    private fun copyIntoPrivate(owner: String, uri: Uri): Map<String, Any> {
+    private fun copyIntoPrivate(
+        owner: String, uri: Uri, request: Pending,
+    ): Map<String, Any> {
         val root = directory(owner)
         val before = all(root)
         val previousBytes = before.sumOf { it.size }
@@ -301,6 +402,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
                 FileOutputStream(staging).use { target ->
                     val buffer = ByteArray(65536)
                     while (true) {
+                        checkTransferActive(request)
                         val n = source.read(buffer)
                         if (n < 0) break
                         size += n
@@ -310,11 +412,14 @@ class NativeMiniAppAssets(private val activity: Activity) {
                         }
                         target.write(buffer, 0, n)
                         hash.update(buffer, 0, n)
+                        transferDoneBytes = size
                     }
                     target.fd.sync()
                 }
             }
+            checkTransferActive(request)
             if (size <= 0) throw IOException("Empty files cannot be imported")
+            transferPhase = "finalizing"
             if (!staging.renameTo(body)) {
                 throw IOException("Could not commit private file")
             }
@@ -338,7 +443,9 @@ class NativeMiniAppAssets(private val activity: Activity) {
         }
     }
 
-    private fun copyOutVerified(owner: String, record: Item, uri: Uri): Map<String, Any> {
+    private fun copyOutVerified(
+        owner: String, record: Item, uri: Uri, request: Pending,
+    ): Map<String, Any> {
         val root = directory(owner)
         // Revalidate original metadata immediately before touching destination.
         if (load(root, record.id) != record) {
@@ -353,12 +460,14 @@ class NativeMiniAppAssets(private val activity: Activity) {
             body.inputStream().use { input ->
                 val buffer = ByteArray(65536)
                 while (true) {
+                    checkTransferActive(request)
                     val n = input.read(buffer)
                     if (n < 0) break
                     bytes += n
                     if (bytes > record.size) throw IOException("Source changed")
                     target.write(buffer, 0, n)
                     sourceHash.update(buffer, 0, n)
+                    transferDoneBytes = bytes
                 }
             }
             target.flush()
@@ -368,6 +477,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
             !sourceDigest.contentEquals(hexBytes(record.sha))) {
             throw IOException("Private asset content no longer matches its checksum")
         }
+        transferPhase = "verifying"
         val destinationHash = MessageDigest.getInstance("SHA-256")
         var readback = 0L
         val input = activity.contentResolver.openInputStream(uri)
@@ -375,6 +485,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
         input.use { stream ->
             val buffer = ByteArray(65536)
             while (true) {
+                checkTransferActive(request)
                 val n = stream.read(buffer)
                 if (n < 0) break
                 readback += n
@@ -386,6 +497,8 @@ class NativeMiniAppAssets(private val activity: Activity) {
             !sourceDigest.contentEquals(destinationHash.digest())) {
             throw IOException("Exported asset failed SHA-256 verification")
         }
+        checkTransferActive(request)
+        transferPhase = "finalizing"
         return mapOf("status" to "saved", "sizeBytes" to bytes,
             "sha256" to record.sha)
     }
@@ -399,6 +512,8 @@ class NativeMiniAppAssets(private val activity: Activity) {
 
     fun onDestroy() {
         closed = true
+        pending?.cancelRequested = true
         pending = null
+        resetProgress()
     }
 }

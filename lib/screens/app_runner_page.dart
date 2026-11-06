@@ -537,6 +537,28 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   }
 
   /// Native SAF transports binary file bytes; JS only gets opaque handles.
+  Future<Map<String, dynamic>> _binaryAssetTransferStatus() async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        !widget.app.permissions.contains('files') ||
+        !_approvedNativeCapabilities.contains('files')) {
+      return const {'active': false, 'phase': 'idle'};
+    }
+    final result = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'binaryAssetTransferStatus', {'owner': widget.app.id});
+    return Map<String, dynamic>.from(
+        result ?? const {'active': false, 'phase': 'idle'});
+  }
+
+  Future<bool> _cancelBinaryAssetTransfer() async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        !widget.app.permissions.contains('files') ||
+        !_approvedNativeCapabilities.contains('files')) {
+      return false;
+    }
+    return await _mediaChannel.invokeMethod<bool>(
+        'cancelBinaryAssetTransfer', {'owner': widget.app.id}) ?? false;
+  }
+
   Future<Map<String, dynamic>> _importBinaryAsset() async {
     await _approveNativeCapability('files', 'ファイルの選択・保存');
     final result = await _mediaChannel.invokeMapMethod<String, dynamic>(
@@ -977,6 +999,12 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           break;
         case 'video.restoreZip':
           value = await _restorePrivateVideosZip();
+          break;
+        case 'files.transferStatus':
+          value = await _binaryAssetTransferStatus();
+          break;
+        case 'files.cancelTransfer':
+          value = await _cancelBinaryAssetTransfer();
           break;
         case 'files.importAsset':
           value = await _importBinaryAsset();
