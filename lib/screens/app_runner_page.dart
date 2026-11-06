@@ -536,6 +536,37 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     }
   }
 
+  Future<Map<String, dynamic>> _pickDocumentText() async {
+    await _approveNativeCapability('files', 'ファイルの選択・保存');
+    final data = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'pickDocumentText');
+    return Map<String, dynamic>.from(
+        data ?? const {'status': 'cancelled'});
+  }
+
+  Future<Map<String, dynamic>> _saveDocumentText(
+      Map<String, dynamic> params) async {
+    final name = params['fileName'];
+    final text = params['text'];
+    if (name is! String || text is! String) {
+      throw const FormatException('Invalid document request');
+    }
+    final lower = name.toLowerCase();
+    final supported = <String>['.txt', '.json', '.csv', '.md']
+        .any((extension) => lower.endsWith(extension));
+    if (!supported || name.length > 100 || name.trim().isEmpty ||
+        name.contains('/') || name.contains(String.fromCharCode(92)) ||
+        name.runes.any((unit) => unit < 32) ||
+        utf8.encode(text).length > 32 * 1024) {
+      throw const FormatException('Invalid filename or document text exceeds 32KiB');
+    }
+    await _approveNativeCapability('files', 'ファイルの選択・保存');
+    final data = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'saveDocumentText', {'fileName': name, 'text': text});
+    return Map<String, dynamic>.from(
+        data ?? const {'status': 'cancelled'});
+  }
+
   Future<Map<String, dynamic>> _sampleMotion(Map<String, dynamic> params) async {
     const permitted = <String>{'accelerometer', 'gyroscope', 'magnetometer'};
     final type = params['type'];
@@ -882,6 +913,12 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           break;
         case 'video.export':
           value = await _exportPrivateVideo(params);
+          break;
+        case 'files.pickText':
+          value = await _pickDocumentText();
+          break;
+        case 'files.saveText':
+          value = await _saveDocumentText(params);
           break;
         case 'motion.sample':
           value = await _sampleMotion(params);

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chappy File Lab</title>
+<style>
+:root{color-scheme:dark;font:15px/1.5 system-ui;background:#0c1420;color:#edf4ff}
+body{margin:0;padding:20px;max-width:650px;margin-inline:auto}
+h1{font-size:24px;margin:4px 0}p,small{color:#b0bfd6}
+section{background:#1a2639;border:1px solid #334b69;padding:18px;border-radius:17px;margin:16px 0}
+h2{font-size:17px;margin:0 0 12px}
+label{display:block;font-size:13px;color:#b4c9e5;margin-bottom:9px}
+input,textarea,button{font:inherit}
+input,textarea{width:100%;box-sizing:border-box;border-radius:10px;
+background:#0e1725;border:1px solid #486383;color:#fff;padding:12px}
+textarea{height:220px;resize:vertical;line-height:1.55}
+button{margin:4px 8px 4px 0;background:#34577e;color:#fff;
+border:1px solid #6593c5;border-radius:11px;padding:12px 15px;cursor:pointer}
+button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
+#status{white-space:pre-wrap;overflow-wrap:anywhere;color:#c6dcfa;min-height:26px}
+</style></head><body>
+<h1>Chappy File Lab</h1>
+<p>ミニアプリの設定・メモ・JSONをスマホのファイルと安全にやり取りする実験室。</p>
+<section>
+<h2>ファイルを開く</h2>
+<button id="openFile">テキスト・JSONを選択</button>
+<small>Androidの標準ファイル選択画面が開きます。選んだファイルの内容だけ読み取り、64KiBを超えるものは拒否します。</small>
+</section>
+<section>
+<h2>編集・保存</h2>
+<label for="fileName">ファイル名（txt/json/csv/md）</label>
+<input id="fileName" value="chappy-note.txt" maxlength="100" spellcheck="false">
+<label for="editor">内容</label>
+<textarea id="editor" placeholder="ここにメモやJSONを入力"></textarea>
+<button id="saveFile">別名でファイルに保存</button>
+<button id="saveLocal">アプリ内に一時保存</button>
+<button id="loadLocal">アプリ内の保存内容を復元</button>
+<p id="status" role="status" aria-live="polite"></p>
+<small>ファイルの読み書きはユーザーの操作時だけ。別のアプリやPCに勝手に送信しません。バイナリと大容量ファイルは今後対応予定。</small>
+</section>
+<script>
+(() => {
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const files=window.Chappy && window.Chappy.files;
+  const storage=window.Chappy && window.Chappy.storage;
+  function status(text){$('status').textContent=text;}
+  async function operation(button, fn){
+    button.disabled=true;
+    try{await fn();}catch(error){status('エラー：'+String(error.message || error));}
+    finally{button.disabled=false;}
+  }
+  $('openFile').addEventListener('click',()=>{
+    void operation($('openFile'),async()=>{
+      if(!files)throw new Error('対応するChappy Player本体が必要です');
+      const result=await files.pickText();
+      if(result.status==='cancelled'){status('選択をキャンセルしました');return;}
+      if(result.status!=='selected' || typeof result.text!=='string')
+        throw new Error('ファイル内容を取得できませんでした');
+      $('editor').value=result.text;
+      $('fileName').value=result.fileName || 'document.txt';
+      status('読み込み完了：'+$('fileName').value+'（'+result.sizeBytes+'バイト）');
+    });
+  });
+  $('saveFile').addEventListener('click',()=>{
+    void operation($('saveFile'),async()=>{
+      if(!files)throw new Error('対応するChappy Player本体が必要です');
+      const result=await files.saveText($('fileName').value,$('editor').value);
+      status(result.status==='saved' ?
+        'ファイル保存・照合完了：'+result.sizeBytes+'バイト' :
+        '保存をキャンセルしました');
+    });
+  });
+  $('saveLocal').addEventListener('click',()=>{
+    void operation($('saveLocal'),async()=>{
+      if(!storage)throw new Error('アプリ内の保存機能が利用できません');
+      await storage.set('file_lab_draft',{
+        fileName:$('fileName').value, text:$('editor').value});
+      status('一時保存しました（このミニアプリ専用）');
+    });
+  });
+  $('loadLocal').addEventListener('click',()=>{
+    void operation($('loadLocal'),async()=>{
+      if(!storage)throw new Error('アプリ内の保存機能が利用できません');
+      const draft=await storage.get('file_lab_draft');
+      if(!draft || typeof draft.text!=='string'){
+        status('保存済みの内容がありません');return;
+      }
+      $('fileName').value=draft.fileName || 'chappy-note.txt';
+      $('editor').value=draft.text;
+      status('アプリ内の一時保存を読み込みました');
+    });
+  });
+})();
+</script></body></html>

@@ -26,6 +26,9 @@ void main() {
         '"permissions": []', '"permissions": ["motion", "haptics"]'));
     expect(tools.permissions, ['motion', 'haptics']);
     expect(chappyPermissionsLabel(tools.permissions), '動きセンサー・振動');
+    final files = ChappyPackage.parse(valid.replaceFirst(
+        '"permissions": []', '"permissions": ["files"]'));
+    expect(chappyPermissionsLabel(files.permissions), 'ファイルの選択・保存');
   });
   test('reject unknown, duplicate and malformed privileges', () {
     for (final list in [
