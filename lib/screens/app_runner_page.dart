@@ -32,6 +32,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   static const MethodChannel _mediaChannel =
       MethodChannel('dev.chappy.player/media_permissions');
   bool _mediaPermissionPending = false;
+  bool _nativeMicPending = false;
+  bool _nativeMicActive = false;
   LocalAppServer? _server;
   WebViewController? _controller;
   String? _fatal;
@@ -123,8 +125,15 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         'Denied: $reason');
   }
 
-  /// The JS bootstrap tracks streams so leaving the app/background stops tracks.
+  /// Native capture is stopped even when a mini-app JS handler is suspended.
+  /// A second Android-side onPause guard exists in MainActivity.
   Future<void> _stopMedia() async {
+    _nativeMicActive = false;
+    try {
+      await _mediaChannel.invokeMethod<bool>('stopNativeMic');
+    } catch (_) {
+      // No native microphone session, or the Android Activity is gone.
+    }
     final controller = _controller;
     if (controller == null) return;
     try {
@@ -141,6 +150,89 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     if (state != AppLifecycleState.resumed) {
       unawaited(_stopMedia());
     }
+  }
+
+  /// Native AudioRecord is available only to a foreground mini-app that
+  /// declares microphone permission, after user and Android consent.
+  Future<Map<String, dynamic>> _startNativeMic() async {
+    if (!mounted || _nativeMicPending || _nativeMicActive ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        !canRequestChappyMedia(widget.app.permissions, ['microphone'])) {
+      throw StateError('Native microphone not permitted or already active');
+    }
+    _nativeMicPending = true;
+    try {
+      final approved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialog) => AlertDialog(
+          title: const Text('ネイティブマイクの使用許可'),
+          content: Text('ミニアプリ「${widget.app.name}」がAndroidのマイクを直接使用して、'
+              '音量と波形を表示しようとしています。音声は保存・送信しません。'
+              'アプリを離れると録音を停止します。'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('拒否')),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true),
+                child: const Text('今回だけ許可')),
+          ],
+        ),
+      );
+      if (approved != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        throw StateError('Native microphone request cancelled');
+      }
+      final osGranted = await _mediaChannel.invokeMethod<bool>(
+        'requestMediaPermissions', {'types': ['microphone']},
+      );
+      if (osGranted != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        throw StateError('Android microphone permission unavailable');
+      }
+      final result = await _mediaChannel.invokeMapMethod<String, dynamic>(
+          'startNativeMic');
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+        await _mediaChannel.invokeMethod<bool>('stopNativeMic');
+        throw StateError('Native microphone page no longer foreground');
+      }
+      if (result == null || result['running'] != true) {
+        throw StateError('Native microphone could not start');
+      }
+      _nativeMicActive = true;
+      unawaited(widget.logs.add(widget.app.id, 'info', 'native-microphone',
+          'Android AudioRecord started (waveform envelope only)'));
+      return Map<String, dynamic>.from(result);
+    } finally {
+      _nativeMicPending = false;
+    }
+  }
+
+  Future<Map<String, dynamic>> _nativeMicLevels() async {
+    if (!_nativeMicActive || !mounted ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return {'running': false, 'rms': 0.0, 'levels': <double>[]};
+    }
+    final levels = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'readNativeMic');
+    if (levels == null || levels['running'] != true) {
+      _nativeMicActive = false;
+      return {'running': false, 'rms': 0.0, 'levels': <double>[]};
+    }
+    return Map<String, dynamic>.from(levels);
+  }
+
+  Future<bool> _stopNativeMic() async {
+    final wasActive = _nativeMicActive;
+    _nativeMicActive = false;
+    try {
+      await _mediaChannel.invokeMethod<bool>('stopNativeMic');
+    } finally {
+      if (wasActive) {
+        unawaited(widget.logs.add(widget.app.id, 'info',
+            'native-microphone', 'Android AudioRecord stopped'));
+      }
+    }
+    return true;
   }
 
   void _armWatchdog() {
@@ -360,6 +452,15 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           break;
         case 'info.get':
           value = {'id': widget.app.id, 'version': widget.app.version, 'player': '0.1.0'};
+          break;
+        case 'microphone.start':
+          value = await _startNativeMic();
+          break;
+        case 'microphone.levels':
+          value = await _nativeMicLevels();
+          break;
+        case 'microphone.stop':
+          value = await _stopNativeMic();
           break;
         case 'log':
           final text = params['message'];

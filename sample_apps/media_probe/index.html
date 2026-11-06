@@ -22,6 +22,23 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
 <p>Chappy Playerのカメラ・マイク許可と停止処理を実機で確認するミニアプリです。操作するまで撮影・録音を開始しません。映像・音声をサーバーに送信しません。</p>
 <section>
 <h2>カメラ</h2>
+<label style="display:block;margin:8px 0">
+  希望解像度：
+  <select id="cameraResolution">
+    <option value="auto">自動（端末にお任せ）</option>
+    <option value="720">HD・1280×720</option>
+    <option value="1080">Full HD・1920×1080</option>
+    <option value="2160">4K・3840×2160</option>
+  </select>
+</label>
+<label style="display:block;margin:8px 0">
+  カメラ：
+  <select id="cameraLens">
+    <option value="environment">背面（希望）</option>
+    <option value="user">前面（希望）</option>
+  </select>
+</label>
+<small>解像度は「希望値」であり、端末のカメラやWebViewの制限で低くなる場合があります。変更するには一度停止して再開してください。</small>
 <button id="cameraOn">カメラを開始</button>
 <button class="secondary" id="photo" disabled>写真を撮る</button>
 <button class="secondary" id="cameraOff" disabled>停止</button>
@@ -33,6 +50,12 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
 <h2>マイク・波形</h2>
 <button id="micOn">マイクを開始</button>
 <button class="secondary" id="micOff" disabled>停止</button>
+<button class="secondary" id="micProbe">入力機器を診断</button>
+<div style="margin:12px 0;border-top:1px solid #33425a;padding-top:12px">
+  <button id="nativeMicOn">Androidネイティブマイクを開始</button>
+  <button class="secondary" id="nativeMicOff" disabled>停止</button>
+  <small>WebViewで取得できない場合の別経路。Android AudioRecordから音量・波形のみ取得します（対応した新しいChappy Player本体が必要）。</small>
+</div>
 <label style="display:block;margin:10px 0">
   <input type="checkbox" id="advancedAudio">
   高度な入力設定を試す（ステレオ希望・音声補正OFF）
@@ -41,6 +64,7 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
 <canvas id="wave" width="640" height="128" aria-label="マイク入力波形"></canvas>
 <div class="status" id="micStatus">停止中</div>
 <small id="micDetails">入力した音声はスピーカーへ再生されません。</small>
+<small id="micProbeDetails">マイク診断では機器名・IDや音声そのものを記録しません。</small>
 </section>
 <section>
 <h2>診断</h2>
@@ -52,6 +76,7 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
   'use strict';
   const $ = id => document.getElementById(id);
   let cameraStream = null, micStream = null, audioContext = null;
+  let nativeMicRunning = false, nativeMicTimer = 0, nativeMicBusy = false;
   let animation = 0, analyser = null;
   const canvas = $('wave'), ctx = canvas.getContext('2d');
   function status(id, value) { $(id).textContent = value; }
@@ -73,6 +98,8 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
     $('cameraOn').disabled = false;
     $('cameraOff').disabled = true;
     $('photo').disabled = true;
+    $('cameraResolution').disabled = false;
+    $('cameraLens').disabled = false;
     status('cameraStatus', '停止中');
   }
   async function stopMic() {
@@ -90,10 +117,23 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
       mark('getUserMedia が利用できません。WebView / Android設定を確認してください。');
       return;
     }
+    const preset = $('cameraResolution').value;
+    const lens = $('cameraLens').value;
+    const dimensions = {
+      '720': [1280, 720], '1080': [1920, 1080], '2160': [3840, 2160]
+    };
+    const preference = dimensions[preset];
+    const video = {facingMode: {ideal: lens}};
+    if (preference) {
+      video.width = {ideal: preference[0]};
+      video.height = {ideal: preference[1]};
+    }
     $('cameraOn').disabled = true;
+    $('cameraResolution').disabled = true;
+    $('cameraLens').disabled = true;
     try {
       cameraStream = await navigator.mediaDevices.getUserMedia({
-        video: {facingMode: {ideal: 'environment'}}, audio: false
+        video, audio: false
       });
       $('view').srcObject = cameraStream;
       await $('view').play();
@@ -101,10 +141,17 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
       $('photo').disabled = false;
       const track = cameraStream.getVideoTracks()[0];
       const info = track && track.getSettings ? track.getSettings() : {};
-      status('cameraStatus', '動作中：' + (info.width || '?') + '×' + (info.height || '?'));
-      mark('カメラ取得成功');
+      const width = info.width || $('view').videoWidth || '?';
+      const height = info.height || $('view').videoHeight || '?';
+      const requested = preference ? preference[0] + '×' + preference[1] : '自動';
+      status('cameraStatus', '取得解像度：' + width + '×' + height +
+        ' / 希望：' + requested +
+        ' / カメラ：' + (info.facingMode || '不明'));
+      mark('カメラ取得成功：希望 ' + requested + ' / 実際 ' + width + '×' + height);
     } catch (error) {
-      stopCamera(); mark('カメラ取得失敗：' + describe(error));
+      stopCamera();
+      mark('カメラ取得失敗（希望 ' + (preference ? preference.join('×') : '自動') +
+        '）：' + describe(error));
     }
   }
   function snapshot() {
@@ -115,7 +162,8 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
     picture.getContext('2d').drawImage($('view'), 0, 0);
     $('snapshot').src = picture.toDataURL('image/png');
     $('snapshot').hidden = false;
-    mark('静止画キャプチャ成功（端末内プレビューのみ）');
+    mark('静止画キャプチャ成功：' + picture.width + '×' + picture.height +
+      '（端末内プレビューのみ）');
   }
   function drawWave() {
     if (!analyser) return;
@@ -137,7 +185,31 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
     status('micStatus', '入力中・RMS: ' + rms.toFixed(3));
     animation = requestAnimationFrame(drawWave);
   }
+  async function diagnoseMicrophone() {
+    const media = navigator.mediaDevices;
+    const contextAvailable = Boolean(window.AudioContext || window.webkitAudioContext);
+    const secure = window.isSecureContext === true;
+    try {
+      if (!media || !media.enumerateDevices) {
+        status('micProbeDetails', '診断結果：enumerateDevicesは使用不可');
+        mark('マイク機器診断：WebViewでenumerateDevicesが使えません' +
+          ' / secureContext=' + secure + ' / AudioContext=' + contextAvailable);
+        return;
+      }
+      const devices = await media.enumerateDevices();
+      const inputs = devices.filter(item => item.kind === 'audioinput').length;
+      const output = '音声入力候補：' + inputs + '件 / SecureContext：' + secure +
+        ' / AudioContext：' + contextAvailable;
+      status('micProbeDetails', output);
+      mark('マイク機器診断：' + output);
+    } catch (error) {
+      const output = '機器診断に失敗：' + describe(error);
+      status('micProbeDetails', output);
+      mark(output);
+    }
+  }
   async function startMic() {
+    if (nativeMicRunning) await stopNativeMic();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       mark('getUserMedia が利用できません。WebView / Android設定を確認してください。');
       return;
@@ -184,17 +256,96 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
         'マイク入力の開始に失敗。別の録音アプリを終了し、端末のマイク利用設定・Chappy Playerの権限を確認してください。' :
         '取得エラー：' + describe(error));
       mark('マイク取得失敗（' + mode + ' / ' + phase + '）：' + describe(error));
+      await diagnoseMicrophone();
+    }
+  }
+  function renderNativeLevels(snapshot) {
+    const values = Array.isArray(snapshot.levels) ? snapshot.levels : [];
+    const rms = Number(snapshot.rms) || 0;
+    const w = canvas.width, h = canvas.height;
+    ctx.fillStyle = '#081020'; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#4ddff2'; ctx.lineWidth = 2;
+    for (let i = 0; i < values.length; i++) {
+      const level = Math.max(0, Math.min(1, Number(values[i]) || 0));
+      const x = i * w / Math.max(1, values.length - 1);
+      const amplitude = Math.max(1, level * h * 0.48);
+      ctx.beginPath(); ctx.moveTo(x, h / 2 - amplitude);
+      ctx.lineTo(x, h / 2 + amplitude); ctx.stroke();
+    }
+    status('micStatus', 'Androidネイティブ入力中・RMS: ' + rms.toFixed(3) +
+      ' / 読取フレーム: ' + (snapshot.framesRead || 0));
+  }
+  async function stopNativeMic() {
+    clearInterval(nativeMicTimer); nativeMicTimer = 0;
+    nativeMicRunning = false; nativeMicBusy = false;
+    $('nativeMicOn').disabled = !(window.Chappy && Chappy.microphone);
+    $('nativeMicOff').disabled = true;
+    try {
+      if (window.Chappy && Chappy.microphone) await Chappy.microphone.stop();
+    } catch (_) {}
+    status('micStatus', '停止中');
+  }
+  async function pollNativeMic() {
+    if (nativeMicBusy || !nativeMicRunning) return;
+    nativeMicBusy = true;
+    try {
+      const info = await Chappy.microphone.levels();
+      if (!nativeMicRunning) return;
+      if (!info || info.running !== true) {
+        mark('ネイティブマイクが停止しました：' +
+          (info && info.error ? String(info.error) : 'foreground capture ended'));
+        await stopNativeMic();
+        return;
+      }
+      renderNativeLevels(info);
+    } catch (error) {
+      mark('ネイティブマイク波形取得失敗：' + describe(error));
+      await stopNativeMic();
+    } finally {
+      nativeMicBusy = false;
+    }
+  }
+  async function startNativeMic() {
+    if (!(window.Chappy && Chappy.microphone)) {
+      mark('このChappy Player本体はネイティブマイク未対応です。新しいAPKに更新してください。');
+      return;
+    }
+    if (nativeMicRunning) return;
+    // Avoid competing for the same input device through WebRTC and AudioRecord.
+    if (cameraStream) stopCamera();
+    if (micStream) await stopMic();
+    $('nativeMicOn').disabled = true;
+    status('micStatus', 'Androidネイティブ入力の許可待ち');
+    try {
+      const info = await Chappy.microphone.start();
+      if (!info || info.running !== true) throw new Error('AudioRecord was not started');
+      nativeMicRunning = true;
+      $('nativeMicOff').disabled = false;
+      status('micDetails', 'ネイティブ取得：' + (info.sampleRate || '?') +
+        ' Hz / ' + (info.channels || '?') + 'ch / ' + (info.source || 'unknown'));
+      mark('Android AudioRecord取得成功。音量・波形データを確認します');
+      nativeMicTimer = setInterval(() => { void pollNativeMic(); }, 120);
+      await pollNativeMic();
+    } catch (error) {
+      await stopNativeMic();
+      mark('Android AudioRecord取得失敗：' + describe(error));
     }
   }
   $('cameraOn').addEventListener('click', startCamera);
   $('cameraOff').addEventListener('click', stopCamera);
   $('photo').addEventListener('click', snapshot);
   $('micOn').addEventListener('click', startMic);
+  $('nativeMicOn').addEventListener('click', startNativeMic);
+  $('nativeMicOff').addEventListener('click', () => { void stopNativeMic(); });
+  $('micProbe').addEventListener('click', diagnoseMicrophone);
   $('micOff').addEventListener('click', () => { void stopMic(); });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { stopCamera(); void stopMic(); }
+    if (document.hidden) { stopCamera(); void stopMic(); void stopNativeMic(); }
   });
-  window.addEventListener('pagehide', () => { stopCamera(); void stopMic(); });
+  window.addEventListener('pagehide', () => {
+    stopCamera(); void stopMic(); void stopNativeMic();
+  });
+  $('nativeMicOn').disabled = !(window.Chappy && Chappy.microphone);
   mark('準備完了：ボタンを押して権限を確認してください');
 })();
 </script>

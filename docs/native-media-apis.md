@@ -9,7 +9,7 @@
 - ホストは映像・音声のバイト列をログに残さず、ローカルWebViewへ渡す。ネット接続は従来のCSPで禁止
 - トラックの終了/ページ終了/バックグラウンド移動時はJavaScriptで停止する。Android側でもWebView破棄時に取得を終了する
 - 既存ミニアプリ（`permissions: []`）はそのまま動作し、権限を自動で付与しない
-- 現時点で実機検証はまだ。Android WebViewによるハードウェア依存の挙動は未知
+- 実機ではカメラ表示と解像度変更が成功。WebViewのマイク取得は未成功（NotReadableError）。新しいAndroid AudioRecord方式は実機未検証
 
 ## 利用する標準API
 
@@ -31,14 +31,14 @@ Androidのカメラ/マイク権限はFlutterから `dev.chappy.player/media_per
 - パッケージID: `local.chappy.media_probe`
 - 追加権限: `camera`, `microphone`
 - ビルド: `Build Android APK` Actions の `chappy-media-probe` 成果物の `media-probe.chappy` を取得
-- ミニアプリは公開ライブラリの **Debug** に掲載（Stable未公開）。実機のマイク取得エラーを調べるため、v0.1.1から「基本入力（audio: true）」と「高度な入力設定」の切替を追加
+- ミニアプリは公開ライブラリの **Debug** に掲載（Stable未公開）。v0.1.1では基本/高度なマイク比較、v0.1.2ではカメラ解像度・マイク機器診断を追加。ネイティブマイク試験用v0.1.3は新しいAPKが配布されるまで公開ライブラリへ反映しない
 
 ローカルでの作成:
 
 ```sh
 python3 tools/pack_html_chappy.py --source sample_apps/media_probe \
   --id local.chappy.media_probe --name "Chappy Media Lab" \
-  --version 0.1.1 --permission camera --permission microphone \
+  --version 0.1.3 --permission camera --permission microphone \
   --output media-probe.chappy
 ```
 
@@ -64,6 +64,28 @@ python3 tools/pack_html_chappy.py --source sample_apps/media_probe \
 - この修正が根本原因かは **未確認**。本体の次の正式署名APKで実機比較が必要。保存データは削除しない
 - 失敗時はマイクのプライバシー設定、他の録音アプリ、Bluetooth/USBマイクの接続状態、Android System WebViewバージョンを記録し、音声データそのものは収集しない
 - バックグラウンド録音はこの改修に含まない
+
+## Androidネイティブ AudioRecord 方式（実装候補・未リリース）
+
+- `WebView.getUserMedia()` が許可後に `NotReadableError` になる一部端末向けに、`tools/android/NativeMicCapture.kt` を追加する新方式。WebView経由の録音とは別にAndroidが直接マイク入力を取得する
+- ChappyのJS APIは `Chappy.microphone.start()`, `Chappy.microphone.levels()`, `Chappy.microphone.stop()`
+- Android側はMono 16kHzを優先し、MICの48kHzまたはVOICE_RECOGNITION入力源へ限定的にフォールバックする
+- ミニアプリ側は、マイク権限がマニフェストで宣言されていること、プレイヤーの毎回許可ダイアログ、AndroidのRECORD_AUDIO許可、画面表示中の4条件が必須
+- `levels()` は **64個の粗い振幅エンベロープ、RMS、読取フレーム数** のみ返す。生PCM、音声ファイル、音声ログは保存・送信しない。ChappyのループバックCSPは従来通り
+- バックグラウンド移行、ミニアプリ画面からの退出、Activity停止で必ず `AudioRecord.stop()` を呼び、録音を終了する
+- `sample_apps/media_probe/index.html` v0.1.3にネイティブマイクの開始・停止と波形表示ボタンを追加した（既存WebView方式も保持）。対応する新しい正式署名APKが必須
+- このPRは **実機未検証・未署名・未リリース**。CIがランナー起動前で失敗する間はmainへマージしない
+
+### ネイティブ方式の実機テスト
+
+1. 正式署名APKを上書きインストールし、既存ASMRデータの保持を確認する
+2. `Chappy Media Lab v0.1.3` を開く。WebViewマイクは以前のエラーを再現してよい
+3. 「Androidネイティブマイクを開始」→プレイヤーの許可→Android権限の順で明示的に承認する
+4. `Android AudioRecord取得成功` が表示され、話しかけると波形とRMSが変化する
+5. 権限拒否時はマイクが起動しない。カメラは従来通り動く
+6. 画面を離れる/ホームへ戻る/画面消灯で録音停止し、Androidのマイク使用インジケーターが消える
+7. 連続開始・停止と、通話・別アプリ利用後の復帰でクラッシュしない
+8. ネイティブも失敗する場合は、Androidの録音ルーティング・端末プライバシー設定を重点調査する。成功した場合はWebView固有のWebRTC入力経路が疑わしい
 
 ## 制限
 

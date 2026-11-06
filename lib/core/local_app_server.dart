@@ -166,7 +166,10 @@ const _bootScript = r'''
   function call(method, params) {
     return new Promise((resolve, reject) => {
       const requestId = String(++seq);
-      const timer = setTimeout(() => {
+      // Native microphone asks the user in two successive permission dialogs.
+      // Do not time out while the user is deciding: Android/Flutter will
+      // reject a cancelled request and always stop capture on background.
+      const timer = method === 'microphone.start' ? null : setTimeout(() => {
         pending.delete(requestId);
         reject(new Error('Chappy API timeout'));
       }, timeoutMs);
@@ -183,6 +186,11 @@ const _bootScript = r'''
         remove: key => call('storage.remove', {key})
       }),
       info: () => call('info.get', {}),
+      microphone: Object.freeze({
+        start: () => call('microphone.start', {}),
+        levels: () => call('microphone.levels', {}),
+        stop: () => call('microphone.stop', {})
+      }),
       log: (message) => call('log', {message: String(message)})
     })
   });

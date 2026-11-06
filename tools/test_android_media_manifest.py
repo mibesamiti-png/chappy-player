@@ -29,7 +29,8 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     kotlin.write_text("package dev.chappy.chappy_player\n", encoding="utf-8")
     templates = root / "tools/android"
     templates.mkdir(parents=True)
-    for name in ["MainActivity.kt", "chappy_update_paths.xml"]:
+    for name in ["MainActivity.kt", "chappy_update_paths.xml",
+                 "NativeMicCapture.kt"]:
         (templates / name).write_bytes(
             (PROJECT / "tools/android" / name).read_bytes()
         )
@@ -38,6 +39,10 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
             [sys.executable, str(PROJECT / "tools/patch_android.py")],
             cwd=root, capture_output=True, text=True, check=True,
         )
+    native_class = root / "android/app/src/main/kotlin/dev/chappy/chappy_player/NativeMicCapture.kt"
+    assert native_class.read_bytes() == (
+        PROJECT / "tools/android/NativeMicCapture.kt"
+    ).read_bytes()
     parsed = ET.parse(manifest).getroot()
     actual = [
         node.get(ANDROID + "name")

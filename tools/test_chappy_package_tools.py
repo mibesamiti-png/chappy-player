@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
     real_html = Path(__file__).resolve().parent.parent / "sample_apps/media_probe"
     media_demo = root / "media-probe.chappy"
     package_html(real_html, media_demo, "local.chappy.media_probe",
-                 "Chappy Media Lab", "0.1.1", ["camera", "microphone"])
+                 "Chappy Media Lab", "0.1.3", ["camera", "microphone"])
     with zipfile.ZipFile(media_demo) as archive:
         demo_manifest = json.loads(archive.read("manifest.json"))
         assert demo_manifest["permissions"] == ["camera", "microphone"]
@@ -68,7 +68,12 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
         assert b"id=\"advancedAudio\"" in source
         assert b"audio: true" in source
         assert b"NotReadableError" in source
-        assert demo_manifest["version"] == "0.1.1"
+        assert demo_manifest["version"] == "0.1.3"
+        assert b'id="cameraResolution"' in source
+        assert b'id="nativeMicOn"' in source
+        assert b'Chappy.microphone.start()' in source
+        assert b'Chappy.microphone.levels()' in source
+        assert b'Chappy.microphone.stop()' in source
 
     debug = public / "debug"
     debug.mkdir()
