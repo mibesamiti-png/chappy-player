@@ -173,7 +173,7 @@ const _bootScript = r'''
                      method === 'video.delete' || method === 'video.export' ||
                       method === 'video.backupZip' || method === 'video.restoreZip' ||
                       method === 'files.importAsset' ||
-                      method === 'files.exportAsset' || method === 'files.exportCompressedZip' ||
+                      method === 'files.exportAsset' || method === 'files.exportCompressedZip' || method === 'network.request' || method === 'network.connect' ||
                       method === 'files.deleteAsset' ||
                        method === 'files.pickText' || method === 'files.saveText' ||
                       method === 'motion.sample' || method === 'haptics.play')
@@ -225,6 +225,16 @@ const _bootScript = r'''
         deleteAsset: id => call('files.deleteAsset', {id: String(id)}),
         transferStatus: () => call('files.transferStatus', {}),
         cancelTransfer: () => call('files.cancelTransfer', {})
+      }),
+      network: Object.freeze({
+        request: (url, method='GET', body='') =>
+          call('network.request', {
+            url: String(url), method: String(method), body: String(body)
+          }),
+        connect: url => call('network.connect', {url: String(url)}),
+        send: text => call('network.send', {text: String(text)}),
+        poll: () => call('network.poll', {}),
+        close: () => call('network.close', {})
       }),
       motion: Object.freeze({
         sample: type => call('motion.sample', {type: String(type)}),
