@@ -67,7 +67,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   Future<dynamic> _handleNativeVideoShortcut(MethodCall call) async {
     if (call.method != 'videoVolumeShortcut' || !_videoDark ||
         !_darkSessionArmed || !mounted ||
-        ModalRoute.of(context)?.isCurrent != true) return null;
+        ModalRoute.of(context)?.isCurrent != true) { return null; }
     if (call.arguments == 'stop' && _nativeVideoActive &&
         !_volumeStopPending && !_videoStartPending) {
       _volumeStopPending = true;
@@ -478,7 +478,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
       ),
     );
     if (confirmed != true || !mounted ||
-        ModalRoute.of(context)?.isCurrent != true) return false;
+        ModalRoute.of(context)?.isCurrent != true) { return false; }
     return await _mediaChannel.invokeMethod<bool>(
         'deletePrivateVideo', {'owner': widget.app.id, 'id': id}) ?? false;
   }
