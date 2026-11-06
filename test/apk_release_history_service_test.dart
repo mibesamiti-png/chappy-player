@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:chappy_player/core/apk_release_history_service.dart';
+import 'package:chappy_player/core/update_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -61,4 +62,33 @@ void main() {
     expect(() => service.parse(jsonEncode(List.filled(13, {}))),
         throwsFormatException);
   });
+  test('Debug prerelease list never mixes with production release history', () {
+    final tag = 'debug-v0.1.0-b22';
+    final debug = {
+      'tag_name': tag, 'draft': false, 'prerelease': true,
+      'body': 'Android Debug APK',
+      'assets': [{
+        'name': 'ChappyPlayerDebug.apk',
+        'digest': 'sha256:${List.filled(64, 'a').join()}',
+        'size': 20000000,
+        'browser_download_url':
+            'https://github.com/mibesamiti-png/chappy-player-updates/releases/download/$tag/ChappyPlayerDebug.apk',
+      }],
+    };
+    final releases = jsonEncode([debug, release(12, '0.2.5')]);
+    final testDebug = const ApkReleaseHistoryService(debug: true).parse(releases);
+    expect(testDebug.length, 1);
+    expect(testDebug.single.packageId, chappyDebugPackageId);
+    expect(testDebug.single.buildNumber, 22);
+    expect(testDebug.single.forAbi('arm64-v8a')!.abi, 'universal');
+    expect(service.parse(releases).length, 1);
+    final malformed = Map<String, dynamic>.from(debug);
+    malformed['assets'] = [Map<String, dynamic>.from(
+      (debug['assets'] as List).first as Map)..['browser_download_url'] =
+          'https://example.com/malicious.apk'];
+    expect(const ApkReleaseHistoryService(debug: true)
+        .parse(jsonEncode([malformed])), isEmpty);
+  });
+
+
 }
