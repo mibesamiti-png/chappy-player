@@ -40,6 +40,7 @@ class MainActivity : FlutterActivity() {
     private val nativeVideo = NativeVideoRecorder(this)
     private val miniDevices = NativeMiniAppDevices(this)
     private val videoExporter = NativeVideoExport(this)
+    private val zipBackup = NativeVideoZipBackup(this)
     private val miniDocuments = NativeMiniAppDocuments(this)
     @Volatile private var micActivityVisible = false
     private var mediaPermissionCallback: MethodChannel.Result? = null
@@ -73,6 +74,7 @@ class MainActivity : FlutterActivity() {
         nativeMic.stop()
         miniDevices.onDestroy()
         videoExporter.onDestroy()
+        zipBackup.onDestroy()
         miniDocuments.onDestroy()
         nativeVideo.onDestroy()
         super.onDestroy()
@@ -351,6 +353,21 @@ class MainActivity : FlutterActivity() {
                                 call.argument<String>("effect") ?: ""))
                         }
                     }
+                    "backupPrivateVideosZip" -> {
+                        if (!micActivityVisible) {
+                            result.error("VIDEO_BACKUP_NOT_FOREGROUND",
+                                "Video backup needs a visible app", null)
+                        } else {
+                            try {
+                                val owner = call.argument<String>("owner") ?: ""
+                                val sources = nativeVideo.privateBackupSources(owner)
+                                zipBackup.begin(owner, sources, result)
+                            } catch (error: Exception) {
+                                result.error("VIDEO_BACKUP_NOT_ALLOWED",
+                                    error.message, null)
+                            }
+                        }
+                    }
                     "exportPrivateVideo" -> {
                         if (!micActivityVisible) {
                             result.error("VIDEO_EXPORT_NOT_FOREGROUND",
@@ -495,6 +512,7 @@ class MainActivity : FlutterActivity() {
     @Deprecated("Deprecated in Android SDK, used for document picker result")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (videoExporter.onResult(requestCode, resultCode, data)) return
+        if (zipBackup.onResult(requestCode, resultCode, data)) return
         if (miniDocuments.onResult(requestCode, resultCode, data)) return
         if (requestCode != backupRequestCode) {
             @Suppress("DEPRECATION")
