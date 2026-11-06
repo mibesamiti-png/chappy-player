@@ -52,7 +52,7 @@ class _ChappyAppState extends State<ChappyApp> {
     await repository.init();
     if (kDebugMode && Platform.isAndroid) {
       try {
-        final report = await const DebugSampleSeeder().seed(repository);
+        final report = await DebugSampleSeeder().seed(repository);
         if (!report.alreadySeeded) {
           await widget.logs.add('player', 'info', 'debug-samples',
               'Added ${report.installed} mini-apps; '
