@@ -101,7 +101,11 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   </div>
   <section id="libraryPanel" hidden>
     <p class="hint">このミニアプリで非公開保存した動画のみ表示します。再生・削除に加え、Androidの保存先選択画面からMP4を書き出せます（対応プレイヤーが必要）。Media Labとは保存領域が別で、ギャラリー保存は対象外です。</p>
-    <button id="refreshLibrary" class="secondary" type="button">一覧を更新</button>
+    <div class="row">
+      <button id="refreshLibrary" class="secondary" type="button">一覧を更新</button>
+      <button id="backupVideos" class="secondary" type="button">非公開動画をまとめてZIP保存</button>
+    </div>
+    <p class="hint">このミニアプリ内の動画をまとめてバックアップします（最大100本・合計4GiB）。保存先は自分で選択。バックアップしても元の動画は残ります。対応する新しいプレイヤー本体が必要です。</p>
     <div id="libraryList"></div>
   </section>
 </section>
@@ -345,6 +349,30 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     if (libraryExpanded) void refreshLibrary();
   });
   $('refreshLibrary').addEventListener('click', () => { void refreshLibrary(); });
+  $('backupVideos').addEventListener('click', async () => {
+    const button = $('backupVideos');
+    if (!video || typeof video.backupZip !== 'function') {
+      notify('ZIPバックアップには新しいChappy Player本体が必要です。', true);
+      return;
+    }
+    button.disabled = true;
+    try {
+      notify('保存する動画を確認しています…');
+      const result = await video.backupZip();
+      if (result && result.status === 'saved') {
+        notify('ZIPバックアップ完了：' + result.files + '本、' +
+            fileSizeText(result.sizeBytes) +
+            '。元の非公開動画は削除していません。');
+      } else {
+        notify('ZIPバックアップをキャンセルしました');
+      }
+    } catch (error) {
+      notify('ZIPバックアップに失敗：' + String(error.message || error), true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   window.addEventListener('chappy-native-video-started', () => {
     recording = true; stopping = false; starting = false; lastSavedName = '';
     beginPolling(); updateControls(); void pollStatus();
