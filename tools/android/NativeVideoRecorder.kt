@@ -55,6 +55,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
     private var lastFileName: String? = null
     private var lastError: String? = null
     private var token = 0
+    private var restoringVideos = false
     private var dimmed = false
     private var originalBrightness: Float? = null
     private var originalKeepOn = false
@@ -99,7 +100,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             result.error("VIDEO_AUDIO_NOT_ALLOWED", "Microphone permission required", null)
             return
         }
-        if (state != "idle" || recording != null) {
+        if (state != "idle" || recording != null || restoringVideos) {
             result.error("VIDEO_BUSY", "A recording is already running or finalizing", null)
             return
         }
@@ -350,7 +351,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             ?: emptyList()
 
     fun deletePrivate(appId: String, id: String): Boolean {
-        if (state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
+        if (restoringVideos || state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
             throw IllegalArgumentException("VIDEO_DELETE_NOT_ALLOWED")
         }
         val root = privateDirectory(appId).canonicalFile
@@ -366,7 +367,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
      * Exposed solely to the native system-document picker, never JavaScript.
      */
     fun privateExportSource(appId: String, id: String): File {
-        if (state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
+        if (restoringVideos || state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
             throw IllegalArgumentException("VIDEO_EXPORT_NOT_ALLOWED")
         }
         val root = privateDirectory(appId).canonicalFile
@@ -384,7 +385,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
      * Reject oversized batches explicitly; do not produce a misleading backup.
      */
     fun privateBackupSources(appId: String): List<File> {
-        if (state != "idle" || recording != null) {
+        if (restoringVideos || state != "idle" || recording != null) {
             throw IllegalStateException("VIDEO_BACKUP_REQUIRES_IDLE")
         }
         val root = privateDirectory(appId).canonicalFile
@@ -415,8 +416,25 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         return sources
     }
 
+    /** Reserve the CameraX player's private library for a user-approved ZIP
+     * restore. System picker pauses the Activity, so pause MUST NOT release
+     * this lock; the restore flow explicitly releases it on every terminal path.
+     */
+    fun beginPrivateRestore(appId: String): File {
+        if (restoringVideos || state != "idle" || recording != null) {
+            throw IllegalStateException("VIDEO_RESTORE_REQUIRES_IDLE")
+        }
+        val directory = privateDirectory(appId).canonicalFile
+        restoringVideos = true
+        return directory
+    }
+
+    fun endPrivateRestore() {
+        restoringVideos = false
+    }
+
     fun openPrivate(appId: String, id: String): Boolean {
-        if (state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
+        if (restoringVideos || state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
             throw IllegalArgumentException("VIDEO_OPEN_NOT_ALLOWED")
         }
         val root = privateDirectory(appId).canonicalFile
