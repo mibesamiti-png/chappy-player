@@ -35,7 +35,8 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     templates = root / "tools/android"
     templates.mkdir(parents=True)
     for name in ["MainActivity.kt", "chappy_update_paths.xml",
-                 "NativeMicCapture.kt", "NativeVideoRecorder.kt"]:
+                 "NativeMicCapture.kt", "NativeVideoRecorder.kt",
+                 "NativeMiniAppDevices.kt", "NativeVideoExport.kt"]:
         (templates / name).write_bytes(
             (PROJECT / "tools/android" / name).read_bytes()
         )
@@ -52,6 +53,9 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     assert video_class.read_bytes() == (
         PROJECT / "tools/android/NativeVideoRecorder.kt"
     ).read_bytes()
+    for name in ("NativeMiniAppDevices.kt", "NativeVideoExport.kt"):
+        copied = native_class.with_name(name)
+        assert copied.read_bytes() == (PROJECT / "tools/android" / name).read_bytes()
     gradle_text = gradle.read_text(encoding="utf-8")
     assert gradle_text.count('androidx.camera:camera-video:1.5.3') == 1
     assert gradle_text.count('androidx.camera:camera-lifecycle:1.5.3') == 1
@@ -67,6 +71,7 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.VIBRATE",
     ]:
         assert actual.count(permission) == 1, (permission, actual)
     assert "android.permission.FOREGROUND_SERVICE_MICROPHONE" not in actual
