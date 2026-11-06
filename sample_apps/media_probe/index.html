@@ -15,6 +15,10 @@ video,canvas, img{display:block;width:100%;border-radius:10px;background:#080e18
 canvas{height:128px}img{margin-top:9px;max-height:220px;object-fit:contain}
 small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
 .status{padding:9px 12px;background:#111c30;border-radius:9px;margin-top:9px}
+textarea{display:block;width:100%;margin-top:8px;background:#0c1527;color:#e9f2ff;
+border:1px solid #425579;border-radius:10px;padding:10px;font-size:12px;
+font-family:ui-monospace,monospace;line-height:1.4;resize:vertical}
+textarea[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -69,6 +73,10 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
 <section>
 <h2>診断</h2>
 <div class="status" id="diagnostic">初期化中...</div>
+<button id="diagCopy">診断ログをコピー</button>
+<button class="secondary" id="diagToggle">診断ログを表示</button>
+<small id="diagCopyStatus">機器名・機器ID・生の音声データは記録しません。</small>
+<textarea id="diagHistory" rows="7" readonly hidden aria-label="診断ログの内容"></textarea>
 <small>権限確認で「拒否」を選ぶと、ここにエラー内容が表示されます。Android側の許可も必要です。ホームへ戻るとストリームを停止します。</small>
 </section>
 <script>
@@ -78,6 +86,10 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
   let cameraStream = null, micStream = null, audioContext = null;
   let nativeMicRunning = false, nativeMicTimer = 0, nativeMicBusy = false;
   let animation = 0, analyser = null;
+  const diagnosticHistory = [];
+  const maxHistory = 40;
+  let nativeFramesBefore = 0, nativeLastProgressAt = 0;
+  let nativeAudioDetected = false, nativeNoFramesReported = false;
   const canvas = $('wave'), ctx = canvas.getContext('2d');
   function status(id, value) { $(id).textContent = value; }
   function describe(error) {
@@ -85,8 +97,36 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
       String(error && error.message ? error.message : error);
   }
   function mark(message) {
-    status('diagnostic', message);
-    try { if (window.Chappy) Chappy.log('[media-probe] ' + message); } catch (_) {}
+    const safeMessage = String(message).slice(0, 400);
+    status('diagnostic', safeMessage);
+    const time = new Date().toLocaleTimeString('ja-JP', {hour12: false});
+    diagnosticHistory.push('[' + time + '] ' + safeMessage);
+    if (diagnosticHistory.length > maxHistory) diagnosticHistory.shift();
+    $('diagHistory').value = diagnosticHistory.join('\n');
+    try { if (window.Chappy) Chappy.log('[media-probe] ' + safeMessage); } catch (_) {}
+  }
+  async function copyDiagnostics() {
+    const content = 'Chappy Media Lab / 診断ログ（最新' +
+      diagnosticHistory.length + '件）\n' + diagnosticHistory.join('\n');
+    const field = $('diagHistory');
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) {
+        throw new Error('Clipboard API is unavailable');
+      }
+      await navigator.clipboard.writeText(content);
+      status('diagCopyStatus', '診断ログをコピーしました。チャットに貼り付けられます。');
+    } catch (_) {
+      field.hidden = false;
+      $('diagToggle').textContent = '診断ログを隠す';
+      field.value = content;
+      field.focus(); field.select();
+      status('diagCopyStatus', '自動コピーが使えません。表示した文章を長押しでコピーしてください。');
+    }
+  }
+  function toggleDiagnostics() {
+    const field = $('diagHistory');
+    field.hidden = !field.hidden;
+    $('diagToggle').textContent = field.hidden ? '診断ログを表示' : '診断ログを隠す';
   }
   function stopTracks(stream) {
     if (!stream) return;
@@ -272,8 +312,22 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
       ctx.beginPath(); ctx.moveTo(x, h / 2 - amplitude);
       ctx.lineTo(x, h / 2 + amplitude); ctx.stroke();
     }
+    const frames = Number(snapshot.framesRead) || 0;
     status('micStatus', 'Androidネイティブ入力中・RMS: ' + rms.toFixed(3) +
-      ' / 読取フレーム: ' + (snapshot.framesRead || 0));
+      ' / 読取フレーム: ' + frames);
+    if (!nativeAudioDetected && rms >= 0.006) {
+      nativeAudioDetected = true;
+      mark('Androidネイティブマイクで音声入力を検出（RMS=' +
+        rms.toFixed(3) + ' / 読取フレーム=' + frames + '）');
+    }
+    const now = Date.now();
+    if (frames > nativeFramesBefore) {
+      nativeFramesBefore = frames;
+      nativeLastProgressAt = now;
+    } else if (!nativeNoFramesReported && now - nativeLastProgressAt > 3000) {
+      nativeNoFramesReported = true;
+      mark('Androidネイティブマイクの読取フレームが増えません。録音入力の停止や端末設定を確認してください。');
+    }
   }
   async function stopNativeMic() {
     clearInterval(nativeMicTimer); nativeMicTimer = 0;
@@ -320,6 +374,10 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
       const info = await Chappy.microphone.start();
       if (!info || info.running !== true) throw new Error('AudioRecord was not started');
       nativeMicRunning = true;
+      nativeFramesBefore = 0;
+      nativeLastProgressAt = Date.now();
+      nativeAudioDetected = false;
+      nativeNoFramesReported = false;
       $('nativeMicOff').disabled = false;
       status('micDetails', 'ネイティブ取得：' + (info.sampleRate || '?') +
         ' Hz / ' + (info.channels || '?') + 'ch / ' + (info.source || 'unknown'));
@@ -331,6 +389,8 @@ small{display:block;color:#93a8c8;margin:8px 0;overflow-wrap:anywhere}
       mark('Android AudioRecord取得失敗：' + describe(error));
     }
   }
+  $('diagCopy').addEventListener('click', () => { void copyDiagnostics(); });
+  $('diagToggle').addEventListener('click', toggleDiagnostics);
   $('cameraOn').addEventListener('click', startCamera);
   $('cameraOff').addEventListener('click', stopCamera);
   $('photo').addEventListener('click', snapshot);
