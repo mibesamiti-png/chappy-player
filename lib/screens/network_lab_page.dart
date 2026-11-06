@@ -109,7 +109,7 @@ class _NetworkLabPageState extends State<NetworkLabPage>
       }
     } catch (error) {
       if (mounted && request == _epoch) {
-        setState(() => _error = '探索を開始できませんでした: ' + error.toString());
+        setState(() => _error = '探索を開始できませんでした: $error');
       }
     } finally {
       if (mounted && request == _epoch) {
@@ -130,7 +130,7 @@ class _NetworkLabPageState extends State<NetworkLabPage>
     } catch (error) {
       if (!mounted || request != _epoch) return;
       _cancelScan(clearResults: true);
-      setState(() => _error = '探索を停止しました: ' + error.toString());
+      setState(() => _error = '探索を停止しました: $error');
     }
   }
 
@@ -146,7 +146,7 @@ class _NetworkLabPageState extends State<NetworkLabPage>
       setState(() => _snapshot = result);
     } catch (error) {
       if (mounted && request == _epoch) {
-        setState(() => _error = '停止処理を確認できませんでした: ' + error.toString());
+        setState(() => _error = '停止処理を確認できませんでした: $error');
       }
     } finally {
       if (mounted && request == _epoch) {
@@ -174,7 +174,7 @@ class _NetworkLabPageState extends State<NetworkLabPage>
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               key: const Key('netlab_service_type'),
-              value: _serviceType,
+              initialValue: _serviceType,
               decoration: const InputDecoration(
                 labelText: '探すサービス',
                 border: OutlineInputBorder(),
@@ -227,12 +227,12 @@ class _NetworkLabPageState extends State<NetworkLabPage>
               ),
             Text(
               _scanning
-                  ? '探索中（残り約' + _snapshot!.remainingSeconds.toString() + '秒）'
+                  ? '探索中（残り約${_snapshot!.remainingSeconds}秒）'
                   : '探索停止中',
               key: const Key('netlab_status'),
             ),
             const SizedBox(height: 14),
-            Text('発見したサービス ' + services.length.toString() + '件',
+            Text('発見したサービス ${services.length}件',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
             if (services.isEmpty)
@@ -251,9 +251,9 @@ class _NetworkLabPageState extends State<NetworkLabPage>
                   leading: const Icon(Icons.devices_outlined),
                   title: Text(service.name),
                   subtitle: Text(
-                    service.type + '\n' +
-                    (service.resolved ? service.address : 'IP未解決') +
-                    (service.port > 0 ? ':' + service.port.toString() : ''),
+                    '${service.type}\n'
+                    '${service.resolved ? service.address : 'IP未解決'}'
+                    '${service.port > 0 ? ':${service.port}' : ''}',
                   ),
                   isThreeLine: true,
                 ),
