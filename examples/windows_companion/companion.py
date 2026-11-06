@@ -107,6 +107,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Use short-lived, fingerprint-verified TLS PC approval instead of an inert beacon",
     )
     parser.add_argument(
+        "--qr", action="store_true",
+        help="With --start --pair, show an expiring, one-time QR pairing invitation",
+    )
+    parser.add_argument(
         "--minutes", type=int, default=DEFAULT_MINUTES,
         help="Automatic stop after 1–30 minutes (default: 10)",
     )
@@ -162,6 +166,9 @@ def main(argv: list[str] | None = None) -> int:
     if not args.start:
         print("Not advertising. Use --start to opt in. See --help.")
         return 0
+    if args.qr and not args.pair:
+        print("--qr requires --pair", file=sys.stderr)
+        return 2
     if not 1 <= args.minutes <= MAX_MINUTES:
         print("Duration must be between 1 and 30 minutes", file=sys.stderr)
         return 2
@@ -169,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
         address = validate_lan_ipv4(args.ip) if args.ip else discover_local_ipv4()
         if args.pair:
             from pairing_server import run_pairing
-            run_pairing(address, args.minutes)
+            run_pairing(address, args.minutes, qr=args.qr)
         else:
             run_beacon(address, args.minutes)
         return 0
