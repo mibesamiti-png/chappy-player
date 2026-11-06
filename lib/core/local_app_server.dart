@@ -171,7 +171,7 @@ const _bootScript = r'''
       // reject a cancelled request and always stop capture on background.
       const timer = (method === 'microphone.start' || method === 'video.start' ||
                      method === 'video.delete' || method === 'video.export' ||
-                      method === 'video.backupZip' ||
+                      method === 'video.backupZip' || method === 'video.restoreZip' ||
                       method === 'files.pickText' || method === 'files.saveText' ||
                       method === 'motion.sample' || method === 'haptics.play')
         ? null : setTimeout(() => {
@@ -206,7 +206,8 @@ const _bootScript = r'''
         open: (id) => call('video.open', {id: String(id)}),
         delete: (id) => call('video.delete', {id: String(id)}),
         export: (id) => call('video.export', {id: String(id)}),
-        backupZip: () => call('video.backupZip', {})
+        backupZip: () => call('video.backupZip', {}),
+        restoreZip: () => call('video.restoreZip', {})
       }),
       files: Object.freeze({
         pickText: () => call('files.pickText', {}),
