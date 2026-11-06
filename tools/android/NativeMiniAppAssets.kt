@@ -1,0 +1,404 @@
+package dev.chappy.chappy_player
+
+import android.app.Activity
+import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
+import android.provider.OpenableColumns
+import io.flutter.plugin.common.MethodChannel
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.security.MessageDigest
+import java.util.UUID
+import org.json.JSONObject
+
+/**
+ * Binary file library for .chappy mini-apps. No payload bytes, content URIs
+ * or private paths ever cross the JS bridge. Every import/export uses Android
+ * Storage Access Framework and each app has a separate internal directory.
+ */
+class NativeMiniAppAssets(private val activity: Activity) {
+    companion object {
+        const val IMPORT_REQUEST = 0x64CB
+        const val EXPORT_REQUEST = 0x64CC
+        private const val MAX_FILE_BYTES = 256L * 1024 * 1024
+        private const val MAX_STORE_BYTES = 512L * 1024 * 1024
+        private const val MAX_FILES = 32
+        private val ownerPattern =
+            Regex("^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$")
+        private val idPattern = Regex("^[a-f0-9]{32}$")
+    }
+    private enum class Mode { IMPORT, EXPORT }
+    private data class Item(
+        val id: String, val name: String, val mime: String, val size: Long,
+        val sha: String, val createdMs: Long,
+    ) {
+        fun exposed() = mapOf(
+            "id" to id, "name" to name, "mime" to mime, "sizeBytes" to size,
+            "sha256" to sha, "createdMs" to createdMs,
+        )
+    }
+    private data class Pending(
+        val owner: String, val mode: Mode, val result: MethodChannel.Result,
+        val item: Item? = null,
+    )
+    private var pending: Pending? = null
+    private var copying = false
+    private var closed = false
+
+    private fun directory(owner: String): File {
+        if (!ownerPattern.matches(owner) || owner.length > 120) {
+            throw IOException("Invalid mini-app owner")
+        }
+        val parent = File(activity.filesDir, "chappy_private_assets").canonicalFile
+        if (!parent.exists() && !parent.mkdirs()) throw IOException("No asset directory")
+        val root = File(parent, owner).canonicalFile
+        if (root.parentFile != parent || (!root.exists() && !root.mkdir())) {
+            throw IOException("Invalid asset storage")
+        }
+        return root
+    }
+
+    private fun file(root: File, id: String, ext: String): File {
+        if (!idPattern.matches(id) || ext !in setOf(".blob", ".json", ".part")) {
+            throw IOException("Invalid asset handle")
+        }
+        val f = File(root, id + ext).canonicalFile
+        if (f.parentFile != root) throw IOException("Asset escaped private storage")
+        return f
+    }
+
+    private fun safeName(raw: String?): String {
+        val cleaned = (raw ?: "").filter {
+            it != '/' && it != '\\' && it.code >= 32 && it.code != 127 &&
+                it != '\u202e' && it != '\u202d'
+        }.trim().take(100)
+        return cleaned.takeIf { it.isNotBlank() && it != "." && it != ".." }
+            ?: "imported-file.bin"
+    }
+
+    private fun safeMime(raw: String?): String {
+        val value = (raw ?: "").trim()
+        return if (value.length in 3..100 &&
+            Regex("^[a-zA-Z0-9!#$&^_.+-]+/[a-zA-Z0-9!#$&^_.+-]+$").matches(value)
+        ) value else "application/octet-stream"
+    }
+
+    private fun load(root: File, id: String): Item {
+        val metadata = file(root, id, ".json")
+        val body = file(root, id, ".blob")
+        if (!metadata.isFile || !body.isFile ||
+            metadata.length() !in 1..4096) throw IOException("Asset unavailable")
+        val json = JSONObject(metadata.readText(Charsets.UTF_8))
+        val sha = json.getString("sha256")
+        val item = Item(
+            json.getString("id"), json.getString("name"),
+            json.getString("mime"), json.getLong("sizeBytes"),
+            sha, json.getLong("createdMs"),
+        )
+        if (item.id != id || !idPattern.matches(id) ||
+            item.name != safeName(item.name) || item.mime != safeMime(item.mime) ||
+            !Regex("^[a-f0-9]{64}$").matches(item.sha) ||
+            item.size !in 1..MAX_FILE_BYTES || body.length() != item.size) {
+            throw IOException("Asset metadata or size mismatch")
+        }
+        return item
+    }
+
+    private fun all(root: File): List<Item> {
+        val records = root.listFiles()
+            ?: throw IOException("Cannot list private assets")
+        val ids = records.filter {
+            it.isFile && Regex("^[a-f0-9]{32}\\.json$").matches(it.name)
+        }.map { it.name.removeSuffix(".json") }
+        if (ids.size > MAX_FILES) throw IOException("Private asset quota exceeded")
+        return ids.map { load(root, it) }.sortedByDescending { it.createdMs }
+    }
+
+    fun list(owner: String): List<Map<String, Any>> {
+        if (closed || pending != null || copying) {
+            throw IOException("Asset import or export already in progress")
+        }
+        return all(directory(owner)).map { it.exposed() }
+    }
+
+    fun importAsset(owner: String, result: MethodChannel.Result) {
+        if (!reserve(result)) return
+        try {
+            val root = directory(owner)
+            val existing = all(root)
+            if (existing.size >= MAX_FILES ||
+                existing.sumOf { it.size } >= MAX_STORE_BYTES) {
+                result.error("ASSET_QUOTA", "Private file storage is full", null)
+                return
+            }
+            val request = Pending(owner, Mode.IMPORT, result)
+            pending = request
+            val picker = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            @Suppress("DEPRECATION")
+            activity.startActivityForResult(picker, IMPORT_REQUEST)
+        } catch (error: Exception) {
+            pending = null
+            result.error("ASSET_IMPORT_FAILED", error.message, null)
+        }
+    }
+
+    fun exportAsset(owner: String, id: String, result: MethodChannel.Result) {
+        if (!reserve(result)) return
+        try {
+            val root = directory(owner)
+            val record = load(root, id)
+            val request = Pending(owner, Mode.EXPORT, result, record)
+            pending = request
+            val picker = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = record.mime
+                putExtra(Intent.EXTRA_TITLE, record.name)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
+            @Suppress("DEPRECATION")
+            activity.startActivityForResult(picker, EXPORT_REQUEST)
+        } catch (error: Exception) {
+            pending = null
+            result.error("ASSET_EXPORT_FAILED", error.message, null)
+        }
+    }
+
+    fun deleteAsset(owner: String, id: String, result: MethodChannel.Result) {
+        if (!reserve(result)) return
+        try {
+            val root = directory(owner)
+            val record = load(root, id)
+            val state = Pending(owner, Mode.EXPORT, result, record)
+            pending = state
+            AlertDialog.Builder(activity)
+                .setTitle("ミニアプリ内のファイルを削除")
+                .setMessage("「" + record.name + "」を削除しますか？" +
+                    "この操作では端末の元ファイルや書き出したコピーは削除しません。")
+                .setNegativeButton("キャンセル") { _, _ ->
+                    if (pending === state) {
+                        pending = null
+                        result.success(false)
+                    }
+                }
+                .setPositiveButton("削除する") { _, _ ->
+                    if (pending !== state) return@setPositiveButton
+                    try {
+                        val body = file(root, id, ".blob")
+                        val meta = file(root, id, ".json")
+                        // Only delete handles owned by this exact mini-app.
+                        if (!body.isFile || !meta.isFile) {
+                            throw IOException("Asset disappeared before deletion")
+                        }
+                        if (!body.delete() || !meta.delete()) {
+                            throw IOException("Unable to delete private asset")
+                        }
+                        pending = null
+                        result.success(true)
+                    } catch (error: Exception) {
+                        pending = null
+                        result.error("ASSET_DELETE_FAILED", error.message, null)
+                    }
+                }.setCancelable(false).show()
+        } catch (error: Exception) {
+            pending = null
+            result.error("ASSET_DELETE_FAILED", error.message, null)
+        }
+    }
+
+    private fun reserve(callback: MethodChannel.Result): Boolean {
+        if (closed || pending != null || copying) {
+            callback.error("ASSET_BUSY", "Another file operation is active", null)
+            return false
+        }
+        return true
+    }
+
+    fun onResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        if (requestCode != IMPORT_REQUEST && requestCode != EXPORT_REQUEST) {
+            return false
+        }
+        val request = pending ?: return true
+        if (copying ||
+            (requestCode == IMPORT_REQUEST && request.mode != Mode.IMPORT) ||
+            (requestCode == EXPORT_REQUEST && request.mode != Mode.EXPORT)) {
+            return true
+        }
+        val uri: Uri? = data?.data
+        if (resultCode != Activity.RESULT_OK || uri == null || uri.scheme != "content") {
+            pending = null
+            request.result.success(mapOf("status" to "cancelled"))
+            return true
+        }
+        copying = true
+        Thread {
+            try {
+                val response = when (request.mode) {
+                    Mode.IMPORT -> copyIntoPrivate(request.owner, uri)
+                    Mode.EXPORT -> copyOutVerified(
+                        request.owner, request.item
+                            ?: throw IOException("Asset selection missing"), uri)
+                }
+                activity.runOnUiThread {
+                    pending = null
+                    copying = false
+                    if (!closed) request.result.success(response)
+                }
+            } catch (error: Exception) {
+                if (request.mode == Mode.EXPORT) {
+                    // If this user-selected document was partially written,
+                    // attempt to remove it; some providers may reject deletion.
+                    try { activity.contentResolver.delete(uri, null, null) }
+                    catch (_: Exception) {}
+                }
+                activity.runOnUiThread {
+                    pending = null
+                    copying = false
+                    if (!closed) request.result.error("ASSET_TRANSFER_FAILED",
+                        error.message, null)
+                }
+            }
+        }.start()
+        return true
+    }
+
+    private fun displayName(uri: Uri): String {
+        val name = try {
+            activity.contentResolver.query(uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null
+            )?.use {
+                if (it.moveToFirst()) it.getString(0) else null
+            }
+        } catch (_: Exception) { null }
+        return safeName(name)
+    }
+
+    private fun copyIntoPrivate(owner: String, uri: Uri): Map<String, Any> {
+        val root = directory(owner)
+        val before = all(root)
+        val previousBytes = before.sumOf { it.size }
+        if (before.size >= MAX_FILES || previousBytes >= MAX_STORE_BYTES) {
+            throw IOException("Private asset storage quota exceeded")
+        }
+        val id = UUID.randomUUID().toString().replace("-", "")
+        val staging = file(root, id, ".part")
+        val body = file(root, id, ".blob")
+        val metadata = file(root, id, ".json")
+        val name = displayName(uri)
+        val mime = safeMime(activity.contentResolver.getType(uri))
+        var size = 0L
+        val hash = MessageDigest.getInstance("SHA-256")
+        try {
+            val input = activity.contentResolver.openInputStream(uri)
+                ?: throw IOException("Selected file cannot be read")
+            input.use { source ->
+                FileOutputStream(staging).use { target ->
+                    val buffer = ByteArray(65536)
+                    while (true) {
+                        val n = source.read(buffer)
+                        if (n < 0) break
+                        size += n
+                        if (size > MAX_FILE_BYTES ||
+                            size > MAX_STORE_BYTES - previousBytes) {
+                            throw IOException("Selected file exceeds private storage limit")
+                        }
+                        target.write(buffer, 0, n)
+                        hash.update(buffer, 0, n)
+                    }
+                    target.fd.sync()
+                }
+            }
+            if (size <= 0) throw IOException("Empty files cannot be imported")
+            if (!staging.renameTo(body)) {
+                throw IOException("Could not commit private file")
+            }
+            val record = Item(id, name, mime, size,
+                hash.digest().joinToString("") { "%02x".format(it.toInt() and 255) },
+                System.currentTimeMillis())
+            metadata.writeText(JSONObject().apply {
+                put("id", id)
+                put("name", record.name)
+                put("mime", record.mime)
+                put("sizeBytes", size)
+                put("sha256", record.sha)
+                put("createdMs", record.createdMs)
+            }.toString(), Charsets.UTF_8)
+            return mapOf("status" to "imported", "file" to record.exposed())
+        } catch (error: Exception) {
+            staging.delete()
+            body.delete()
+            metadata.delete()
+            throw error
+        }
+    }
+
+    private fun copyOutVerified(owner: String, record: Item, uri: Uri): Map<String, Any> {
+        val root = directory(owner)
+        // Revalidate original metadata immediately before touching destination.
+        if (load(root, record.id) != record) {
+            throw IOException("Asset metadata changed since export selection")
+        }
+        val body = file(root, record.id, ".blob")
+        val sourceHash = MessageDigest.getInstance("SHA-256")
+        var bytes = 0L
+        val output = activity.contentResolver.openOutputStream(uri, "w")
+            ?: throw IOException("Selected destination cannot be written")
+        output.use { target ->
+            body.inputStream().use { input ->
+                val buffer = ByteArray(65536)
+                while (true) {
+                    val n = input.read(buffer)
+                    if (n < 0) break
+                    bytes += n
+                    if (bytes > record.size) throw IOException("Source changed")
+                    target.write(buffer, 0, n)
+                    sourceHash.update(buffer, 0, n)
+                }
+            }
+            target.flush()
+        }
+        val sourceDigest = sourceHash.digest()
+        if (bytes != record.size ||
+            !sourceDigest.contentEquals(hexBytes(record.sha))) {
+            throw IOException("Private asset content no longer matches its checksum")
+        }
+        val destinationHash = MessageDigest.getInstance("SHA-256")
+        var readback = 0L
+        val input = activity.contentResolver.openInputStream(uri)
+            ?: throw IOException("Destination cannot be verified after export")
+        input.use { stream ->
+            val buffer = ByteArray(65536)
+            while (true) {
+                val n = stream.read(buffer)
+                if (n < 0) break
+                readback += n
+                if (readback > bytes) throw IOException("Destination unexpectedly larger")
+                destinationHash.update(buffer, 0, n)
+            }
+        }
+        if (readback != bytes ||
+            !sourceDigest.contentEquals(destinationHash.digest())) {
+            throw IOException("Exported asset failed SHA-256 verification")
+        }
+        return mapOf("status" to "saved", "sizeBytes" to bytes,
+            "sha256" to record.sha)
+    }
+
+    private fun hexBytes(hex: String): ByteArray {
+        if (!Regex("^[a-f0-9]{64}$").matches(hex)) {
+            throw IOException("Malformed asset SHA-256")
+        }
+        return ByteArray(32) { idx -> hex.substring(idx * 2, idx * 2 + 2).toInt(16).toByte() }
+    }
+
+    fun onDestroy() {
+        closed = true
+        pending = null
+    }
+}
