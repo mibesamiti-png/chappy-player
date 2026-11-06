@@ -172,7 +172,9 @@ const _bootScript = r'''
       const timer = (method === 'microphone.start' || method === 'video.start' ||
                      method === 'video.delete' || method === 'video.export' ||
                       method === 'video.backupZip' || method === 'video.restoreZip' ||
-                      method === 'files.pickText' || method === 'files.saveText' ||
+                      method === 'files.importAsset' ||
+                      method === 'files.exportAsset' || method === 'files.deleteAsset' ||
+                       method === 'files.pickText' || method === 'files.saveText' ||
                       method === 'motion.sample' || method === 'haptics.play')
         ? null : setTimeout(() => {
         pending.delete(requestId);
@@ -212,7 +214,11 @@ const _bootScript = r'''
       files: Object.freeze({
         pickText: () => call('files.pickText', {}),
         saveText: (fileName, text) =>
-          call('files.saveText', {fileName: String(fileName), text: String(text)})
+          call('files.saveText', {fileName: String(fileName), text: String(text)}),
+        importAsset: () => call('files.importAsset', {}),
+        listAssets: () => call('files.listAssets', {}),
+        exportAsset: id => call('files.exportAsset', {id: String(id)}),
+        deleteAsset: id => call('files.deleteAsset', {id: String(id)})
       }),
       motion: Object.freeze({
         sample: type => call('motion.sample', {type: String(type)})
