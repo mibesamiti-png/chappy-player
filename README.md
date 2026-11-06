@@ -10,7 +10,7 @@ Xiaomi 11T Pro / Android 14 でサンプルメモの表示・保存・バック�
 正式署名版 **v0.2.0 (Build 5)** はGitHub Actionsからのビルド・署名検証・公開が成功し、Android端末へのインストールも確認済み。
 
 - 公開APK（**アプリ本体のみ**）：[chappy-player-updates Releases](https://github.com/mibesamiti-png/chappy-player-updates/releases)
-- ソースコード：この非公開リポジトリ（公開しない）
+- ソースコード：この公開リポジトリ。秘密の署名鍵・トークンはGitHub Actions Secretsで厳重に分離
 - 配布フィード：`https://raw.githubusercontent.com/mibesamiti-png/chappy-player-updates/main/update.json`
 - 署名鍵：GitHub Secretsの固定署名鍵を継続使用。署名の変更やビルド番号の巻き戻しは公開前に拒否
 - ユーザー確認付きのアプリ内更新：HTTPS、SHA-256、パッケージID、署名、ビルド番号を検証しAndroid標準インストーラーに引き渡す
@@ -28,7 +28,7 @@ Xiaomi 11T Pro / Android 14 でサンプルメモの表示・保存・バック�
 - Android「ファイルで開く」「共有」からの `.chappy` 直接受信と、既存インポートの共通化。
 - HTMLを `.chappy` へ梱包し、公開Stable / Debug用 `catalog.json` を生成するCLIを追加。
 
-**公開用 `chappy-apps` リポジトリは現時点ではまだ未作成。** 公開する際はソース／APIキー／私的データを含めずに作成すること。
+**公開用 `chappy-apps` リポジトリは作成済み**：[mibesamiti-png/chappy-apps](https://github.com/mibesamiti-png/chappy-apps)。Stable / Debugのミニアプリを配布する。APIキーや個人的な保存データは登録しない。
 詳細：[公開カタログ](docs/chappy-apps-catalog.md) / [ファイル直接取り込み](docs/android-external-chappy.md) / [HTML移植](docs/html-to-chappy.md)。
 実機でのファイル連携・本体更新の成功は未確認。次の署名付きAPKにまとめた後でテストする。
 
@@ -77,7 +77,7 @@ Xiaomi 11T Pro / Android 14 でサンプルメモの表示・保存・バック�
 
 ## APKの作り方（GitHub Actions）
 
-1. **新しいプライベートGitHubリポジトリ**を作り、このプロジェクトのファイルとフォルダを配置する（ZIP単体をGitHubへ置いただけでは展開されません）。
+1. 既存の公開ソースリポジトリ `mibesamiti-png/chappy-player` で作業する。初回導入の場合はこのリポジトリを取得する。
 2. `Actions` → `Build Android APK` → `Run workflow` を選択（pushでも実行）。
 3. ワークフローが成功したら `chappy-player-debug-apk` アーティファクトを取得する。
 4. APKをAndroidで開いてインストールする。端末設定によっては不明なアプリのインストールを許可する必要がある。
@@ -107,7 +107,7 @@ flutter build apk --debug
 
 **上書き更新の実機成功はまだ未確認**。更新の前に必ず保存データをバックアップし、`.chappy` 本体も保管すること。失敗しても、既存アプリをいきなりアンインストールしないこと。
 
-新リリースは非公開開発リポジトリの `Publish Signed APK Updates` を手動実行する。生成APK・更新JSONのみ公開用リポジトリに保存し、秘密の署名鍵・ソース・トークンは含めない。
+新リリースはこの公開ソースリポジトリの `Publish Signed APK Updates` を**手動実行**する。生成APK・更新JSONのみを配布専用リポジトリに保存し、秘密の署名鍵やトークン、個人データは含めない。
 
 ## 保存データのバックアップと復元（開発中）
 
@@ -125,9 +125,9 @@ flutter build apk --debug
 ## 固定署名APKのビルド・更新
 
 公開版のビルドは `.github/workflows/publish-signed-apks.yml` を実行する。
-非公開GitHubリポジトリの `Actions → Publish Signed APK Updates → Run workflow` で `version` と `release_notes` を入力する。
+この公開GitHubリポジトリの `Actions → Publish Signed APK Updates → Run workflow` で `version` と `release_notes` を入力する。
 
-- `CHAPPY_KEYSTORE_B64`、`CHAPPY_STORE_PASSWORD`、`CHAPPY_KEY_PASSWORD`、`CHAPPY_KEY_ALIAS` は非公開リポジトリの **Actions Secrets** に登録済み。
+- `CHAPPY_KEYSTORE_B64`、`CHAPPY_STORE_PASSWORD`、`CHAPPY_KEY_PASSWORD`、`CHAPPY_KEY_ALIAS` はリポジトリの非公開 **Actions Secrets** に登録済み。ソースが公開でもSecretsの内容は公開しない。
 - `CHAPPY_RELEASE_CERT_SHA256` は **Actions Variables** に登録済み。実際の秘密鍵と生成APKの両方をこの証明書指紋と照合する。
 - `CHAPPY_PUBLISH_TOKEN` は公開配布専用リポジトリにしか書き込めないトークンとして **Actions Secrets** に登録済み。
 - Secrets・署名鍵・トークンはチャットやソースに貼り付けない。
@@ -168,7 +168,7 @@ await Chappy.log('diagnostic message');
 - **現在は信頼できる自作 `.chappy` のみ読み込むこと**。不特定多数のアプリを安全に実行するサンドボックスとしては未完成。
 - アプリごとに**一時的な異なるloopbackポート**から静的ファイルを配信するためオリジンが分離される。通信は `connect-src 'none'` のCSPで禁止。アプリ自身の画像/JS/CSSだけ読み込む。
 - HTTPサーバーは 127.0.0.1 にのみバインド。Androidマニフェストにはローカル配信用 `INTERNET` / `usesCleartextTraffic` が必要。ネットワーク権限を使った外部アクセスはv0.1では公開しない。
-- ブリッジは storage/info/log のみに限定。カメラ、マイク、Bluetooth、バックグラウンド通信は**未実装**。
+- ブリッジは storage/info/log と、マニフェスト宣言・個別許可が必要なカメラ/マイクのWeb標準APIを提供する。WebViewマイクは一部端末で失敗するため、ネイティブ AudioRecord はPR #29で開発中（まだ正式リリースには未反映）。Bluetooth・バックグラウンド通信は未実装。
 - WebViewのJavaScript実行には固有のリスクがある。現段階で無条件に外部由来の `.chappy` をインストールしてはいけない。
 - 診断レポートは自動送信されない。ログにアプリが書いた文言が入るので、共有前に確認する。
 - FPS計測、ZIP形式レポート、アプリごとのユーザー権限画面、復旧ジャーナル、ネット通信、性能測定、カメラ等は今後の予定。
