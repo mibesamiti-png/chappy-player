@@ -177,7 +177,7 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "startNativeMic" -> {
-                        if (!micActivityVisible ||
+                        if (!micActivityVisible || nativeVideo.isRecording() ||
                             ContextCompat.checkSelfPermission(this,
                                 Manifest.permission.RECORD_AUDIO) !=
                                 PackageManager.PERMISSION_GRANTED) {
