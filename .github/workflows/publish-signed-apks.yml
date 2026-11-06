@@ -100,6 +100,8 @@ jobs:
         run: python3 tools/test_native_miniapp_capabilities.py
       - name: Android SAF document import/export safety contract
         run: python3 tools/test_native_documents_contract.py
+      - name: Private video ZIP backup integrity/safety checks
+        run: python3 tools/test_private_video_zip_backup.py
       - name: Android camera and microphone permissions manifest checks
         run: python3 tools/test_android_media_manifest.py
       - name: Chappy Recorder standalone mini-app UI smoke test
