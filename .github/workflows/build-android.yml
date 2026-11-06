@@ -163,12 +163,18 @@ jobs:
           name: chappy-file-lab
           path: chappy-file-lab.chappy
           if-no-files-found: error
+      - name: Verify debug sample ZIPs, hashes and signed-release isolation
+        run: python3 tools/test_debug_sample_library.py
       - name: Verify isolated debug APK preparation on both Gradle formats
         run: python3 tools/test_prepare_debug_variant.py
       - name: Separate debug app from the installed permanently signed release
         run: python3 tools/prepare_debug_variant.py
+      - name: Bundle eight offline examples into isolated debug APK only
+        run: python3 tools/prepare_debug_samples.py
       - name: Build installable APK (debug signed; side-by-side personal test only)
         run: flutter build apk --debug
+      - name: Verify all eight mini-apps are embedded in the actual debug APK
+        run: python3 tools/verify_debug_sample_apk.py build/app/outputs/flutter-apk/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
           name: chappy-player-debug-apk

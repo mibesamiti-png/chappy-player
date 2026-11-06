@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chappy Color Lab</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui;background:#0c1420;color:#f2f7ff}
+*{box-sizing:border-box}body{max-width:680px;margin:0 auto;padding:18px}
+h1{font-size:24px;margin:8px 0}p{line-height:1.65;color:#aabed8}
+.card{background:#19283b;border:1px solid #34516f;border-radius:16px;padding:18px;margin:14px 0}
+#preview{height:135px;border-radius:14px;border:1px solid #567089;margin:14px 0;background:#6495ed}
+label{display:block;margin:16px 0;color:#e0ebfa}
+.row{display:flex;align-items:center;gap:12px}.row span{min-width:35px;text-align:right;font-variant-numeric:tabular-nums}
+input[type="range"]{flex:1;min-width:0;accent-color:#8bceff}
+#hex{font-size:24px;font-weight:700;letter-spacing:2px}
+button{background:#294b70;color:#fff;border:1px solid #4b77a4;border-radius:12px;font:inherit;padding:12px}
+button:focus-visible{outline:2px solid #a9dcff}#steps{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.step{height:70px;border-radius:7px;border:1px solid #53718c}
+small{color:#92a6c4}
+</style></head>
+<body>
+<h1>🎨 Chappy Color Lab</h1>
+<p>RGBカラー調整、グラデーション、描画応答を試すオフライン検証アプリ。外部への送信も追加の端末権限もなし。</p>
+<section class="card">
+ <strong>カラー調整</strong><div id="preview" aria-label="選択色のプレビュー"></div>
+ <div id="hex" aria-live="polite">#6495ED</div>
+ <label>赤（R）<div class="row"><input id="r" type="range" min="0" max="255" value="100"><span id="rv">100</span></div></label>
+ <label>緑（G）<div class="row"><input id="g" type="range" min="0" max="255" value="149"><span id="gv">149</span></div></label>
+ <label>青（B）<div class="row"><input id="b" type="range" min="0" max="255" value="237"><span id="bv">237</span></div></label>
+ <button id="copy" type="button">カラーコードをコピー</button>
+ <small id="message" aria-live="polite">コピーは端末の機能によっては利用できない場合があります。</small>
+</section>
+<section class="card">
+ <strong>白への7段階グラデーション</strong>
+ <div id="steps" style="margin-top:12px" aria-label="色のグラデーション"></div>
+ <p>色を調整すると自動的に更新されるよ。</p>
+</section>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+function hex(v){return Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0').toUpperCase();}
+function render(){
+ const values=['r','g','b'].map(id=>Number($(id).value));
+ for(let i=0;i<3;i++)$(['rv','gv','bv'][i]).textContent=String(values[i]);
+ const color='#'+values.map(hex).join('');$('preview').style.background=color;
+ $('hex').textContent=color;const steps=$('steps');steps.replaceChildren();
+ for(let i=0;i<7;i++){
+   const ratio=i/6,step=document.createElement('div');step.className='step';
+   step.style.background='#'+values.map(v=>hex(Math.round(v*(1-ratio)+255*ratio))).join('');
+   step.title='ステップ '+(i+1);steps.appendChild(step);
+ }
+}
+['r','g','b'].forEach(id=>$(id).addEventListener('input',render));
+$('copy').addEventListener('click',async()=>{
+ try {
+   if(!navigator.clipboard || !navigator.clipboard.writeText)throw Error('unsupported');
+   await navigator.clipboard.writeText($('hex').textContent);
+   $('message').textContent='コピーしたよ！';
+ } catch (_){$('message').textContent='コピーできない環境です。表示された色コードを手動で使ってね。';}
+});
+render();
+})();
+</script></body></html>
