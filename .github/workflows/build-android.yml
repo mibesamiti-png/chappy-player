@@ -42,6 +42,8 @@ jobs:
         run: python3 tools/test_native_video_contract.py
       - name: Motion, haptics and private video export safety contracts
         run: python3 tools/test_native_miniapp_capabilities.py
+      - name: Scoped Android SAF document import/export contract
+        run: python3 tools/test_native_documents_contract.py
       - name: JavaScript bridge smoke test
         run: node tools/test_bootstrap.js
       - name: Release signing helper smoke test
@@ -79,6 +81,8 @@ jobs:
         run: node tools/test_chappy_recorder.js
       - name: Native motion and haptics demo app smoke test
         run: node tools/test_device_lab.js
+      - name: File Lab user-picked documents smoke test
+        run: node tools/test_file_lab.js
       - name: Package standalone Chappy Recorder
         run: |
           python3 tools/pack_html_chappy.py \
@@ -108,6 +112,21 @@ jobs:
         with:
           name: chappy-device-lab
           path: chappy-device-lab.chappy
+          if-no-files-found: error
+      - name: Package Chappy File Lab (user-selected text and JSON)
+        run: |
+          python3 tools/pack_html_chappy.py \
+            --source sample_apps/file_lab \
+            --id local.chappy.file_lab \
+            --name 'Chappy File Lab' \
+            --version 0.1.0 \
+            --permission files \
+            --output chappy-file-lab.chappy
+      - name: Upload Chappy File Lab
+        uses: actions/upload-artifact@v4
+        with:
+          name: chappy-file-lab
+          path: chappy-file-lab.chappy
           if-no-files-found: error
       - name: Verify isolated debug APK preparation on both Gradle formats
         run: python3 tools/test_prepare_debug_variant.py
