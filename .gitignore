@@ -11,3 +11,4 @@ android/local.properties
 android/key.properties
 *.jks
 *.keystore
+debug_sample_assets/
