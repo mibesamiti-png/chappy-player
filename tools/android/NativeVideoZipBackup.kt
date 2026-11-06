@@ -64,7 +64,7 @@ class NativeVideoZipBackup(private val activity: Activity) {
         pending = state
         val message = sources.size.toString() + "本、約" +
             ((total + 1048575) / 1048576).toString() +
-            "MiBの動画を保存します。元動画は消しません。続けますか？"
+            "MiBの動画を保存します。元動画は消しません。ZIPは暗号化されないため、保存先に注意してください。続けますか？"
         AlertDialog.Builder(activity)
             .setTitle("非公開動画をまとめてZIP保存")
             .setMessage(message)
