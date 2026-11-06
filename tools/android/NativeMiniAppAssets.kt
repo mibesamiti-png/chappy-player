@@ -170,17 +170,37 @@ class NativeMiniAppAssets(private val activity: Activity) {
         return ids.map { load(root, it) }.sortedByDescending { it.createdMs }
     }
 
+    /** Remove only old unfinished import temp files. Never touch completed
+     * assets, and never run while a transfer owns this vault.
+     */
+    private fun cleanupStaleImports(root: File) {
+        if (pending != null || copying) return
+        val cutoff = System.currentTimeMillis() - 24L * 60 * 60 * 1000
+        root.listFiles()?.forEach { candidate ->
+            if (candidate.isFile &&
+                Regex("^[a-f0-9]{32}\\.part$").matches(candidate.name) &&
+                candidate.lastModified() > 0L &&
+                candidate.lastModified() < cutoff &&
+                candidate.canonicalFile.parentFile == root) {
+                candidate.delete()
+            }
+        }
+    }
+
     fun list(owner: String): List<Map<String, Any>> {
         if (closed || pending != null || copying) {
             throw IOException("Asset import or export already in progress")
         }
-        return all(directory(owner)).map { it.exposed() }
+        val root = directory(owner)
+        cleanupStaleImports(root)
+        return all(root).map { it.exposed() }
     }
 
     fun importAsset(owner: String, result: MethodChannel.Result) {
         if (!reserve(result)) return
         try {
             val root = directory(owner)
+            cleanupStaleImports(root)
             val existing = all(root)
             if (existing.size >= MAX_FILES ||
                 existing.sumOf { it.size } >= MAX_STORE_BYTES) {
