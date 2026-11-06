@@ -36,6 +36,7 @@ class MainActivity : FlutterActivity() {
     private val mediaChannelName = "dev.chappy.player/media_permissions"
     private val mediaPermissionRequestCode = 0x44FA
     private val nativeMic = NativeMicCapture()
+    private val nativeVideo = NativeVideoRecorder(this)
     @Volatile private var micActivityVisible = false
     private var mediaPermissionCallback: MethodChannel.Result? = null
     private var mediaRequestedPermissions: List<String> = emptyList()
@@ -44,22 +45,26 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        nativeVideo.onCreate()
         captureExternalIntent(intent)
     }
 
     override fun onResume() {
         super.onResume()
         micActivityVisible = true
+        nativeVideo.onResume()
     }
 
     override fun onPause() {
         micActivityVisible = false
         nativeMic.stop()
+        nativeVideo.onPause()
         super.onPause()
     }
 
     override fun onDestroy() {
         nativeMic.stop()
+        nativeVideo.onDestroy()
         super.onDestroy()
     }
 
@@ -200,6 +205,54 @@ class MainActivity : FlutterActivity() {
                     "stopNativeMic" -> {
                         nativeMic.stop()
                         result.success(true)
+                    }
+                    "startNativeVideo" -> {
+                        val owner = call.argument<String>("owner") ?: ""
+                        val lens = call.argument<String>("lens") ?: "back"
+                        val quality = call.argument<String>("quality") ?: "720"
+                        val sound = call.argument<Boolean>("audio") ?: false
+                        val visibility = call.argument<String>("storage") ?: "private"
+                        if (!micActivityVisible) {
+                            result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
+                        } else {
+                            nativeMic.stop()
+                            nativeVideo.start(owner, lens, quality, sound, visibility, result)
+                        }
+                    }
+                    "stopNativeVideo" -> result.success(nativeVideo.stop())
+                    "readNativeVideo" -> result.success(nativeVideo.status())
+                    "listPrivateVideos" -> {
+                        if (!micActivityVisible) {
+                            result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
+                        } else {
+                            try {
+                                result.success(nativeVideo.listPrivate(
+                                    call.argument<String>("owner") ?: ""))
+                            } catch (error: Exception) {
+                                result.error("VIDEO_LIST_FAILED", error.message, null)
+                            }
+                        }
+                    }
+                    "openPrivateVideo" -> {
+                        if (!micActivityVisible) {
+                            result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
+                        } else {
+                            try {
+                                result.success(nativeVideo.openPrivate(
+                                    call.argument<String>("owner") ?: "",
+                                    call.argument<String>("id") ?: ""))
+                            } catch (error: Exception) {
+                                result.error("VIDEO_OPEN_FAILED", error.message, null)
+                            }
+                        }
+                    }
+                    "setVideoDark" -> {
+                        if (!micActivityVisible) {
+                            result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
+                        } else {
+                            result.success(nativeVideo.setDark(
+                                call.argument<Boolean>("enabled") == true))
+                        }
                     }
                     "requestMediaPermissions" -> {
                         val names = call.argument<List<String>>("types")
