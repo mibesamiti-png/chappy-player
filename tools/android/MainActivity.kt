@@ -40,6 +40,7 @@ class MainActivity : FlutterActivity() {
     private val nativeVideo = NativeVideoRecorder(this)
     private val miniDevices = NativeMiniAppDevices(this)
     private val videoExporter = NativeVideoExport(this)
+    private val miniDocuments = NativeMiniAppDocuments(this)
     @Volatile private var micActivityVisible = false
     private var mediaPermissionCallback: MethodChannel.Result? = null
     private var mediaRequestedPermissions: List<String> = emptyList()
@@ -72,6 +73,7 @@ class MainActivity : FlutterActivity() {
         nativeMic.stop()
         miniDevices.onDestroy()
         videoExporter.onDestroy()
+        miniDocuments.onDestroy()
         nativeVideo.onDestroy()
         super.onDestroy()
     }
@@ -314,6 +316,24 @@ class MainActivity : FlutterActivity() {
                             result.success(nativeVideo.setDarkBrightness(brightness))
                         }
                     }
+                    "pickDocumentText" -> {
+                        if (!micActivityVisible) {
+                            result.error("DOCUMENT_NOT_FOREGROUND",
+                                "Foreground file picker required", null)
+                        } else {
+                            miniDocuments.pickText(result)
+                        }
+                    }
+                    "saveDocumentText" -> {
+                        if (!micActivityVisible) {
+                            result.error("DOCUMENT_NOT_FOREGROUND",
+                                "Foreground file picker required", null)
+                        } else {
+                            val fileName = call.argument<String>("fileName") ?: ""
+                            val contents = call.argument<String>("text") ?: ""
+                            miniDocuments.saveText(fileName, contents, result)
+                        }
+                    }
                     "sampleMotion" -> {
                         if (!micActivityVisible) {
                             result.error("MOTION_NOT_FOREGROUND",
@@ -475,6 +495,7 @@ class MainActivity : FlutterActivity() {
     @Deprecated("Deprecated in Android SDK, used for document picker result")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (videoExporter.onResult(requestCode, resultCode, data)) return
+        if (miniDocuments.onResult(requestCode, resultCode, data)) return
         if (requestCode != backupRequestCode) {
             @Suppress("DEPRECATION")
             super.onActivityResult(requestCode, resultCode, data)
