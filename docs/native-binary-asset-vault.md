@@ -19,6 +19,12 @@ The Android native host now provides a *private asset vault* for each installed 
 
 The `id` is an opaque, randomly generated 32-character hex handle. No app-private path, Android `content://` URI, or binary payload is exposed to JavaScript. `Chappy.files.pickText()` and `saveText()` continue to work independently.
 
+## Optional, measured ZIP compression export (source update)
+
+`Chappy.files.exportCompressedZip(id, preset)` exports **one** private asset as a lossless DEFLATE ZIP using Android's destination picker. Presets are `fast`, `balanced` (default) and `max` (ZIP level 1/6/9). The ZIP includes the original file and a JSON checksum manifest; the host checks source SHA-256 and hashes the saved destination after readback.
+
+The result reports actual `originalBytes`, `zipBytes`, `savedBytes` and `percentSmaller`. **Negative values explicitly mean that the ZIP is larger**, e.g. for MP3, JPEG or an existing ZIP. The original vault item remains untouched and the archive is not encrypted. See `docs/native-asset-zip-compression.md`.
+
 ## Transfer progress and cancellation (source update)
 
 - `Chappy.files.transferStatus()` reports only the active caller mini-app's current operation: `{active,phase,bytesDone,totalBytes,cancelable,cancelRequested}`. A total of `-1` means the Android document provider did not disclose its file size. No filename, destination URI, path or raw file contents are sent to JavaScript.

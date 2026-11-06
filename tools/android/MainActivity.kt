@@ -368,6 +368,17 @@ class MainActivity : FlutterActivity() {
                                 call.argument<String>("id") ?: "", result)
                         }
                     }
+                    "exportCompressedAssetZip" -> {
+                        if (!micActivityVisible) {
+                            result.error("ASSET_NOT_FOREGROUND",
+                                "ZIP export requires a visible mini-app", null)
+                        } else {
+                            miniAssets.exportZip(
+                                call.argument<String>("owner") ?: "",
+                                call.argument<String>("id") ?: "",
+                                call.argument<Int>("level") ?: 6, result)
+                        }
+                    }
                     "deleteBinaryAsset" -> {
                         if (!micActivityVisible) {
                             result.error("ASSET_NOT_FOREGROUND", "Deletion needs visible app", null)

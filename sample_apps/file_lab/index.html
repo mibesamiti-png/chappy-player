@@ -23,6 +23,8 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
 .asset-name{font-size:14px;overflow-wrap:anywhere;font-weight:600}
 .asset-meta{font-size:12px;color:#a5b8d2;margin:5px 0}
 .asset-row button{font-size:12px;padding:8px 11px}
+.asset-row select{margin:6px 8px 6px 0;background:#122037;color:#e4f2ff;
+border:1px solid #486383;border-radius:8px;padding:8px}
 </style></head><body>
 <h1>Chappy File Lab</h1>
 <p>ミニアプリの設定・メモ・JSONをスマホのファイルと安全にやり取りする実験室。</p>
@@ -52,6 +54,7 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
 <progress id="assetProgressBar" max="100" value="0"></progress>
 <p id="assetTransferLabel" role="status" aria-live="polite">転送待機中</p>
 <div id="assetList" aria-live="polite">「ファイル一覧を更新」で表示します。</div>
+<small>圧縮してZIP保存は可逆DEFLATEで、高速・標準・最大の3段階から選べます。MP3・ZIPなどは逆に大きくなることがあります。ZIPは暗号化されません。元ファイルは残ります。</small>
 <small>1ファイル最大256MiB、合計512MiB・32ファイルまで。転送中は処理量を表示し、キャンセルもできます。取り込み元は変更せず、書き出し先は毎回Androidで選択します。ミニアプリの削除やデータ消去で保管庫も消えるので、必要なファイルは書き出してください。</small>
 </section>
 <script>
@@ -171,10 +174,41 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
           if(removed)await refreshAssetList();
         });
       });
+      const levelSelect=document.createElement('select');
+      levelSelect.setAttribute('aria-label','ZIP圧縮レベル');
+      [['fast','高速'],['balanced','標準'],['max','最大圧縮']].forEach(pair=>{
+        const option=document.createElement('option');
+        option.value=pair[0];
+        option.textContent=pair[1];
+        levelSelect.appendChild(option);
+      });
+      levelSelect.value='balanced';
+      const zipButton=document.createElement('button');
+      zipButton.type='button';
+      zipButton.textContent='可逆ZIPで保存';
+      zipButton.addEventListener('click',()=>{
+        void operation(zipButton,async()=>{
+          if(!files || typeof files.exportCompressedZip!=='function')
+            throw new Error('圧縮ZIPに対応した新しいプレイヤーが必要です');
+          const result=await monitoredTransfer(
+            ()=>files.exportCompressedZip(file.id,levelSelect.value));
+          if(result.status==='saved'){
+            const original=Number(result.originalBytes)||0;
+            const zipped=Number(result.zipBytes)||0;
+            const percent=original>0 ? ((original-zipped)/original*100).toFixed(1) : '0.0';
+            const change=original>=zipped ? '削減' : '増加';
+            status('可逆ZIP保存・SHA-256照合完了：'+file.name+
+              ' '+formatBytes(original)+' → '+formatBytes(zipped)+
+              '（'+Math.abs(Number(percent)).toFixed(1)+'% '+change+'）。元データは保持。');
+          }else status('ZIP圧縮をキャンセルしました');
+        });
+      });
       row.appendChild(label);
       row.appendChild(meta);
       row.appendChild(exportButton);
       row.appendChild(deleteButton);
+      row.appendChild(levelSelect);
+      row.appendChild(zipButton);
       root.appendChild(row);
     });
   }

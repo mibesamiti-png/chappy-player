@@ -173,7 +173,8 @@ const _bootScript = r'''
                      method === 'video.delete' || method === 'video.export' ||
                       method === 'video.backupZip' || method === 'video.restoreZip' ||
                       method === 'files.importAsset' ||
-                      method === 'files.exportAsset' || method === 'files.deleteAsset' ||
+                      method === 'files.exportAsset' || method === 'files.exportCompressedZip' ||
+                      method === 'files.deleteAsset' ||
                        method === 'files.pickText' || method === 'files.saveText' ||
                       method === 'motion.sample' || method === 'haptics.play')
         ? null : setTimeout(() => {
@@ -218,6 +219,9 @@ const _bootScript = r'''
         importAsset: () => call('files.importAsset', {}),
         listAssets: () => call('files.listAssets', {}),
         exportAsset: id => call('files.exportAsset', {id: String(id)}),
+        exportCompressedZip: (id, level='balanced') =>
+          call('files.exportCompressedZip',
+               {id: String(id), level: String(level)}),
         deleteAsset: id => call('files.deleteAsset', {id: String(id)}),
         transferStatus: () => call('files.transferStatus', {}),
         cancelTransfer: () => call('files.cancelTransfer', {})
