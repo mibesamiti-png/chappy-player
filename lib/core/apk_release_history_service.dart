@@ -38,7 +38,10 @@ class ApkReleaseHistoryService {
       final match = tagPattern.firstMatch(tag);
       if (match == null) continue;
       final build = int.tryParse(match.group(2)!);
-      if (build == null || build <= 0 || build >= 1000) continue;
+      if (build == null || build <= 0 ||
+          (debug ? build < 100000 || build >= 2147483647 : build >= 1000)) {
+        continue;
+      }
       final files = release['assets'];
       if (files is! List) continue;
       final artifacts = <UpdateArtifact>[];
