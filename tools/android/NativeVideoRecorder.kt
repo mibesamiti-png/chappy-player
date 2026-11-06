@@ -378,6 +378,43 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         return file
     }
 
+    /**
+     * All finished private MP4 files owned by this exact .chappy app.
+     * Unlike the UI's 100-item recent list, never silently omit older files.
+     * Reject oversized batches explicitly; do not produce a misleading backup.
+     */
+    fun privateBackupSources(appId: String): List<File> {
+        if (state != "idle" || recording != null) {
+            throw IllegalStateException("VIDEO_BACKUP_REQUIRES_IDLE")
+        }
+        val root = privateDirectory(appId).canonicalFile
+        val all = root.listFiles()
+            ?: throw IllegalStateException("VIDEO_BACKUP_LIST_FAILED")
+        val names = all.filter {
+            it.isFile && Regex("^Chappy_[0-9_]+\\.mp4$").matches(it.name)
+        }.sortedBy { it.name }
+        if (names.isEmpty()) {
+            throw IllegalStateException("VIDEO_BACKUP_EMPTY")
+        }
+        // An explicit error is safer than an archive silently missing files.
+        if (names.size > 100) {
+            throw IllegalStateException("VIDEO_BACKUP_TOO_MANY_FILES")
+        }
+        var totalBytes = 0L
+        val sources = names.map { candidate ->
+            val file = privateExportSource(appId, candidate.name)
+            if (file.parentFile != root) {
+                throw IllegalStateException("VIDEO_BACKUP_NOT_OWNED")
+            }
+            totalBytes += file.length()
+            if (totalBytes > 4L * 1024 * 1024 * 1024) {
+                throw IllegalStateException("VIDEO_BACKUP_EXCEEDS_4GIB")
+            }
+            file
+        }
+        return sources
+    }
+
     fun openPrivate(appId: String, id: String): Boolean {
         if (state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
             throw IllegalArgumentException("VIDEO_OPEN_NOT_ALLOWED")
