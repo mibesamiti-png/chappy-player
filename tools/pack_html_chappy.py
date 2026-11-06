@@ -37,7 +37,7 @@ def package_html(source, output, app_id, name, version, permissions=()):
 
     permissions = list(permissions)
     if len(permissions) != len(set(permissions)) or any(
-            name not in ('camera', 'microphone', 'motion', 'haptics') for name in permissions):
+            name not in ('camera', 'microphone', 'motion', 'haptics', 'files') for name in permissions):
         raise ValueError('unsupported or duplicate media permission')
 
     manifest = {
