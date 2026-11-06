@@ -1,2 +1,3 @@
 zeroconf==0.153.0
 cryptography==45.0.7
+qrcode[pil]==8.2
