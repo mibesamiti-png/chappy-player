@@ -41,6 +41,7 @@ class MainActivity : FlutterActivity() {
     private val miniDevices = NativeMiniAppDevices(this)
     private val videoExporter = NativeVideoExport(this)
     private val zipBackup = NativeVideoZipBackup(this)
+    private val zipRestore = NativeVideoZipRestore(this)
     private val miniDocuments = NativeMiniAppDocuments(this)
     @Volatile private var micActivityVisible = false
     private var mediaPermissionCallback: MethodChannel.Result? = null
@@ -75,6 +76,7 @@ class MainActivity : FlutterActivity() {
         miniDevices.onDestroy()
         videoExporter.onDestroy()
         zipBackup.onDestroy()
+        zipRestore.onDestroy()
         miniDocuments.onDestroy()
         nativeVideo.onDestroy()
         super.onDestroy()
@@ -353,6 +355,23 @@ class MainActivity : FlutterActivity() {
                                 call.argument<String>("effect") ?: ""))
                         }
                     }
+                    "restorePrivateVideosZip" -> {
+                        if (!micActivityVisible) {
+                            result.error("VIDEO_RESTORE_NOT_FOREGROUND",
+                                "ZIP restore needs a visible app", null)
+                        } else {
+                            try {
+                                val owner = call.argument<String>("owner") ?: ""
+                                val target = nativeVideo.beginPrivateRestore(owner)
+                                zipRestore.begin(owner, target, result) {
+                                    nativeVideo.endPrivateRestore()
+                                }
+                            } catch (error: Exception) {
+                                result.error("VIDEO_RESTORE_NOT_ALLOWED",
+                                    error.message, null)
+                            }
+                        }
+                    }
                     "backupPrivateVideosZip" -> {
                         if (!micActivityVisible) {
                             result.error("VIDEO_BACKUP_NOT_FOREGROUND",
@@ -513,6 +532,7 @@ class MainActivity : FlutterActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (videoExporter.onResult(requestCode, resultCode, data)) return
         if (zipBackup.onResult(requestCode, resultCode, data)) return
+        if (zipRestore.onResult(requestCode, resultCode, data)) return
         if (miniDocuments.onResult(requestCode, resultCode, data)) return
         if (requestCode != backupRequestCode) {
             @Suppress("DEPRECATION")
