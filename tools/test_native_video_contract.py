@@ -17,11 +17,12 @@ html = read("sample_apps/media_probe/index.html")
 patch = read("tools/patch_android.py")
 
 for name in ("startNativeVideo", "stopNativeVideo", "readNativeVideo",
-             "setVideoDark", "listPrivateVideos", "openPrivateVideo", "deletePrivateVideo"):
+             "setVideoDark", "setVideoBrightness", "readVideoStorage",
+             "listPrivateVideos", "openPrivateVideo", "deletePrivateVideo"):
     assert f'"{name}"' in activity, name
 
 for name in ("video.start", "video.status", "video.stop", "video.dark",
-             "video.list", "video.open", "video.delete"):
+             "video.list", "video.open", "video.delete", "video.storageInfo"):
     assert f"'{name}'" in dart, name
     assert f"'{name}'" in bridge, name
 
@@ -79,6 +80,19 @@ assert '暗転モードで録画' in html
 assert 'startVideoRecording(true)' in html
 
 assert "Chappy.video.start(options)" in html
+assert "StatFs(directory.absolutePath)" in native
+assert '"availableBytes" to stats.availableBytes' in native
+assert '"totalBytes" to stats.totalBytes' in native
+assert "fun setDarkBrightness(brightness: Float)" in native
+assert "brightness !in 0.01f..1.0f" in native
+assert "onHorizontalDragUpdate:" in dart
+assert "onHorizontalDragEnd:" in dart
+assert "_setDarkSwipeBrightness(1.0)" in dart
+assert "_setDarkSwipeBrightness(0.01)" in dart
+assert "_videoStorageInfo()" in dart
+assert "storageInfo: () => call('video.storageInfo', {})" in bridge
+assert "nativeVideo.storageInfo(" in activity
+assert "nativeVideo.setDarkBrightness(brightness)" in activity
 assert "Chappy.video.list()" in html
 assert "Chappy.video.open(file.id)" in html
 assert "recording" not in read("tools/android/NativeMicCapture.kt").lower() or True
