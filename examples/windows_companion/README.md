@@ -1,10 +1,10 @@
 # Chappy Companion — Windows discovery beacon v0.1.0 (prototype)
 
-A temporary, user-initiated mDNS/DNS-SD beacon which helps **Chappy Network Lab** find your own Windows PC on the same private Wi-Fi.
+A temporary, user-initiated mDNS/DNS-SD beacon (with an optional one-session pinned-TLS PC confirmation preview) which helps **Chappy Network Lab** find your own Windows PC on the same private Wi-Fi.
 
-**What it does:** advertises a short-lived `_workstation._tcp.local.` service with a session-random name, private IPv4, and an ephemeral TCP port. The TCP listener closes probes immediately and accepts **no commands, files, authentication tokens, telemetry, or raw packets**. It makes no outbound internet connection, has no autostart/Windows service, and stops by default after 10 minutes. It is **not** an authenticated PC companion yet.
+**What it does:** advertises a short-lived `_workstation._tcp.local.` service with a session-random name, private IPv4, and an ephemeral TCP port. By default, the inert TCP listener closes probes immediately and accepts **no commands, files, authentication tokens, telemetry, or raw packets**. With **explicit** `--start --pair`, a separate one-time, fingerprint-pinned TLS approval endpoint replaces the inert listener; it still accepts no commands, files, telemetry or credentials. It makes no outbound internet connection, has no autostart/Windows service, and stops by default after 10 minutes. It is **not** a persistently authenticated PC companion yet.
 
-**What it does not do:** show PC traffic, run PC commands, transfer files, expose private folders, monitor other devices, install a VPN, or automatically pair your phone. Those require separate design and consent.
+**What it does not do:** persist a paired relationship, show PC traffic, run PC commands, transfer files, expose private folders, monitor other devices, install a VPN, or automatically pair your phone. Those require separate design and consent.
 
 ## Windows usage
 
@@ -44,3 +44,12 @@ Windows Defender Firewall may prompt about local Python/EXE network access; auth
 ## Next design milestone
 
 Add mutual pairing and authenticated, encrypted PC status/traffic metadata with explicit PC and phone approval. **Never** infer trust merely from DNS-SD results; beacons can be spoofed. Then add an opt-in, read-only metrics view before any remote control.
+
+
+## Optional: one-time PC identity confirmation (prototype)
+
+Run `Start-ChappyPairing.cmd` instead of `Start-ChappyCompanion.cmd`, or execute `ChappyCompanion.exe --start --pair --minutes 10` explicitly. This creates a fresh TLS certificate and displays its **full SHA-256 fingerprint** on the PC console. From the compatible Android Network Lab preview, select the discovered Chappy PC, manually enter that **entire** fingerprint, and compare the six-character confirmation codes on both devices. Only if they match should the PC user type `YES`. Confirmation can be used once per PC launch and expires; no ongoing PC permission or stored pairing key results.
+
+The basic `Start-ChappyCompanion.cmd` is still discovery-only and cannot complete a TLS pairing request. **Do not treat a service name or short confirmation code as identity evidence without the full TLS fingerprint copied from the PC display.**
+
+Protocol details, Android 17 restrictions, threat model and QA: [NETLAB-03A one-session pinned TLS preview](../../docs/network-lab-session-pairing.md). Android APK source integration is not a published signed Android update. The preview EXE is also unsigned and needs owner-initiated local testing.
