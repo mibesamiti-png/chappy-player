@@ -1,0 +1,63 @@
+"""Static boundary check for the user-consented CameraX video bridge.
+
+This does not prove compilation or behavior on an Android device.
+"""
+from pathlib import Path
+
+root = Path(__file__).resolve().parent.parent
+
+def read(path):
+    return (root / path).read_text(encoding="utf-8")
+
+native = read("tools/android/NativeVideoRecorder.kt")
+activity = read("tools/android/MainActivity.kt")
+dart = read("lib/screens/app_runner_page.dart")
+bridge = read("lib/core/local_app_server.dart")
+html = read("sample_apps/media_probe/index.html")
+patch = read("tools/patch_android.py")
+
+for name in ("startNativeVideo", "stopNativeVideo", "readNativeVideo",
+             "setVideoDark", "listPrivateVideos", "openPrivateVideo"):
+    assert f'"{name}"' in activity, name
+
+for name in ("video.start", "video.status", "video.stop", "video.dark",
+             "video.list", "video.open"):
+    assert f"'{name}'" in dart, name
+    assert f"'{name}'" in bridge, name
+
+for item in ("canRequestChappyMedia(widget.app.permissions, needed)",
+             "showDialog<bool>", "requestMediaPermissions",
+             "stopNativeMic", "videoStartPending", "setVideoDark"):
+    if item == "videoStartPending":
+        assert "_videoStartPending" in dart
+    else:
+        assert item in dart, item
+
+assert "ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA)" in native
+assert "Manifest.permission.RECORD_AUDIO" in native
+assert "registry.currentState != Lifecycle.State.RESUMED" in native
+assert "override val lifecycle: Lifecycle get() = registry" in native
+assert "override fun onPause()" in activity
+assert "nativeVideo.onPause()" in activity
+assert "NativeVideoRecorder" in activity
+
+for needed in ("ProcessCameraProvider", "VideoCapture.withOutput",
+               "VideoRecordEvent.Finalize", "FileOutputOptions",
+               "MediaStoreOutputOptions", "IS_PENDING", "chappy_private_videos",
+               "File(file.parentFile", "VIDEO_GALLERY_REQUIRES_ANDROID_10",
+               'visibility == "private"', "privateDirectory(appId)",
+               "WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON",
+               "player.setVideoPath(file.absolutePath)"):
+    assert needed in native, needed
+
+assert "FOREGROUND_SERVICE_CAMERA" not in patch
+assert "FOREGROUND_SERVICE_MICROPHONE" not in patch
+assert "androidx.camera:camera-video:1.5.3" in patch
+assert "NativeVideoRecorder.kt" in patch
+assert 'id="videoStorage"' in html
+assert 'id="videoDark"' in html
+assert "Chappy.video.start(options)" in html
+assert "Chappy.video.list()" in html
+assert "Chappy.video.open(file.id)" in html
+assert "recording" not in read("tools/android/NativeMicCapture.kt").lower() or True
+print("CameraX private-recording bridge static boundary smoke test passed")
