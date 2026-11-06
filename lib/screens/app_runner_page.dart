@@ -34,6 +34,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   bool _mediaPermissionPending = false;
   bool _nativeMicPending = false;
   bool _nativeMicActive = false;
+  bool _videoStartPending = false;
+  bool _nativeVideoActive = false;
+  bool _videoDark = false;
   LocalAppServer? _server;
   WebViewController? _controller;
   String? _fatal;
@@ -129,10 +132,19 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   /// A second Android-side onPause guard exists in MainActivity.
   Future<void> _stopMedia() async {
     _nativeMicActive = false;
+    _nativeVideoActive = false;
+    if (_videoDark && mounted) {
+      setState(() => _videoDark = false);
+    } else {
+      _videoDark = false;
+    }
     try {
       await _mediaChannel.invokeMethod<bool>('stopNativeMic');
+      await _mediaChannel.invokeMethod<bool>('stopNativeVideo');
+      await _mediaChannel.invokeMethod<bool>(
+          'setVideoDark', {'enabled': false});
     } catch (_) {
-      // No native microphone session, or the Android Activity is gone.
+      // Native host may already have gone away. Android onPause also stops.
     }
     final controller = _controller;
     if (controller == null) return;
@@ -233,6 +245,141 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
       }
     }
     return true;
+  }
+
+  /// Native CameraX recorder: every start requires a manifest camera declaration,
+  /// a user-facing confirmation and Android's runtime permission.
+  /// Audio recording additionally requires the microphone declaration/permission.
+  Future<Map<String, dynamic>> _startNativeVideo(
+      Map<String, dynamic> options) async {
+    final audio = options['audio'] == true;
+    final needed = <String>['camera', if (audio) 'microphone'];
+    if (!mounted || _videoStartPending || _nativeVideoActive ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        !canRequestChappyMedia(widget.app.permissions, needed)) {
+      throw StateError('Video camera not permitted or already recording');
+    }
+    final lens = options['lens'];
+    final quality = options['quality'];
+    final storage = options['storage'];
+    if ((lens != 'back' && lens != 'front') ||
+        (quality != '720' && quality != '1080') ||
+        (storage != 'private' && storage != 'gallery')) {
+      throw const FormatException('Invalid native video recording options');
+    }
+    _videoStartPending = true;
+    try {
+      final approved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialog) => AlertDialog(
+          title: const Text('カメラ動画の録画'),
+          content: Text('ミニアプリ「${widget.app.name}」がカメラで動画を録画します。'
+              '${audio ? '音声も録音します。' : '音声は録音しません。'}'
+              '${storage == 'private' ? '動画はChappy Playerの非公開領域に保存します。'
+                  'アンインストールすると動画は消えます。' : '動画はギャラリーに公開保存します。'}'
+              'この段階ではアプリを離れると録画を停止します。録画中はAndroidの'
+              'カメラ使用表示が有効になります。'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('キャンセル')),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true),
+                child: const Text('今回の録画を許可')),
+          ],
+        ),
+      );
+      if (approved != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        throw StateError('Video permission prompt cancelled');
+      }
+      final osGranted = await _mediaChannel.invokeMethod<bool>(
+          'requestMediaPermissions', {'types': needed});
+      if (osGranted != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        throw StateError('Android camera or microphone permission unavailable');
+      }
+      // Release WebView camera tracks before binding CameraX to the same sensor.
+      try {
+        await _controller?.runJavaScript(
+            'if (typeof window.__chappyStopMedia === "function") '
+            'window.__chappyStopMedia();');
+      } catch (_) {}
+      await _mediaChannel.invokeMethod<bool>('stopNativeMic');
+      final result = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'startNativeVideo', {
+          'owner': widget.app.id, 'lens': lens, 'quality': quality,
+          'audio': audio, 'storage': storage,
+        });
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+        await _mediaChannel.invokeMethod<dynamic>('stopNativeVideo');
+        throw StateError('Camera page no longer foreground');
+      }
+      if (result == null ||
+          (result['state'] != 'starting' && result['state'] != 'recording')) {
+        throw StateError('CameraX video recorder did not start');
+      }
+      _nativeVideoActive = true;
+      unawaited(widget.logs.add(widget.app.id, 'info', 'native-video',
+          'CameraX foreground recording initiated; storage=$storage audio=$audio'));
+      return Map<String, dynamic>.from(result);
+    } finally {
+      _videoStartPending = false;
+    }
+  }
+
+  Future<Map<String, dynamic>> _nativeVideoStatus() async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+      return {'state': 'idle', 'error': 'page-not-visible'};
+    }
+    final data = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'readNativeVideo');
+    final current = Map<String, dynamic>.from(data ?? {'state': 'idle'});
+    if (current['state'] == 'idle') {
+      _nativeVideoActive = false;
+      if (_videoDark) await _setVideoDark(false);
+    }
+    return current;
+  }
+
+  Future<Map<String, dynamic>> _stopNativeVideo() async {
+    _nativeVideoActive = false;
+    if (_videoDark) await _setVideoDark(false);
+    final data = await _mediaChannel.invokeMapMethod<String, dynamic>(
+        'stopNativeVideo');
+    return Map<String, dynamic>.from(data ?? {'state': 'idle'});
+  }
+
+  Future<bool> _setVideoDark(bool enabled) async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        (enabled && !_nativeVideoActive)) {
+      throw StateError('Cannot change recording display outside active video');
+    }
+    final applied = await _mediaChannel.invokeMethod<bool>(
+        'setVideoDark', {'enabled': enabled});
+    if (mounted) setState(() => _videoDark = enabled && applied == true);
+    return _videoDark;
+  }
+
+  Future<List<Map<String, dynamic>>> _listPrivateVideos() async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        !canRequestChappyMedia(widget.app.permissions, ['camera'])) {
+      throw StateError('Video library not available to this app');
+    }
+    final videos = await _mediaChannel.invokeListMethod<dynamic>(
+        'listPrivateVideos', {'owner': widget.app.id});
+    return (videos ?? [])
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  Future<bool> _openPrivateVideo(Map<String, dynamic> params) async {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
+        !canRequestChappyMedia(widget.app.permissions, ['camera']) ||
+        params['id'] is! String) {
+      throw StateError('Video file cannot be opened');
+    }
+    return await _mediaChannel.invokeMethod<bool>(
+        'openPrivateVideo', {'owner': widget.app.id, 'id': params['id']}) ?? false;
   }
 
   void _armWatchdog() {
@@ -462,6 +609,24 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         case 'microphone.stop':
           value = await _stopNativeMic();
           break;
+        case 'video.start':
+          value = await _startNativeVideo(params);
+          break;
+        case 'video.status':
+          value = await _nativeVideoStatus();
+          break;
+        case 'video.stop':
+          value = await _stopNativeVideo();
+          break;
+        case 'video.dark':
+          value = await _setVideoDark(params['enabled'] == true);
+          break;
+        case 'video.list':
+          value = await _listPrivateVideos();
+          break;
+        case 'video.open':
+          value = await _openPrivateVideo(params);
+          break;
         case 'log':
           final text = params['message'];
           if (text is! String) { throw const FormatException('message must be text'); }
@@ -519,7 +684,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: _videoDark ? null : AppBar(
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(widget.app.name, style: const TextStyle(fontSize: 16)),
           Text(widget.app.version, style: Theme.of(context).textTheme.labelSmall),
@@ -576,6 +741,36 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
                 Text('読み込み中… $_loadProgress%'),
               ],
             )),
+          )),
+        if (_videoDark)
+          Positioned.fill(child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onDoubleTap: () => unawaited(_setVideoDark(false)),
+            child: ColoredBox(
+              color: Colors.black,
+              child: SafeArea(child: Column(children: [
+                const Spacer(),
+                const Icon(Icons.fiber_manual_record,
+                    size: 18, color: Colors.redAccent),
+                const SizedBox(height: 8),
+                const Text('カメラ録画中',
+                    style: TextStyle(color: Colors.white70, fontSize: 14)),
+                const SizedBox(height: 8),
+                const Text('画面はONのまま・ダブルタップで復帰',
+                    style: TextStyle(color: Colors.white38, fontSize: 12)),
+                const Spacer(),
+                FilledButton.tonal(
+                  onPressed: () => unawaited(_setVideoDark(false)),
+                  child: const Text('画面を表示する'),
+                ),
+                TextButton(
+                  onPressed: () => unawaited(_stopNativeVideo()),
+                  child: const Text('録画を停止',
+                      style: TextStyle(color: Colors.redAccent)),
+                ),
+                const SizedBox(height: 24),
+              ])),
+            ),
           )),
       ]),
     );
