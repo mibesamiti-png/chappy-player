@@ -140,7 +140,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     }
     try {
       await _mediaChannel.invokeMethod<bool>('stopNativeMic');
-      await _mediaChannel.invokeMethod<bool>('stopNativeVideo');
+      await _mediaChannel.invokeMethod<dynamic>('stopNativeVideo');
       await _mediaChannel.invokeMethod<bool>(
           'setVideoDark', {'enabled': false});
     } catch (_) {
