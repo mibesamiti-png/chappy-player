@@ -64,6 +64,8 @@ vm.runInNewContext(match[1],{
 (async()=>{
  for(const sensor of sensors)await sensor.click();
  for(const haptic of haptics)await haptic.click();
+ assert.match(elements.sensorResult.textContent,/X = 1.200/);
+ assert.match(elements.hapticResult.textContent,/振動を実行/);
  await elements.probeSensors.click();
  await elements.probeHaptics.click();
  assert.match(elements.sensorResult.textContent,/linearAcceleration: 非対応/);
@@ -80,7 +82,5 @@ vm.runInNewContext(match[1],{
  assert.equal(calls[0][1],'accelerometer');
  assert.equal(calls[1][1],'gyroscope');
  assert.equal(calls[2][1],'magnetometer');
- assert.match(elements.sensorResult.textContent,/X = 1.200/);
- assert.match(elements.hapticResult.textContent,/振動を実行/);
  console.log('Device Lab smoke test passed: five sensors, haptic probes, bounded tilt input and lifecycle cleanup');
 })().catch(e=>{console.error(e);process.exit(1)});
