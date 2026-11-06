@@ -1,6 +1,6 @@
 # Chappy Player — agent instructions
 
-This private repository is the source of truth for Chappy Player (Flutter/Android) and the offline .chappy mini-app runtime.
+This public source repository is the source of truth for Chappy Player (Flutter/Android) and the offline .chappy mini-app runtime. The source and existing commit history are public; do not put secrets, user backups, logs containing personal information or signing materials in tracked files, PRs or issues.
 
 ## Before changing code
 
