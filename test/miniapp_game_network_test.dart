@@ -54,7 +54,10 @@ void main() {
         '127.0.0.1', '10.0.0.1', '172.16.0.1',
         '192.168.0.1', '169.254.2.3', '100.64.0.1',
         '192.0.2.1', '198.51.100.2', '203.0.113.1',
+        '192.0.0.77', '192.88.99.1',
         '224.0.0.1', '::1', 'fe80::1', 'fd00::123',
+        '2001:db8::1', '2001:2::1', '2002:c000:0201::1',
+        '3fff::1',
       ]) {
         expect(GameNetworkPolicy.isPublicAddress(InternetAddress(ip)),
             false, reason: ip);
@@ -71,6 +74,13 @@ void main() {
         GameNetworkPolicy.resolvePublic('game.example.org',
           lookup: (host) async => [
             InternetAddress('8.8.8.8'), InternetAddress('127.0.0.1'),
+          ]),
+        throwsFormatException,
+      );
+      expect(
+        GameNetworkPolicy.resolvePublic('game.example.org',
+          lookup: (host) async => [
+            InternetAddress('2001:db8::1'), InternetAddress('8.8.8.8'),
           ]),
         throwsFormatException,
       );
