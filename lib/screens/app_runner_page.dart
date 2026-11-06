@@ -63,7 +63,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   }
 
   // OS volume buttons are intercepted by MainActivity only when dark mode is
-  // active in the foreground. Each restarted capture still needs fresh consent.
+  // active in the foreground. The first consent covers only this active dark session.
   Future<dynamic> _handleNativeVideoShortcut(MethodCall call) async {
     if (call.method != 'videoVolumeShortcut' || !_videoDark ||
         !_darkSessionArmed || !mounted ||
@@ -84,9 +84,10 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         _lastVideoOptions != null) {
       _volumeStartPending = true;
       try {
-        // Restore visibility and brightness for the recording consent prompt.
-        await _setVideoDark(false, preserveSession: true);
-        await _startNativeVideo(Map<String, dynamic>.from(_lastVideoOptions!));
+        // Reuse the explicit consent from this STILL-FOREGROUND dark session.
+        // Never expose the UI or open a fresh host dialog for volume-up.
+        await _startNativeVideo(Map<String, dynamic>.from(_lastVideoOptions!),
+            reuseDarkSessionConsent: true);
         try {
           await _controller?.runJavaScript(
               'window.dispatchEvent(new Event("chappy-native-video-started"));');
@@ -95,10 +96,6 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         unawaited(widget.logs.add(widget.app.id, 'warning', 'volume-video-start',
             'Video restart cancelled or failed: $error'));
       } finally {
-        if (mounted && _darkSessionArmed &&
-            ModalRoute.of(context)?.isCurrent == true) {
-          try { await _setVideoDark(true); } catch (_) {}
-        }
         _volumeStartPending = false;
       }
     }
@@ -186,6 +183,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     _darkVideoPollTimer?.cancel();
     _darkVideoPollTimer = null;
     _darkSessionArmed = false;
+    _lastVideoOptions = null;
     _nativeMicActive = false;
     _nativeVideoActive = false;
     if (_videoDark && mounted) {
@@ -201,6 +199,10 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     } catch (_) {
       // Native host may already have gone away. Android onPause also stops.
     }
+    // Never leave immersive bars hidden if the mini-app exits or backgrounds.
+    try {
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    } catch (_) {}
     final controller = _controller;
     if (controller == null) return;
     try {
@@ -303,11 +305,11 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     return true;
   }
 
-  /// Native CameraX recorder: every start requires a manifest camera declaration,
-  /// a user-facing confirmation and Android's runtime permission.
-  /// Audio recording additionally requires the microphone declaration/permission.
+  /// The initial capture requires a user-facing confirmation. Only foreground
+  /// hardware volume-up from the already approved dark session can reuse it,
+  /// with the exact same camera/audio/storage options and Android permissions.
   Future<Map<String, dynamic>> _startNativeVideo(
-      Map<String, dynamic> options) async {
+      Map<String, dynamic> options, {bool reuseDarkSessionConsent = false}) async {
     final audio = options['audio'] == true;
     final needed = <String>['camera', if (audio) 'microphone'];
     if (!mounted || _videoStartPending || _nativeVideoActive ||
@@ -324,8 +326,17 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         (storage != 'private' && storage != 'gallery')) {
       throw const FormatException('Invalid native video recording options');
     }
+    final previous = _lastVideoOptions;
+    final canReuseDarkConsent = reuseDarkSessionConsent &&
+        _darkSessionArmed && _videoDark && previous != null &&
+        previous['lens'] == lens && previous['quality'] == quality &&
+        previous['storage'] == storage && previous['audio'] == audio;
+    if (reuseDarkSessionConsent && !canReuseDarkConsent) {
+      throw StateError('Dark camera session approval expired or settings changed');
+    }
     _videoStartPending = true;
     try {
+      if (!canReuseDarkConsent) {
       final approved = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -349,6 +360,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           ModalRoute.of(context)?.isCurrent != true) {
         throw StateError('Video permission prompt cancelled');
       }
+      }
+      // Android runtime permission is checked on EVERY capture, even when the
+      // one-session user confirmation is reused (revoked permissions fail).
       final osGranted = await _mediaChannel.invokeMethod<bool>(
           'requestMediaPermissions', {'types': needed});
       if (osGranted != true || !mounted ||
@@ -410,7 +424,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     return Map<String, dynamic>.from(data ?? {'state': 'idle'});
   }
 
-  Future<bool> _setVideoDark(bool enabled, {bool preserveSession = false}) async {
+  Future<bool> _setVideoDark(bool enabled) async {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true ||
         (enabled && !_nativeVideoActive && !_darkSessionArmed)) {
       throw StateError('Cannot change recording display outside approved camera session');
@@ -419,7 +433,16 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         'setVideoDark', {'enabled': enabled});
     final nowDark = enabled && applied == true;
     if (nowDark) _darkSessionArmed = true;
-    if (!enabled && !preserveSession) _darkSessionArmed = false;
+    if (!enabled) _darkSessionArmed = false;
+    // Immersive sticky hides status/navigation bars, revealing them temporarily
+    // on system edge swipes. Android retains control of camera/mic indicators.
+    try {
+      await SystemChrome.setEnabledSystemUIMode(
+          nowDark ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge);
+    } catch (error) {
+      unawaited(widget.logs.add(widget.app.id, 'warning', 'video-immersive',
+          'Failed to change system bar mode: $error'));
+    }
     if (mounted) setState(() => _videoDark = nowDark);
     _darkVideoPollTimer?.cancel();
     _darkVideoPollTimer = null;
