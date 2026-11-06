@@ -45,7 +45,7 @@ void main() {
     }
     expect(
       CompanionPairingClient.normalizeFingerprint(
-        List<String>.filled(31, 'AB:').join() + 'AB',
+        List<String>.filled(32, 'AB').join(':'),
       ),
       List<String>.filled(32, 'ab').join(),
     );
