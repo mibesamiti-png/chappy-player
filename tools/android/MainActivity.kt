@@ -286,6 +286,28 @@ class MainActivity : FlutterActivity() {
                                 call.argument<Boolean>("enabled") == true))
                         }
                     }
+                    "readVideoStorage" -> {
+                        if (!micActivityVisible) {
+                            result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
+                        } else {
+                            try {
+                                result.success(nativeVideo.storageInfo(
+                                    call.argument<String>("owner") ?: ""))
+                            } catch (error: Exception) {
+                                result.error("VIDEO_STORAGE_FAILED", error.message, null)
+                            }
+                        }
+                    }
+                    "setVideoBrightness" -> {
+                        val brightness = call.argument<Number>("brightness")?.toFloat()
+                        if (!micActivityVisible || brightness == null ||
+                            brightness !in 0.01f..1.0f) {
+                            result.error("VIDEO_BRIGHTNESS_NOT_ALLOWED",
+                                "Foreground dark recording gesture required", null)
+                        } else {
+                            result.success(nativeVideo.setDarkBrightness(brightness))
+                        }
+                    }
                     "requestMediaPermissions" -> {
                         val names = call.argument<List<String>>("types")
                         if (names.isNullOrEmpty() || names.size != names.toSet().size ||
