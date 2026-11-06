@@ -9,6 +9,7 @@ import android.content.ClipData
 import android.provider.Settings
 import android.provider.OpenableColumns
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.core.content.FileProvider
 import android.net.Uri
 import java.io.IOException
@@ -41,6 +42,7 @@ class MainActivity : FlutterActivity() {
     private var mediaPermissionCallback: MethodChannel.Result? = null
     private var mediaRequestedPermissions: List<String> = emptyList()
     private var incomingChannel: MethodChannel? = null
+    private var mediaControlChannel: MethodChannel? = null
     private var pendingExternalUri: Uri? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,6 +68,23 @@ class MainActivity : FlutterActivity() {
         nativeMic.stop()
         nativeVideo.onDestroy()
         super.onDestroy()
+    }
+
+    // Hardware volume shortcuts are enabled ONLY while the foreground user has
+    // explicitly entered the recorder's dark mode. Android's privacy indicators
+    // remain under OS control. Repeated and key-up events do not retrigger.
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (micActivityVisible && nativeVideo.isDark() &&
+            (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
+             event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                val shortcut = if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP)
+                    "start" else "stop"
+                mediaControlChannel?.invokeMethod("videoVolumeShortcut", shortcut)
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -173,8 +192,8 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannelName)
-            .setMethodCallHandler { call, result ->
+        mediaControlChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mediaChannelName)
+        mediaControlChannel?.setMethodCallHandler { call, result ->
                 when (call.method) {
                     "startNativeMic" -> {
                         if (!micActivityVisible || nativeVideo.isRecording() ||
@@ -230,6 +249,19 @@ class MainActivity : FlutterActivity() {
                                     call.argument<String>("owner") ?: ""))
                             } catch (error: Exception) {
                                 result.error("VIDEO_LIST_FAILED", error.message, null)
+                            }
+                        }
+                    }
+                    "deletePrivateVideo" -> {
+                        if (!micActivityVisible) {
+                            result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
+                        } else {
+                            try {
+                                result.success(nativeVideo.deletePrivate(
+                                    call.argument<String>("owner") ?: "",
+                                    call.argument<String>("id") ?: ""))
+                            } catch (error: Exception) {
+                                result.error("VIDEO_DELETE_FAILED", error.message, null)
                             }
                         }
                     }

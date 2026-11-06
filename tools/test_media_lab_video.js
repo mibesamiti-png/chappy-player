@@ -32,7 +32,8 @@ const document = {
   createElement: tag=>newElement(tag),
   addEventListener:()=>{}
 };
-const events = {videoStart:[],stop:0,dark:[],list:0,open:[]};
+const events = {videoStart:[],stop:0,dark:[],list:0,open:[],remove:[]};
+let deleted = false;
 let current = 'idle';
 const video = {
   async start(options) {
@@ -47,9 +48,10 @@ const video = {
   },
   async stop(){events.stop++;current='idle';return {state:'stopping'};},
   async dark(enabled){events.dark.push(enabled);return true;},
-  async list(){events.list++;return [
+  async list(){events.list++;return deleted ? [] : [
     {id:'Chappy_20261106_092500_001.mp4',bytes:30000,createdMs:Date.now()}];},
-  async open(id){events.open.push(id);return true;}
+  async open(id){events.open.push(id);return true;},
+  async delete(id){events.remove.push(id);deleted=true;return true;}
 };
 const window = {Chappy:{video, microphone:{
   async start(){return {running:false}},async levels(){return {running:false}},
@@ -84,8 +86,11 @@ const settle = async()=>{
   await click('videoList');await settle();
   assert.equal(get('videoLibrary').children.length,1);
   const row=get('videoLibrary').children[0];
-  assert.equal(row.children.length,2);
+  assert.equal(row.children.length,3);
   await row.children[1].callback('click')();await settle();
   assert.deepEqual(events.open,['Chappy_20261106_092500_001.mp4']);
-  console.log('Video UI smoke test passed: user-selected private MP4, dark mode, stop, library and playback');
+  await row.children[2].callback('click')();await settle();
+  assert.deepEqual(events.remove,['Chappy_20261106_092500_001.mp4']);
+  assert.match(get('videoLibrary').textContent,/プライベート動画はまだありません/);
+  console.log('Video UI smoke test passed: private MP4 dark mode, playback, confirmed delete and refreshed library');
 })().catch(error=>{console.error(error);process.exit(1);});

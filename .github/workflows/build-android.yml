@@ -64,7 +64,7 @@ jobs:
             --source sample_apps/media_probe \
             --id local.chappy.media_probe \
             --name 'Chappy Media Lab' \
-            --version 0.1.4 \
+            --version 0.1.5 \
             --permission camera --permission microphone \
             --output media-probe.chappy
       - name: Upload Chappy Media Lab demo package

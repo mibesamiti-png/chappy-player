@@ -36,3 +36,11 @@ Updated 2026-11-06. This is a **debug-stage implementation**, not shipped in the
 ## Privacy and release constraints
 
 No hidden camera operation, covert background capture, disable-OS-indicator feature, automatic post-boot recording or network upload. Existing GitHub signed-release workflow is manually triggered only. Wait for successful CI **and physical QA** before releasing this feature to the installed signed application.
+
+## Debug v0.1.5: dark-screen hardware keys and private video deletion (pending QA)
+
+- Enter dark mode from an already user-approved CameraX recording. The black overlay shows **only an 8px upper-right status dot** (red while recording/finalizing; green after the saved file reaches idle). Its 64px invisible touch target restores the normal interface on double tap. There is no custom recording text over the dark overlay. Android privacy indicators remain visible.
+- While the app stays foreground and dark: **volume down** requests a stop; **volume up**, after an earlier successful capture, reuses that capture's camera/quality/audio/storage options to request a *new* session, with a fresh consent dialog. For readability the overlay/brightness is temporarily restored while asking permission. The dark overlay returns afterwards, including when the user cancels; recording never restarts silently.
+- System volume keys behave normally outside dark mode. Android lock screen, background and activity pause still stop the recording and restore brightness. Hardware shortcut interception is device-dependent and needs Xiaomi Android 14 testing.
+- Private video list has **play** and **delete**. Every deletion requires a host-controlled, explicit confirmation, validates owning mini-app ID and a basename-only MP4 ID, allows deletion only when recorder is idle, and cannot be undone. MediaStore/gallery videos are not included in this private delete API.
+- Media Lab Debug version is **v0.1.5**, not a production APK release. Verify CI on the exact branch head, ensure `Chappy Player Debug` installs alongside the existing signed v0.2.4, then test physical volume buttons, 10-second capture, file finalization, green dot, double-tap recovery, private playback and confirmed deletion. Do not uninstall existing production app or publish a signed release without explicit instruction.

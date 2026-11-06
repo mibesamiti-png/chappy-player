@@ -215,7 +215,8 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
 
     private fun finalizeRecording(event: VideoRecordEvent.Finalize, sessionToken: Int) {
         if (sessionToken != token) return
-        setDark(false)
+        // Keep the user-requested dark screen active until they explicitly exit.
+        // The host shows green once finalization reaches idle.
         recording?.close()
         recording = null
         provider?.unbindAll()
@@ -276,7 +277,8 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             state = "stopping"
             recording?.stop()
         }
-        setDark(false)
+        // Stopping via volume-down keeps the black overlay/brightness active.
+        // onPause/onDestroy or the explicit restore gesture still clears it.
         return status()
     }
 
@@ -288,8 +290,10 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
 
     fun isRecording(): Boolean = state == "starting" || state == "recording"
 
+    fun isDark(): Boolean = dimmed
+
     fun setDark(enabled: Boolean): Boolean {
-        if (enabled && !isRecording()) return false
+        if (enabled && registry.currentState != Lifecycle.State.RESUMED) return false
         if (enabled == dimmed) return dimmed
         val window = activity.window
         val attrs = window.attributes
@@ -318,6 +322,19 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             ?.map { mapOf("id" to it.name, "bytes" to it.length(),
                 "createdMs" to it.lastModified()) }
             ?: emptyList()
+
+    fun deletePrivate(appId: String, id: String): Boolean {
+        if (state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
+            throw IllegalArgumentException("VIDEO_DELETE_NOT_ALLOWED")
+        }
+        val root = privateDirectory(appId).canonicalFile
+        val file = File(root, id).canonicalFile
+        if (file.parentFile != root || !file.isFile || file.length() == 0L) {
+            throw IllegalArgumentException("VIDEO_FILE_UNAVAILABLE")
+        }
+        if (!file.delete()) throw IllegalStateException("VIDEO_DELETE_FAILED")
+        return true
+    }
 
     fun openPrivate(appId: String, id: String): Boolean {
         if (state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {

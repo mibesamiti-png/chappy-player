@@ -17,11 +17,11 @@ html = read("sample_apps/media_probe/index.html")
 patch = read("tools/patch_android.py")
 
 for name in ("startNativeVideo", "stopNativeVideo", "readNativeVideo",
-             "setVideoDark", "listPrivateVideos", "openPrivateVideo"):
+             "setVideoDark", "listPrivateVideos", "openPrivateVideo", "deletePrivateVideo"):
     assert f'"{name}"' in activity, name
 
 for name in ("video.start", "video.status", "video.stop", "video.dark",
-             "video.list", "video.open"):
+             "video.list", "video.open", "video.delete"):
     assert f"'{name}'" in dart, name
     assert f"'{name}'" in bridge, name
 
@@ -56,6 +56,19 @@ assert "androidx.camera:camera-video:1.5.3" in patch
 assert "NativeVideoRecorder.kt" in patch
 assert 'id="videoStorage"' in html
 assert 'id="videoDark"' in html
+assert "Chappy.video.delete(file.id)" in html
+assert "fun deletePrivate(appId: String, id: String): Boolean" in native
+assert 'VIDEO_DELETE_NOT_ALLOWED' in native
+assert 'file.parentFile != root' in native
+assert 'if (state != "idle"' in native
+assert 'KeyEvent.KEYCODE_VOLUME_UP' in activity
+assert 'KeyEvent.KEYCODE_VOLUME_DOWN' in activity
+assert 'nativeVideo.isDark()' in activity
+assert 'event.repeatCount == 0' in activity
+assert 'videoVolumeShortcut' in activity and 'videoVolumeShortcut' in dart
+assert '_darkSessionArmed' in dart
+assert 'onDoubleTap: () => unawaited(_setVideoDark(false))' in dart
+assert 'Colors.redAccent : Colors.greenAccent' in dart
 assert "Chappy.video.start(options)" in html
 assert "Chappy.video.list()" in html
 assert "Chappy.video.open(file.id)" in html
