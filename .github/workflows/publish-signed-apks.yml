@@ -94,6 +94,16 @@ jobs:
         run: flutter analyze
       - name: Unit tests
         run: flutter test
+      - name: CameraX permissions and private video storage safety contract
+        run: python3 tools/test_native_video_contract.py
+      - name: Android camera and microphone permissions manifest checks
+        run: python3 tools/test_android_media_manifest.py
+      - name: Chappy Recorder standalone mini-app UI smoke test
+        run: node tools/test_chappy_recorder.js
+      - name: Media Lab recording regression smoke test
+        run: node tools/test_media_lab_video.js
+      - name: Existing offline mini-app JS bridge regression
+        run: node tools/test_bootstrap.js
       - name: Build three permanently signed CPU-specific APKs
         run: |
           flutter build apk --release --split-per-abi \
