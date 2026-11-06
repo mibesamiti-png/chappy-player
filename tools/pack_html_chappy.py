@@ -37,7 +37,7 @@ def package_html(source, output, app_id, name, version, permissions=()):
 
     permissions = list(permissions)
     if len(permissions) != len(set(permissions)) or any(
-            name not in ('camera', 'microphone') for name in permissions):
+            name not in ('camera', 'microphone', 'motion', 'haptics') for name in permissions):
         raise ValueError('unsupported or duplicate media permission')
 
     manifest = {
@@ -100,7 +100,7 @@ def main():
     parser.add_argument("--name", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--permission", action="append", choices=["camera", "microphone"],
+    parser.add_argument("--permission", action="append", choices=["camera", "microphone", "motion", "haptics"],
                         default=[], help="Explicit Android media capability")
     args = parser.parse_args()
     output = package_html(args.source, args.output, args.id, args.name, args.version,
