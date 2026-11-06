@@ -476,7 +476,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
 
   Future<void> _setDarkSwipeBrightness(double brightness) async {
     if (!_videoDark || !mounted || !_darkSessionArmed ||
-        ModalRoute.of(context)?.isCurrent != true) return;
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
     try {
       final changed = await _mediaChannel.invokeMethod<bool>(
           'setVideoBrightness', {'brightness': brightness});
