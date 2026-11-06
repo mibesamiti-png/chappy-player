@@ -67,9 +67,9 @@ class NativeVideoExport(private val activity: Activity) {
                 }
                 val originalHash = MessageDigest.getInstance("SHA-256")
                 var written = 0L
-                val stream = activity.contentResolver.openOutputStream(dest, "w")
+                val outputStream = activity.contentResolver.openOutputStream(dest, "w")
                     ?: throw IOException("Selected destination is not writable")
-                stream.use { output ->
+                outputStream.use { output ->
                     state.file.inputStream().use { input ->
                         val buffer = ByteArray(65536)
                         while (true) {
@@ -91,9 +91,9 @@ class NativeVideoExport(private val activity: Activity) {
                 // Do not claim success until readback agrees with the source.
                 val readHash = MessageDigest.getInstance("SHA-256")
                 var readBytes = 0L
-                val stream = activity.contentResolver.openInputStream(dest)
+                val inputStream = activity.contentResolver.openInputStream(dest)
                     ?: throw IOException("The selected destination cannot be verified")
-                stream.use { input ->
+                inputStream.use { input ->
                     val buffer = ByteArray(65536)
                     while (true) {
                         val count = input.read(buffer)
