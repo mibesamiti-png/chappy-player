@@ -41,7 +41,7 @@ get('videoAudio').checked = true;
 get('libraryPanel').hidden = true;
 const docCallbacks = new Map();
 const winCallbacks = new Map();
-const log = {start:[],stop:0,dark:[],list:0,open:[],export:[],backup:0,delete:[],storage:0};
+const log = {start:[],stop:0,dark:[],list:0,open:[],export:[],backup:0,restore:0,delete:[],storage:0};
 let current='idle', removed=false;
 const video = {
   async storageInfo(){log.storage++;return {totalBytes:128000000000,availableBytes:32000000000}},
@@ -55,6 +55,7 @@ const video = {
   async open(id){log.open.push(id);return true},
   async export(id){log.export.push(id);return {status:'saved',sizeBytes:6000000}},
   async backupZip(){log.backup++;return {status:'saved',files:1,sizeBytes:6010240}},
+  async restoreZip(){log.restore++;return {status:'restored',total:2,restored:1,skipped:1}},
   async delete(id){log.delete.push(id);removed=true;return true}
 };
 const w={Chappy:{video},addEventListener(n,cb){winCallbacks.set(n,cb)}};
@@ -107,6 +108,12 @@ const click = async id => {
   assert.equal(log.backup,1);
   assert.match(get('message').textContent,/ZIPバックアップ完了：1本/);
   assert.equal(get('backupVideos').disabled,false);
+  const callsBeforeRestore = log.list;
+  await click('restoreVideos');
+  assert.equal(log.restore,1);
+  assert.equal(get('restoreVideos').disabled,false);
+  assert.match(get('message').textContent,/ZIP復元完了：新規 1本/);
+  assert.ok(log.list > callsBeforeRestore, 'Restored videos must refresh the private list');
   await buttons[2].callback('click')();await settle();
   assert.deepEqual(log.delete,['Chappy_20261106_123456_001.mp4']);
   assert.match(get('libraryList').textContent,/まだありません/);
