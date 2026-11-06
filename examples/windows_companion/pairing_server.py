@@ -192,6 +192,18 @@ class BoundedHttpsServer(ThreadingHTTPServer):
         self.timeout = 0.4
         self._active = threading.BoundedSemaphore(4)
 
+    def get_request(self):
+        # Accept plain TCP first and limit the TLS handshake lifetime.
+        # Wrapping the listening socket directly may block on a silent client.
+        connection, address = self.socket.accept()
+        connection.settimeout(3.0)
+        try:
+            wrapped = self.context.wrap_socket(connection, server_side=True)
+            return wrapped, address
+        except Exception:
+            connection.close()
+            raise
+
     def process_request(self, request, client_address):
         if not self._active.acquire(blocking=False):
             try:
@@ -234,7 +246,7 @@ def run_pairing(ip: str, minutes: int) -> None:
 
         session = PairingSession()
         with BoundedHttpsServer((address, 0), make_handler(session)) as server:
-            server.socket = context.wrap_socket(server.socket, server_side=True)
+            server.context = context
             port = server.server_address[1]
             nonce = secrets.token_hex(4)
             details = service_descriptor(address, port, nonce)
