@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:chappy_player/core/backup_export_service.dart';
 import 'package:chappy_player/core/data_backup_service.dart';
+import 'package:chappy_player/core/debug_sample_seeder.dart';
 import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/core/package_model.dart';
 import 'package:chappy_player/core/package_repository.dart';
@@ -14,6 +15,7 @@ import 'package:chappy_player/screens/network_lab_page.dart';
 import 'package:chappy_player/screens/player_update_page.dart';
 import 'package:chappy_player/screens/self_check_page.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/services.dart';
@@ -44,7 +46,25 @@ class ChappyApp extends StatefulWidget {
 
 class _ChappyAppState extends State<ChappyApp> {
   final PackageRepository repository = PackageRepository();
-  late final Future<void> initialization = repository.init();
+  late final Future<void> initialization = _initializeLibrary();
+
+  Future<void> _initializeLibrary() async {
+    await repository.init();
+    if (kDebugMode && Platform.isAndroid) {
+      try {
+        final report = await const DebugSampleSeeder().seed(repository);
+        if (!report.alreadySeeded) {
+          await widget.logs.add('player', 'info', 'debug-samples',
+              'Added ${report.installed} mini-apps; '
+              'preserved ${report.skipped} existing apps');
+        }
+      } catch (error) {
+        // A missing/invalid debug bundle must not block the user's library.
+        await widget.logs.add(
+            'player', 'warning', 'debug-samples', error.toString());
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
