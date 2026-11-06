@@ -53,5 +53,17 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   window.__chappyResolve({requestId: sent[8].requestId, ok: true,
     value: {status: 'cancelled'}});
   assert.equal((await exportVideo).status, 'cancelled');
-  console.log('Bridge smoke tests passed: storage, microphone, scoped motion/haptics and user-picked video export');
+  const pickText = window.Chappy.files.pickText();
+  assert.equal(sent[9].method, 'files.pickText');
+  window.__chappyResolve({requestId: sent[9].requestId, ok: true,
+    value: {status: 'selected', fileName: 'demo.txt', text: 'hello'}});
+  assert.equal((await pickText).text, 'hello');
+  const saveText = window.Chappy.files.saveText('demo.txt', 'こんにちは');
+  assert.equal(sent[10].method, 'files.saveText');
+  assert.equal(sent[10].params.fileName, 'demo.txt');
+  assert.equal(sent[10].params.text, 'こんにちは');
+  window.__chappyResolve({requestId: sent[10].requestId, ok: true,
+    value: {status: 'saved', sizeBytes: 15}});
+  assert.equal((await saveText).status, 'saved');
+  console.log('Bridge smoke tests passed: storage, microphone, motion/haptics, verified video export and selected document text I/O');
 })().catch(err => { console.error(err); process.exit(1); });
