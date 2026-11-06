@@ -23,7 +23,7 @@ def verify():
     if meta.returncode:
         raise RuntimeError("Could not read Debug APK package metadata")
     match = re.search(
-        r"package: name='([^']+)' versionCode='(\\d+)' versionName='([^']+)'",
+        r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'",
         meta.stdout)
     if match is None or match.group(1) != "dev.chappy.chappy_player.debug" or (
         int(match.group(2)) != expected_code or match.group(3) != expected_name
