@@ -52,6 +52,8 @@ jobs:
         run: python3 tools/test_windows_companion.py
       - name: Windows pairing PC approval and TLS pin contract
         run: python3 tools/test_windows_pairing.py
+      - name: PC QR invitation expiry, ticket and privacy checks
+        run: python3 tools/test_windows_qr.py
       - name: Scoped Android SAF document import/export contract
         run: python3 tools/test_native_documents_contract.py
       - name: Native large binary asset vault boundary and checksum checks
