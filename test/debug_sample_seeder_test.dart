@@ -16,7 +16,7 @@ class MemoryDebugBundle extends CachingAssetBundle {
   @override
   Future<ByteData> load(String key) async {
     final bytes = data[key];
-    if (bytes == null) throw FlutterError('Missing test asset: $key');
+    if (bytes == null) throw StateError('Missing test asset: $key');
     return ByteData.sublistView(bytes);
   }
 }
