@@ -17,6 +17,10 @@ button{margin:4px 8px 4px 0;background:#34577e;color:#fff;
 border:1px solid #6593c5;border-radius:11px;padding:12px 15px;cursor:pointer}
 button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
 #status{white-space:pre-wrap;overflow-wrap:anywhere;color:#c6dcfa;min-height:26px}
+.asset-row{margin:9px 0;padding:12px;background:#0e1725;border:1px solid #334b69;border-radius:12px}
+.asset-name{font-size:14px;overflow-wrap:anywhere;font-weight:600}
+.asset-meta{font-size:12px;color:#a5b8d2;margin:5px 0}
+.asset-row button{font-size:12px;padding:8px 11px}
 </style></head><body>
 <h1>Chappy File Lab</h1>
 <p>ミニアプリの設定・メモ・JSONをスマホのファイルと安全にやり取りする実験室。</p>
@@ -35,7 +39,15 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
 <button id="saveLocal">アプリ内に一時保存</button>
 <button id="loadLocal">アプリ内の保存内容を復元</button>
 <p id="status" role="status" aria-live="polite"></p>
-<small>ファイルの読み書きはユーザーの操作時だけ。別のアプリやPCに勝手に送信しません。バイナリと大容量ファイルは今後対応予定。</small>
+<small>ファイルの読み書きはユーザーの操作時だけ。別のアプリやPCに勝手に送信しません。バイナリ・大容量ファイルは下の専用保管庫から扱えます。</small>
+</section>
+<section>
+<h2>大容量ファイル保管庫</h2>
+<p>ZIP・音声・画像・3Dファイルなどを、ミニアプリだけの非公開保管庫に取り込めます。</p>
+<button id="importAsset">ファイルを取り込む</button>
+<button id="listAssets">保管ファイル一覧を更新</button>
+<div id="assetList" aria-live="polite">「ファイル一覧を更新」で表示します。</div>
+<small>1ファイル最大256MiB、合計512MiB・32ファイルまで。取り込み元は変更せず、書き出し先は毎回Androidで選択します。ミニアプリの削除やデータ消去で保管庫も消えるので、必要なファイルは書き出してください。</small>
 </section>
 <script>
 (() => {
@@ -49,6 +61,69 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
     try{await fn();}catch(error){status('エラー：'+String(error.message || error));}
     finally{button.disabled=false;}
   }
+  async function refreshAssetList() {
+    if(!files || typeof files.listAssets !== 'function')
+      throw new Error('バイナリ保管庫に対応した新しいプレイヤーが必要です');
+    const items=await files.listAssets();
+    const root=$('assetList');
+    root.textContent='';
+    if(!Array.isArray(items) || items.length===0){
+      root.textContent='保管されているファイルはありません。';return;
+    }
+    items.forEach(file=>{
+      if(!file || typeof file.id!=='string')return;
+      const row=document.createElement('div');
+      row.className='asset-row';
+      const label=document.createElement('div');
+      label.className='asset-name';
+      label.textContent=file.name || '名前なし';
+      const meta=document.createElement('div');
+      meta.className='asset-meta';
+      meta.textContent=(Number(file.sizeBytes || 0)/1048576).toFixed(1)+
+          ' MiB ・ '+(file.mime || 'binary');
+      const exportButton=document.createElement('button');
+      exportButton.type='button';
+      exportButton.textContent='書き出し';
+      exportButton.addEventListener('click',()=>{
+        void operation(exportButton,async()=>{
+          const result=await files.exportAsset(file.id);
+          status(result.status==='saved' ?
+            'ファイルを書き出して照合しました：'+file.name :
+            '書き出しをキャンセルしました');
+        });
+      });
+      const deleteButton=document.createElement('button');
+      deleteButton.type='button';
+      deleteButton.textContent='削除';
+      deleteButton.addEventListener('click',()=>{
+        void operation(deleteButton,async()=>{
+          const removed=await files.deleteAsset(file.id);
+          status(removed ? '保管庫から削除しました：'+file.name :
+            '削除をキャンセルしました');
+          if(removed)await refreshAssetList();
+        });
+      });
+      row.appendChild(label);
+      row.appendChild(meta);
+      row.appendChild(exportButton);
+      row.appendChild(deleteButton);
+      root.appendChild(row);
+    });
+  }
+  $('importAsset').addEventListener('click',()=>{
+    void operation($('importAsset'),async()=>{
+      if(!files || typeof files.importAsset!=='function')
+        throw new Error('バイナリ保管庫に対応した新しいプレイヤーが必要です');
+      const result=await files.importAsset();
+      if(result.status==='imported'){
+        status('取り込み完了：'+result.file.name);
+        await refreshAssetList();
+      }else status('取り込みをキャンセルしました');
+    });
+  });
+  $('listAssets').addEventListener('click',()=>{
+    void operation($('listAssets'),refreshAssetList);
+  });
   $('openFile').addEventListener('click',()=>{
     void operation($('openFile'),async()=>{
       if(!files)throw new Error('対応するChappy Player本体が必要です');
