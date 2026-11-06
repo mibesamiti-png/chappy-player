@@ -125,10 +125,10 @@ class PairingTests(unittest.TestCase):
             thread.join(timeout=2)
 
     def test_privacy_contract(self):
-        server = (ROOT / "examples/windows_companion/pairing_server.py").read_text()
-        client = (ROOT / "lib/core/companion_pairing_client.dart").read_text()
-        host = (ROOT / "tools/android/MainActivity.kt").read_text()
-        bridge = (ROOT / "lib/core/local_app_server.dart").read_text()
+        server = (ROOT / "examples/windows_companion/pairing_server.py").read_text(encoding="utf-8")
+        client = (ROOT / "lib/core/companion_pairing_client.dart").read_text(encoding="utf-8")
+        host = (ROOT / "tools/android/MainActivity.kt").read_text(encoding="utf-8")
+        bridge = (ROOT / "lib/core/local_app_server.dart").read_text(encoding="utf-8")
         for item in (
             "ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)",
             "ssl.TLSVersion.TLSv1_2",
