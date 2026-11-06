@@ -113,13 +113,19 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
     }
   }
   $('cancelAssetTransfer').addEventListener('click',()=>{
-    void operation($('cancelAssetTransfer'),async()=>{
-      if(!transferBusy)return;
-      const ok=await files.cancelTransfer();
+    const button=$('cancelAssetTransfer');
+    if(!transferBusy || button.disabled)return;
+    button.disabled=true;
+    void files.cancelTransfer().then(ok=>{
       if(ok){
         $('assetTransferLabel').textContent='キャンセル処理中…';
-        $('cancelAssetTransfer').disabled=true;
-      }else status('転送中のみキャンセルできます');
+      }else if(transferBusy){
+        status('転送中のみキャンセルできます');
+        button.disabled=false;
+      }
+    }).catch(error=>{
+      status('キャンセル処理に失敗：'+String(error.message||error));
+      if(transferBusy)button.disabled=false;
     });
   });
   async function refreshAssetList() {
