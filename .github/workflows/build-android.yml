@@ -125,7 +125,7 @@ jobs:
             --source sample_apps/file_lab \
             --id local.chappy.file_lab \
             --name 'Chappy File Lab' \
-            --version 0.2.0 \
+            --version 0.2.1 \
             --permission files \
             --output chappy-file-lab.chappy
       - name: Upload Chappy File Lab
