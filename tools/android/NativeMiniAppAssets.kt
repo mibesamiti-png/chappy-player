@@ -10,6 +10,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.security.MessageDigest
+import java.security.DigestOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import java.util.UUID
 import org.json.JSONObject
 
@@ -22,6 +25,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
     companion object {
         const val IMPORT_REQUEST = 0x64CB
         const val EXPORT_REQUEST = 0x64CC
+        const val ZIP_REQUEST = 0x64CD
         private const val MAX_FILE_BYTES = 256L * 1024 * 1024
         private const val MAX_STORE_BYTES = 512L * 1024 * 1024
         private const val MAX_FILES = 32
@@ -29,7 +33,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
             Regex("^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$")
         private val idPattern = Regex("^[a-f0-9]{32}$")
     }
-    private enum class Mode { IMPORT, EXPORT }
+    private enum class Mode { IMPORT, EXPORT, EXPORT_ZIP }
     private data class Item(
         val id: String, val name: String, val mime: String, val size: Long,
         val sha: String, val createdMs: Long,
@@ -42,6 +46,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
     private data class Pending(
         val owner: String, val mode: Mode, val result: MethodChannel.Result,
         val item: Item? = null,
+        val compressionLevel: Int = 6,
         @Volatile var cancelRequested: Boolean = false,
     )
     private var pending: Pending? = null
@@ -250,6 +255,38 @@ class NativeMiniAppAssets(private val activity: Activity) {
         }
     }
 
+    /**
+     * Explicit, lossless ZIP export of one vault item. Keep the source untouched;
+     * report real saved ZIP bytes even when already-compressed input grows.
+     */
+    fun exportZip(
+        owner: String, id: String, level: Int, result: MethodChannel.Result,
+    ) {
+        if (!reserve(result)) return
+        if (level !in setOf(1, 6, 9)) {
+            result.error("ASSET_COMPRESSION_LEVEL", "Choose 1, 6 or 9", null)
+            return
+        }
+        try {
+            val record = load(directory(owner), id)
+            pending = Pending(owner, Mode.EXPORT_ZIP, result, record, level)
+            transferPhase = "picker"
+            val picker = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/zip"
+                putExtra(Intent.EXTRA_TITLE, record.name + ".zip")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
+            @Suppress("DEPRECATION")
+            activity.startActivityForResult(picker, ZIP_REQUEST)
+        } catch (error: Exception) {
+            pending = null
+            resetProgress()
+            result.error("ASSET_ZIP_FAILED", error.message, null)
+        }
+    }
+
     fun deleteAsset(owner: String, id: String, result: MethodChannel.Result) {
         if (!reserve(result)) return
         try {
@@ -306,13 +343,15 @@ class NativeMiniAppAssets(private val activity: Activity) {
     }
 
     fun onResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        if (requestCode != IMPORT_REQUEST && requestCode != EXPORT_REQUEST) {
+        if (requestCode != IMPORT_REQUEST && requestCode != EXPORT_REQUEST &&
+            requestCode != ZIP_REQUEST) {
             return false
         }
         val request = pending ?: return true
         if (copying ||
             (requestCode == IMPORT_REQUEST && request.mode != Mode.IMPORT) ||
-            (requestCode == EXPORT_REQUEST && request.mode != Mode.EXPORT)) {
+            (requestCode == EXPORT_REQUEST && request.mode != Mode.EXPORT) ||
+            (requestCode == ZIP_REQUEST && request.mode != Mode.EXPORT_ZIP)) {
             return true
         }
         val uri: Uri? = data?.data
@@ -336,6 +375,9 @@ class NativeMiniAppAssets(private val activity: Activity) {
                     Mode.EXPORT -> copyOutVerified(
                         request.owner, request.item
                             ?: throw IOException("Asset selection missing"), uri, request)
+                    Mode.EXPORT_ZIP -> copyOutCompressedZip(
+                        request.owner, request.item
+                            ?: throw IOException("Asset selection missing"), uri, request)
                 }
                 activity.runOnUiThread {
                     pending = null
@@ -344,7 +386,7 @@ class NativeMiniAppAssets(private val activity: Activity) {
                     if (!closed) request.result.success(response)
                 }
             } catch (error: Exception) {
-                if (request.mode == Mode.EXPORT) {
+                if (request.mode != Mode.IMPORT) {
                     // If this user-selected document was partially written,
                     // attempt to remove it; some providers may reject deletion.
                     try { activity.contentResolver.delete(uri, null, null) }
@@ -502,6 +544,102 @@ class NativeMiniAppAssets(private val activity: Activity) {
         return mapOf("status" to "saved", "sizeBytes" to bytes,
             "sha256" to record.sha)
     }
+
+    /**
+     * Stream a standards-compliant DEFLATE ZIP without materializing
+     * the source bytes in JavaScript or writing temporary public files.
+     * SHA-256 verifies the source against vault metadata and the actual
+     * saved ZIP bytes against what the encoder wrote.
+     */
+    private fun copyOutCompressedZip(
+        owner: String, record: Item, uri: Uri, request: Pending,
+    ): Map<String, Any> {
+        val root = directory(owner)
+        if (load(root, record.id) != record) {
+            throw IOException("Asset metadata changed before compression")
+        }
+        val sourceFile = file(root, record.id, ".blob")
+        val archiveDigest = MessageDigest.getInstance("SHA-256")
+        val inputDigest = MessageDigest.getInstance("SHA-256")
+        var sourceBytes = 0L
+        val output = activity.contentResolver.openOutputStream(uri, "w")
+            ?: throw IOException("ZIP destination cannot be opened")
+        ZipOutputStream(DigestOutputStream(output, archiveDigest)).use { zip ->
+            zip.setLevel(request.compressionLevel)
+            zip.putNextEntry(ZipEntry("files/" + record.name))
+            sourceFile.inputStream().use { input ->
+                val buffer = ByteArray(65536)
+                while (true) {
+                    checkTransferActive(request)
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    sourceBytes += count
+                    if (sourceBytes > record.size) {
+                        throw IOException("Source grew while compressing")
+                    }
+                    zip.write(buffer, 0, count)
+                    inputDigest.update(buffer, 0, count)
+                    transferDoneBytes = sourceBytes
+                }
+            }
+            if (sourceBytes != record.size ||
+                !inputDigest.digest().contentEquals(hexBytes(record.sha))) {
+                throw IOException("Source file failed SHA-256 verification")
+            }
+            checkTransferActive(request)
+            zip.closeEntry()
+            val manifest = JSONObject().apply {
+                put("schemaVersion", 1)
+                put("format", "chappy-asset-zip")
+                put("fileName", record.name)
+                put("mime", record.mime)
+                put("sourceBytes", sourceBytes)
+                put("sourceSha256", record.sha)
+                put("compressionLevel", request.compressionLevel)
+            }.toString().toByteArray(Charsets.UTF_8)
+            zip.putNextEntry(ZipEntry("manifest.json"))
+            zip.write(manifest)
+            zip.closeEntry()
+        }
+
+        transferPhase = "verifying"
+        val expectedArchiveHash = archiveDigest.digest()
+        val actualArchiveHash = MessageDigest.getInstance("SHA-256")
+        var zippedBytes = 0L
+        val input = activity.contentResolver.openInputStream(uri)
+            ?: throw IOException("Saved ZIP cannot be read back")
+        input.use { stream ->
+            val buffer = ByteArray(65536)
+            while (true) {
+                checkTransferActive(request)
+                val count = stream.read(buffer)
+                if (count < 0) break
+                zippedBytes += count
+                if (zippedBytes > record.size + 1048576L) {
+                    throw IOException("ZIP output unexpectedly larger than source")
+                }
+                actualArchiveHash.update(buffer, 0, count)
+            }
+        }
+        if (zippedBytes <= 0 ||
+            !expectedArchiveHash.contentEquals(actualArchiveHash.digest())) {
+            throw IOException("Saved ZIP failed SHA-256 readback")
+        }
+        checkTransferActive(request)
+        transferPhase = "finalizing"
+        return mapOf(
+            "status" to "saved",
+            "originalBytes" to sourceBytes,
+            "zipBytes" to zippedBytes,
+            "savedBytes" to (sourceBytes - zippedBytes),
+            "percentSmaller" to (100.0 * (sourceBytes - zippedBytes) / sourceBytes),
+            "compressionLevel" to request.compressionLevel,
+            "sha256" to hex(expectedArchiveHash),
+        )
+    }
+
+    private fun hex(bytes: ByteArray): String =
+        bytes.joinToString("") { "%02x".format(it.toInt() and 255) }
 
     private fun hexBytes(hex: String): ByteArray {
         if (!Regex("^[a-f0-9]{64}$").matches(hex)) {
