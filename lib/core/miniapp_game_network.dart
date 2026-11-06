@@ -37,7 +37,21 @@ class GameNetworkPolicy {
 
   static bool isPublicAddress(InternetAddress ip) {
     final a = ip.rawAddress;
-    if (a.length == 16) return a[0] >= 0x20 && a[0] <= 0x3f;
+    if (a.length == 16) {
+      // 2000::/3 contains reserved and documentation prefixes too.
+      // Reject them rather than treating every global-unicast-shaped IP
+      // as safe for an app-controlled outbound connection.
+      if (a[0] < 0x20 || a[0] > 0x3f) return false;
+      if (a[0] == 0x20 && a[1] == 0x01 &&
+          (a[2] <= 0x01 || (a[2] == 0x0d && a[3] == 0xb8))) {
+        return false; // 2001::/23 special-purpose; 2001:db8::/32 docs.
+      }
+      if (a[0] == 0x20 && a[1] == 0x02) return false; // 2002::/16 6to4.
+      if (a[0] == 0x3f && a[1] == 0xff && (a[2] & 0xf0) == 0) {
+        return false; // 3fff::/20 documentation.
+      }
+      return true;
+    }
     if (a.length != 4) return false;
     final x = a[0], y = a[1], z = a[2];
     return !(x == 0 || x == 10 || x == 127 || x >= 224 ||
@@ -46,7 +60,9 @@ class GameNetworkPolicy {
         x == 192 && y == 168 ||
         x == 100 && y >= 64 && y <= 127 ||
         x == 198 && (y == 18 || y == 19) ||
-        x == 192 && y == 0 && (z == 0 || z == 2) ||
+        x == 192 && y == 0 || // 192.0.0.0/24 protocol assignments.
+        x == 192 && y == 88 && z == 99 || // Deprecated 6to4 relay.
+        x == 192 && y == 0 && z == 2 ||
         x == 198 && y == 51 && z == 100 ||
         x == 203 && y == 0 && z == 113);
   }
