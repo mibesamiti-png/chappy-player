@@ -67,7 +67,7 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   assert.equal((await saveText).status, 'saved');
   const zip = window.Chappy.video.backupZip();
   assert.equal(sent[11].method, 'video.backupZip');
-  assert.deepEqual(sent[11].params, {});
+  assert.equal(Object.keys(sent[11].params).length, 0);
   window.__chappyResolve({requestId: sent[11].requestId, ok: true,
     value: {status: 'saved', files: 2, sizeBytes: 3000000}});
   assert.equal((await zip).files, 2);
