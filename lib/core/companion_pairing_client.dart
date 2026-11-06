@@ -58,9 +58,20 @@ class CompanionPairingClient {
     required int port,
     required String fingerprint,
     required String nonce,
+    String? invitationTicket,
+    int? expiresAt,
   }) async {
     validateTarget(ip, port, fingerprint);
     confirmationCode(nonce);
+    if (invitationTicket != null) {
+      if (!RegExp(r'^[0-9a-f]{32}$').hasMatch(invitationTicket)) {
+        throw const FormatException('QR招待IDが正しくありません');
+      }
+      final now = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+      if (expiresAt == null || expiresAt <= now || expiresAt - now > 1800) {
+        throw const FormatException('QRの有効期限が切れています');
+      }
+    }
     if (_socket != null) throw StateError('すでに接続確認中です');
     _cancelled = false;
     final pin = normalizeFingerprint(fingerprint);
@@ -81,6 +92,7 @@ class CompanionPairingClient {
       }
       final body = utf8.encode(jsonEncode(<String, String>{
         'protocol': 'pair-preview-v1', 'nonce': nonce,
+        if (invitationTicket != null) 'ticket': invitationTicket,
       }));
       final header =
           'POST /v1/pair-preview HTTP/1.1\r\n'
