@@ -248,7 +248,10 @@ def run_pairing(ip: str, minutes: int, *, qr: bool = False) -> None:
         raise ValueError("Duration must be 1-30 minutes")
     pem, key, fingerprint = create_ephemeral_certificate(address)
 
-    with tempfile.TemporaryDirectory(prefix="chappy-pair-session-") as folder:
+    # Photos preview software may temporarily lock the QR PNG on Windows.
+    with tempfile.TemporaryDirectory(
+        prefix="chappy-pair-session-", ignore_cleanup_errors=True
+    ) as folder:
         crt = Path(folder) / "session.crt"
         pem_key = Path(folder) / "session.key"
         crt.write_bytes(pem)
@@ -316,4 +319,9 @@ def run_pairing(ip: str, minutes: int, *, qr: bool = False) -> None:
                         zeroconf.unregister_service(info)
                 finally:
                     zeroconf.close()
+                    if qr:
+                        try:
+                            image_file.unlink(missing_ok=True)
+                        except OSError:
+                            print("Close the QR viewer to allow temp file cleanup.")
                     print("Chappy Companion: secure confirmation preview OFF")
