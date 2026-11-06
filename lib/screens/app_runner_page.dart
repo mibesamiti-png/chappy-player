@@ -678,7 +678,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         builder: (dialog) => AlertDialog(
           title: const Text('ゲームサーバーへの接続確認'),
           content: Text('ミニアプリ「${widget.app.name}」が次のサーバーへ通信しようとしています。\n\n'
-              '${origin}\n\n送信したデータはサーバー管理者に届きます。'
+              '$origin\n\n送信したデータはサーバー管理者に届きます。'
               '信頼できる接続先だけ許可してください。'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialog, false),
