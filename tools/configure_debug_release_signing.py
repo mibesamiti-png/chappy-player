@@ -43,16 +43,16 @@ if hashlib.sha256(cert.stdout).hexdigest() != pinned:
     raise SystemExit("Dedicated Debug signing certificate does not match pinned digest")
 
 def prop(value: str) -> str:
-    if "\\n" in value or "\\r" in value:
+    if "\n" in value or "\r" in value:
         raise SystemExit("Invalid multiline signing secret")
-    return (value.replace("\\\\", "\\\\\\\\").replace("=", "\\=")
-            .replace(":", "\\:").replace("#", "\\#").replace("!", "\\!"))
+    return (value.replace("\\", "\\\\").replace("=", "\=")
+            .replace(":", "\:").replace("#", "\#").replace("!", "\!"))
 
 PROPERTY_FILE.write_text(
-    "storePassword=" + prop(os.environ["CHAPPY_DEBUG_STORE_PASSWORD"]) + "\\n" +
-    "keyPassword=" + prop(os.environ["CHAPPY_DEBUG_KEY_PASSWORD"]) + "\\n" +
-    "keyAlias=" + prop(os.environ["CHAPPY_DEBUG_KEY_ALIAS"]) + "\\n" +
-    "storeFile=chappy-debug.jks\\n",
+    "storePassword=" + prop(os.environ["CHAPPY_DEBUG_STORE_PASSWORD"]) + "\n" +
+    "keyPassword=" + prop(os.environ["CHAPPY_DEBUG_KEY_PASSWORD"]) + "\n" +
+    "keyAlias=" + prop(os.environ["CHAPPY_DEBUG_KEY_ALIAS"]) + "\n" +
+    "storeFile=chappy-debug.jks\n",
     encoding="utf-8",
 )
 
@@ -63,7 +63,7 @@ if source.count("android {") != 1 or source.count("    buildTypes {") != 1:
     raise SystemExit("Unknown Gradle project layout")
 if 'applicationIdSuffix = ".debug"' not in source:
     raise SystemExit("Refusing to sign a non-isolated Debug package")
-source = "import java.io.FileInputStream\\nimport java.util.Properties\\n\\n" + source
+source = "import java.io.FileInputStream\nimport java.util.Properties\n\n" + source
 source = source.replace(
     "android {",
     """val chappyDebugKeystore = Properties()
