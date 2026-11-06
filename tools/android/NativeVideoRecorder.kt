@@ -27,6 +27,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import android.os.StatFs
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -312,6 +313,31 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         }
         dimmed = enabled
         return dimmed
+    }
+
+    /** Storage used by private MP4 files. Does not expose filesystem paths. */
+    fun storageInfo(appId: String): Map<String, Long> {
+        val directory = privateDirectory(appId)
+        val stats = StatFs(directory.absolutePath)
+        return mapOf(
+            "totalBytes" to stats.totalBytes,
+            "availableBytes" to stats.availableBytes
+        )
+    }
+
+    /** User-initiated swipe brightness while the visible app is in dark mode.
+     * 1.0 means maximum brightness; 0.01 is the lowest supported in-app value.
+     * This is per-window only; original brightness is restored when leaving.
+     */
+    fun setDarkBrightness(brightness: Float): Boolean {
+        if (!dimmed || registry.currentState != Lifecycle.State.RESUMED ||
+            brightness.isNaN() || brightness !in 0.01f..1.0f) {
+            return false
+        }
+        val attrs = activity.window.attributes
+        attrs.screenBrightness = brightness
+        activity.window.attributes = attrs
+        return true
     }
 
     fun listPrivate(appId: String): List<Map<String, Any>> =
