@@ -83,11 +83,14 @@ class CompanionPairingClient {
       if (cert == null || sha256.convert(cert.der).toString() != pin) {
         throw const HandshakeException('PCの証明書指紋が一致しません');
       }
-      final body = utf8.encode(jsonEncode(<String, String>{
+      final payload = <String, String>{
         'protocol': invitation == null ? 'pair-preview-v1' : 'pair-qr-v2',
         'nonce': nonce,
-        if (invitation != null) 'invitation': invitation,
-      }));
+      };
+      if (invitation != null) {
+        payload['invitation'] = invitation;
+      }
+      final body = utf8.encode(jsonEncode(payload));
       final header =
           'POST /v1/pair-preview HTTP/1.1\r\n'
           'Host: $ip:$port\r\n'
