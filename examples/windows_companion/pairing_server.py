@@ -15,16 +15,14 @@ import hashlib
 import hmac
 import ipaddress
 import json
-import sys
-import queue
+ import queue
 import secrets
 import socket
 import ssl
 import tempfile
 import threading
 import time
-import urllib.parse
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from companion import (
@@ -358,7 +356,12 @@ def run_pairing(ip: str, minutes: int, qr: bool = False) -> None:
                 print("Auto-stop: " + str(minutes) + " min. Ctrl+C stops.")
                 deadline = time.monotonic() + lifetime_seconds
                 while time.monotonic() < deadline and not session.finished.is_set():
-                    server.handle_request()
+                    try:
+                        server.handle_request()
+                    except (ssl.SSLError, OSError):
+                        # A client may interrupt TLS handshakes; do not
+                        # terminate the user's short-lived invitation.
+                        continue
             finally:
                 try:
                     if registered:
