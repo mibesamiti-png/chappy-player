@@ -54,6 +54,15 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
         assert json.loads(archive.read("manifest.json"))["permissions"] == [
             "motion", "haptics"]
 
+    file_package = stable / "file-lab.chappy"
+    file_source = Path(__file__).resolve().parent.parent / "sample_apps/file_lab"
+    package_html(file_source, file_package, "local.chappy.file_lab",
+                 "Chappy File Lab", "0.1.0", ["files"])
+    with zipfile.ZipFile(file_package) as archive:
+        assert json.loads(archive.read("manifest.json"))["permissions"] == ["files"]
+        assert b"files.pickText()" in archive.read("index.html")
+    assert len(json.loads(build_catalog(public))["entries"]) == 4
+
     try:
         package_html(html, public / "invalid.chappy", "local.chappy.invalid", "Invalid", "0.1.0",
                      ["location"])
