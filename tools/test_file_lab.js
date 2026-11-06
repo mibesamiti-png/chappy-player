@@ -14,6 +14,7 @@ function makeNode(id='') {
     id, value:'', disabled:false, className:'', type:'',
     children:[], callbacks:new Map(),
     addEventListener(name, callback){this.callbacks.set(name,callback)},
+    setAttribute(name,value){this[name]=value},
     appendChild(child){this.children.push(child);return child},
     get textContent(){return content},
     set textContent(value){content=String(value);this.children=[]},
@@ -49,6 +50,11 @@ const Chappy={
       traces.push(['export',id]);
       if(slowExport)return new Promise(resolve=>{exportResolve=resolve});
       return {status:'saved',sizeBytes:2097152};
+    },
+    async exportCompressedZip(id,level){
+      traces.push(['zip',id,level]);
+      return {status:'saved',originalBytes:2097152,zipBytes:524288,
+        savedBytes:1572864,percentSmaller:75,compressionLevel:6};
     },
     async transferStatus(){return {
       active:true,phase:'copying',bytesDone:1048576,totalBytes:4194304,
@@ -128,6 +134,12 @@ async function click(node){
   assert.equal(get('cancelAssetTransfer').disabled,true);
   slowExport=false;
 
+  assert.equal(list.children[0].children[4].value,'balanced');
+  await click(list.children[0].children[5]);
+  assert.deepEqual(traces.find(x=>Array.isArray(x)&&x[0]==='zip'),
+    ['zip',nextId,'balanced']);
+  assert.match(get('status').textContent,/75.0% 削減/);
+  assert.equal(intervals.size,0);
   await click(list.children[0].children[3]);
   assert.deepEqual(traces.find(x=>Array.isArray(x)&&x[0]==='delete'),
     ['delete',nextId]);
@@ -136,5 +148,5 @@ async function click(node){
   assert.equal(get('importAsset').disabled,false);
   await click(get('listAssets'));
   assert.equal(list.children.length,0);
-  console.log('File Lab smoke tests passed: text, asset import/export, transfer progress/cancellation, delete');
+  console.log('File Lab smoke tests passed: text, asset import/export, ZIP compression ratio, transfer progress/cancellation, delete');
 })().catch(e=>{console.error(e);process.exit(1)});
