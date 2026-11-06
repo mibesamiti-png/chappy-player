@@ -2,7 +2,7 @@ import 'dart:convert';
 
 /// Explicit, install-time capabilities supported by this release.
 const supportedChappyPermissions = <String>{
-  'camera', 'microphone', 'motion', 'haptics', 'files',
+  'camera', 'microphone', 'motion', 'haptics', 'files', 'network',
 };
 
 String chappyPermissionsLabel(List<String> permissions) {
@@ -19,6 +19,8 @@ String chappyPermissionsLabel(List<String> permissions) {
         return '振動';
       case 'files':
         return 'ファイルの選択・保存';
+      case 'network':
+        return '暗号化サーバー通信';
       default:
         return '未対応の権限';
     }
@@ -74,7 +76,7 @@ class ChappyPackage {
         permissions.any((item) => item is! String ||
             !supportedChappyPermissions.contains(item)) ||
         permissions.toSet().length != permissions.length) {
-      throw const FormatException('permissionsはcamera/microphone/motion/haptics/filesのみ、重複なしで指定してください');
+      throw const FormatException('permissionsはcamera/microphone/motion/haptics/files/networkのみ、重複なしで指定してください');
     }
     if (decoded['minPlayerVersion'] != null &&
         decoded['minPlayerVersion'] != '0.1.0') {
