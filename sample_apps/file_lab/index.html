@@ -117,9 +117,9 @@ button:disabled{opacity:.4}button:focus-visible{outline:2px solid #c5e5ff}
     if(!transferBusy || button.disabled)return;
     button.disabled=true;
     void files.cancelTransfer().then(ok=>{
-      if(ok){
+      if(ok && transferBusy){
         $('assetTransferLabel').textContent='キャンセル処理中…';
-      }else if(transferBusy){
+      }else if(!ok && transferBusy){
         status('転送中のみキャンセルできます');
         button.disabled=false;
       }
