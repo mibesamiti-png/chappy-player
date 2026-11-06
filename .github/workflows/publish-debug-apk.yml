@@ -29,13 +29,14 @@ jobs:
       CHAPPY_DEBUG_VERSION: ${{ inputs.version }}
       CHAPPY_DEBUG_RELEASE_NOTES: ${{ inputs.release_notes }}
       CHAPPY_DEBUG_CERT_SHA256: ${{ vars.CHAPPY_DEBUG_CERT_SHA256 }}
-      CHAPPY_DEBUG_KEYSTORE_B64: ${{ secrets.CHAPPY_DEBUG_KEYSTORE_B64 }}
-      CHAPPY_DEBUG_STORE_PASSWORD: ${{ secrets.CHAPPY_DEBUG_STORE_PASSWORD }}
-      CHAPPY_DEBUG_KEY_PASSWORD: ${{ secrets.CHAPPY_DEBUG_KEY_PASSWORD }}
-      CHAPPY_DEBUG_KEY_ALIAS: ${{ secrets.CHAPPY_DEBUG_KEY_ALIAS }}
       CHAPPY_DIST_REPO: mibesamiti-png/chappy-player-updates
     steps:
       - name: Refuse non-main, missing fixed Debug identity, and unsafe build numbers
+        env:
+          CHAPPY_DEBUG_KEYSTORE_B64: ${{ secrets.CHAPPY_DEBUG_KEYSTORE_B64 }}
+          CHAPPY_DEBUG_STORE_PASSWORD: ${{ secrets.CHAPPY_DEBUG_STORE_PASSWORD }}
+          CHAPPY_DEBUG_KEY_PASSWORD: ${{ secrets.CHAPPY_DEBUG_KEY_PASSWORD }}
+          CHAPPY_DEBUG_KEY_ALIAS: ${{ secrets.CHAPPY_DEBUG_KEY_ALIAS }}
         run: |
           test "$GITHUB_REF" = "refs/heads/main" || { echo "Debug releases require main"; exit 1; }
           python3 - <<'PY'
@@ -69,6 +70,11 @@ jobs:
           channel: stable
           cache: true
       - name: Prepare isolated Debug app and fixed dedicated certificate
+        env:
+          CHAPPY_DEBUG_KEYSTORE_B64: ${{ secrets.CHAPPY_DEBUG_KEYSTORE_B64 }}
+          CHAPPY_DEBUG_STORE_PASSWORD: ${{ secrets.CHAPPY_DEBUG_STORE_PASSWORD }}
+          CHAPPY_DEBUG_KEY_PASSWORD: ${{ secrets.CHAPPY_DEBUG_KEY_PASSWORD }}
+          CHAPPY_DEBUG_KEY_ALIAS: ${{ secrets.CHAPPY_DEBUG_KEY_ALIAS }}
         run: |
           flutter create --platforms=android --org dev.chappy .
           python3 tools/patch_android.py
