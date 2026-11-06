@@ -73,6 +73,23 @@ jobs:
           name: chappy-media-probe
           path: media-probe.chappy
           if-no-files-found: error
+      - name: Chappy Recorder isolated mini-app smoke test
+        run: node tools/test_chappy_recorder.js
+      - name: Package standalone Chappy Recorder
+        run: |
+          python3 tools/pack_html_chappy.py \
+            --source sample_apps/video_recorder \
+            --id local.chappy.recorder \
+            --name 'Chappy Recorder' \
+            --version 0.1.0 \
+            --permission camera --permission microphone \
+            --output chappy-recorder.chappy
+      - name: Upload Chappy Recorder mini-app
+        uses: actions/upload-artifact@v4
+        with:
+          name: chappy-recorder-miniapp
+          path: chappy-recorder.chappy
+          if-no-files-found: error
       - name: Verify isolated debug APK preparation on both Gradle formats
         run: python3 tools/test_prepare_debug_variant.py
       - name: Separate debug app from the installed permanently signed release
