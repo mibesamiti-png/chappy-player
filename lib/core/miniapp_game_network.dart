@@ -105,12 +105,13 @@ class MiniAppGameNetwork {
       ..autoUncompress = false;
     client.connectionFactory = (url, proxy, proxyPort) {
       if (proxy != null || proxyPort != null ||
-          url.host != uri.host || url.port != uri.port) {
+          url.host != uri.host ||
+          url.port != (uri.hasPort ? uri.port : 443)) {
         throw StateError('Proxy or different destination blocked');
       }
       // Connect to the already-vetted IP, no second DNS lookup or redirect.
       // Dart still verifies TLS for the requested DNS hostname.
-      return Socket.startConnect(address, url.port);
+      return Socket.startConnect(address, uri.hasPort ? uri.port : 443);
     };
     return client;
   }
@@ -135,6 +136,7 @@ class MiniAppGameNetwork {
       outbound.followRedirects = false;
       outbound.persistentConnection = false;
       outbound.headers.set(HttpHeaders.acceptHeader, 'application/json, text/plain');
+      outbound.headers.removeAll(HttpHeaders.acceptEncodingHeader);
       if (method == 'POST') {
         outbound.headers.contentType = ContentType.json;
         outbound.add(utf8.encode(body));
