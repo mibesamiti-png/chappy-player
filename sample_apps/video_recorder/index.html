@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chappy Recorder</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif;background:#0c111d;color:#f2f5ff}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;background:radial-gradient(ellipse at 95% 0%,#223452 0%,#0c111d 53%);padding:18px 16px calc(28px + env(safe-area-inset-bottom));}
+main{max-width:620px;margin:auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 22px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{display:grid;place-items:center;width:43px;height:43px;border-radius:15px;background:#26395a;border:1px solid #3c5275;font-size:24px}
+h1{font-size:22px;letter-spacing:-.5px;margin:0}
+.eyebrow{font-size:11px;color:#9aa9c5;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
+.badge{font-size:12px;background:#1a293f;border:1px solid #344761;border-radius:99px;padding:7px 11px;color:#b6c8e5}
+.card{background:#171f30ee;border:1px solid #31405b;border-radius:19px;padding:18px;margin-bottom:14px;box-shadow:0 12px 26px #04070f2b}
+.card h2{font-size:13px;color:#b7c5db;font-weight:600;margin:0 0 12px;letter-spacing:.02em}
+.capacity{display:flex;justify-content:space-between;align-items:end;gap:8px}
+.capacity strong{font-size:25px;font-variant-numeric:tabular-nums}
+small,.hint{font-size:12px;line-height:1.65;color:#95a6c1}
+.meter{height:9px;border-radius:99px;background:#303d56;overflow:hidden;margin:12px 0 8px}
+#capacityFill{width:0%;height:100%;background:linear-gradient(90deg,#6eb1f8,#82d4ca);border-radius:99px;transition:width .25s}
+button,select{font:inherit}
+button{cursor:pointer;min-height:45px;border:1px solid #455573;border-radius:12px;background:#263654;color:#f2f5ff;padding:10px 13px}
+button:focus-visible,select:focus-visible{outline:2px solid #8cbbff;outline-offset:2px}
+button:disabled{opacity:.48;cursor:not-allowed}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lens-choice{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.lens-choice button{width:100%}
+.lens-choice button[aria-pressed="true"]{background:#3c5d89;border-color:#9cc5ff;box-shadow:inset 0 0 0 1px #648dbf}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label.field{display:grid;gap:8px;font-size:13px;color:#b7c5db}
+select{width:100%;padding:12px;background:#0e1728;color:#eef5ff;border:1px solid #3b4d6b;border-radius:11px}
+input[type="checkbox"]{accent-color:#78b8ff;width:17px;height:17px}
+.audio-line{display:flex;align-items:center;gap:9px;font-size:13px;padding-top:15px;color:#dae7fc}
+button.primary{display:block;width:100%;background:#467fbd;border-color:#78b7f9;font-size:17px;font-weight:700;min-height:64px;border-radius:15px}
+button.primary:disabled{background:#263654}
+button.secondary{background:#19263a}
+button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
+.status-row{display:flex;align-items:center;gap:9px;margin:15px 0 9px}
+.dot{width:9px;height:9px;border-radius:50%;background:#53dc96;box-shadow:0 0 0 3px #2b6c4f33}
+.dot.active{background:#ff636f;box-shadow:0 0 0 3px #b8374433}
+#captureStatus{font-size:14px;font-weight:650}
+#timer{margin-left:auto;font-size:15px;font-variant-numeric:tabular-nums;color:#b6c8df}
+#libraryPanel[hidden]{display:none}
+#libraryList{display:grid;gap:9px;margin-top:12px}
+.video-file{padding:13px;border-radius:12px;background:#101a2b;border:1px solid #2d425e}
+.filename{font-size:12px;overflow-wrap:anywhere;margin-bottom:7px}
+.meta{font-size:11px;color:#95a6c1;margin:0 0 9px}
+.video-file .row button{min-height:38px;padding:8px 11px;font-size:12px}
+.error{color:#ffc0b8}
+#message{font-size:12px;line-height:1.6;min-height:1.5em;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(min-width:480px){body{padding:26px 22px}.card{padding:22px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="brand"><div class="logo" aria-hidden="true">●</div><div><h1>Chappy Recorder</h1><div class="eyebrow">PRIVATE VIDEO STUDIO · DEBUG</div></div></div>
+  <span class="badge" id="hostStatus">接続確認中</span>
+</header>
+
+<section class="card" aria-label="スマホ内部ストレージ">
+  <h2>スマホの空き容量</h2>
+  <div class="capacity"><div><strong id="freeSpace">—</strong><div class="hint">録画に利用可能</div></div><div class="hint" id="totalSpace">全容量：—</div></div>
+  <div class="meter" aria-label="使用中容量の割合"><div id="capacityFill"></div></div>
+  <div class="row" style="justify-content:space-between"><small>端末の内部ストレージ（プライベート保存先）</small><button class="secondary" id="refreshCapacity" type="button" style="min-height:32px;padding:4px 9px;font-size:12px">更新</button></div>
+</section>
+
+<section class="card">
+  <h2>カメラの向き</h2>
+  <div class="lens-choice" role="group" aria-label="撮影カメラ">
+    <button type="button" id="lensBack" aria-pressed="true">◉ 背面カメラ</button>
+    <button type="button" id="lensFront" aria-pressed="false">◉ 前面カメラ</button>
+  </div>
+  <div class="field-grid" style="margin-top:17px">
+    <label class="field">画質
+      <select id="videoQuality"><option value="720">720p HD</option><option value="1080">1080p フルHD</option></select>
+    </label>
+    <label class="field">保存先
+      <select id="videoStorage"><option value="private">アプリ内（非公開）</option><option value="gallery">ギャラリー</option></select>
+    </label>
+  </div>
+  <label class="audio-line"><input id="videoAudio" type="checkbox" checked>動画にマイク音声を含める</label>
+</section>
+
+<section class="card">
+  <button id="recordDark" class="primary" type="button">● 暗転モードで録画</button>
+  <div class="status-row"><span class="dot" id="recordDot" aria-hidden="true"></span><span id="captureStatus" role="status">停止中</span><span id="timer">00:00</span></div>
+  <button id="recordStop" class="secondary" type="button" disabled>録画を停止する</button>
+  <p class="hint">初回は録画の確認後、黒画面に切り替わります。暗転中は音量＋で録画再開、音量－で停止。右上の点付近をダブルタップで復帰。<strong>右スワイプで輝度最大、左スワイプで輝度最低</strong>。Androidのカメラ・マイク使用表示はそのままです。</p>
+  <div id="message" role="status" aria-live="polite"></div>
+</section>
+
+<section class="card">
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">プライベート動画</h2>
+    <button id="toggleLibrary" class="secondary" type="button" aria-expanded="false">一覧を表示</button>
+  </div>
+  <section id="libraryPanel" hidden>
+    <p class="hint">このミニアプリで非公開保存した動画のみ表示します。Media Labの動画とは保存領域が別です。ギャラリー保存は対象外です。</p>
+    <button id="refreshLibrary" class="secondary" type="button">一覧を更新</button>
+    <div id="libraryList"></div>
+  </section>
+</section>
+<p class="hint">暗転中も画面の電源はONです。アプリを離れると録画を停止します。非公開動画はアプリデータ削除・アンインストールで消えるため、重要な動画に注意してください。</p>
+</main>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const video = window.Chappy && window.Chappy.video;
+  let lens = 'back';
+  let recording = false;
+  let starting = false;
+  let stopping = false;
+  let pollBusy = false;
+  let timer = null;
+  let lastSavedName = '';
+  let libraryExpanded = false;
+  const controlIds = ['lensBack', 'lensFront', 'videoQuality', 'videoStorage', 'videoAudio'];
+  const setText = (id, value) => { $(id).textContent = value; };
+  const notify = (message, isError) => {
+    setText('message', message);
+    $('message').className = isError ? 'error' : '';
+  };
+  const sizeText = bytes => {
+    const value = Number(bytes);
+    if (!Number.isFinite(value) || value < 0) return '—';
+    return (value / 1000000000).toFixed(1) + ' GB';
+  };
+  const fileSizeText = bytes => (Number(bytes || 0) / 1048576).toFixed(1) + ' MiB';
+
+  function updateControls() {
+    const busy = recording || starting || stopping;
+    controlIds.forEach(id => { $(id).disabled = busy; });
+    $('recordDark').disabled = busy || !video;
+    $('recordStop').disabled = !recording || stopping || !video;
+    $('recordDot').className = recording || stopping ? 'dot active' : 'dot';
+    $('hostStatus').textContent = video ? 'カメラ対応' : '本体の更新が必要';
+  }
+  function setLens(next) {
+    if (recording || starting || stopping || !['front','back'].includes(next)) return;
+    lens = next;
+    $('lensBack').setAttribute('aria-pressed', String(lens === 'back'));
+    $('lensFront').setAttribute('aria-pressed', String(lens === 'front'));
+    $('lensBack').setAttribute('data-selected', String(lens === 'back'));
+    $('lensFront').setAttribute('data-selected', String(lens === 'front'));
+  }
+  async function refreshCapacity() {
+    if (!video || typeof video.storageInfo !== 'function') {
+      setText('freeSpace', '取得非対応');
+      return;
+    }
+    $('refreshCapacity').disabled = true;
+    try {
+      const data = await video.storageInfo();
+      const total = Number(data.totalBytes);
+      const available = Number(data.availableBytes);
+      if (!Number.isFinite(total) || !Number.isFinite(available) ||
+          total <= 0 || available < 0 || available > total) {
+        throw new Error('ストレージ情報が不正です');
+      }
+      setText('freeSpace', sizeText(available));
+      setText('totalSpace', '全容量：' + sizeText(total));
+      $('capacityFill').style.width = Math.min(100, Math.max(0, 100 * (total - available) / total)).toFixed(1) + '%';
+    } catch (error) {
+      setText('freeSpace', '取得失敗');
+      notify('空き容量の取得に失敗：' + String(error.message || error), true);
+    } finally {
+      $('refreshCapacity').disabled = false;
+    }
+  }
+
+  async function refreshLibrary() {
+    if (!video) return;
+    $('refreshLibrary').disabled = true;
+    const root = $('libraryList');
+    root.textContent = '';
+    try {
+      const list = await video.list();
+      if (!Array.isArray(list) || list.length === 0) {
+        root.textContent = '非公開動画はまだありません。';
+        return;
+      }
+      list.forEach(file => {
+        if (!file || typeof file.id !== 'string') return;
+        const row = document.createElement('div');
+        row.className = 'video-file';
+        const label = document.createElement('div');
+        label.className = 'filename';
+        label.textContent = file.id;
+        const meta = document.createElement('p');
+        meta.className = 'meta';
+        const date = Number(file.createdMs);
+        meta.textContent = fileSizeText(file.bytes) +
+          (Number.isFinite(date) && date > 0 ? ' ・ ' + new Date(date).toLocaleString('ja-JP') : '');
+        const buttons = document.createElement('div');
+        buttons.className = 'row';
+        const play = document.createElement('button');
+        play.type = 'button'; play.textContent = '再生';
+        play.addEventListener('click', async () => {
+          try { await video.open(file.id); }
+          catch (error) { notify('動画の再生に失敗：' + String(error.message || error), true); }
+        });
+        const remove = document.createElement('button');
+        remove.type = 'button'; remove.className = 'danger'; remove.textContent = '削除';
+        remove.addEventListener('click', async () => {
+          try {
+            const deleted = await video.delete(file.id);
+            if (deleted) {
+              notify('動画を削除しました');
+              await refreshLibrary();
+              await refreshCapacity();
+            } else {
+              notify('削除をキャンセルしました');
+            }
+          } catch (error) {
+            notify('動画の削除に失敗：' + String(error.message || error), true);
+          }
+        });
+        buttons.appendChild(play); buttons.appendChild(remove);
+        row.appendChild(label); row.appendChild(meta); row.appendChild(buttons);
+        root.appendChild(row);
+      });
+    } catch (error) {
+      root.textContent = '一覧を取得できませんでした。';
+      notify(String(error.message || error), true);
+    } finally {
+      $('refreshLibrary').disabled = false;
+    }
+  }
+
+  function renderStatus(info) {
+    const state = info && typeof info.state === 'string' ? info.state : 'idle';
+    recording = state !== 'idle';
+    stopping = state === 'stopping';
+    const millis = Number(info && info.elapsedMs || 0);
+    const seconds = Math.floor(Math.max(0, millis) / 1000);
+    setText('timer', String(Math.floor(seconds / 60)).padStart(2, '0') + ':' +
+      String(seconds % 60).padStart(2, '0'));
+    setText('captureStatus', state === 'idle' ? '停止中' :
+      state === 'stopping' ? '保存処理中…' :
+      state === 'initializing' || state === 'starting' ? 'カメラ準備中…' : '録画中');
+    updateControls();
+    if (state === 'idle') {
+      if (info && info.error) {
+        notify('動画保存エラー：' + String(info.error), true);
+      } else if (info && info.fileName && info.fileName !== lastSavedName) {
+        lastSavedName = info.fileName;
+        notify('録画保存完了：' + info.fileName);
+        void refreshCapacity();
+        if (libraryExpanded) void refreshLibrary();
+      }
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+  }
+  async function pollStatus() {
+    if (!video || pollBusy) return;
+    pollBusy = true;
+    try { renderStatus(await video.status()); }
+    catch (error) { notify('録画状態の取得に失敗：' + String(error.message || error), true); }
+    finally { pollBusy = false; }
+  }
+  function beginPolling() {
+    if (timer !== null) clearInterval(timer);
+    timer = setInterval(() => { void pollStatus(); }, 450);
+  }
+  async function startDarkRecording() {
+    if (!video || recording || starting || stopping) return;
+    starting = true; updateControls();
+    setText('captureStatus', 'Androidカメラの許可待ち…');
+    notify('');
+    try {
+      const options = {
+        lens, quality: $('videoQuality').value,
+        storage: $('videoStorage').value, audio: $('videoAudio').checked
+      };
+      const response = await video.start(options);
+      if (!response || !['starting','recording'].includes(response.state)) {
+        throw new Error('カメラ録画が開始されませんでした');
+      }
+      recording = true;
+      lastSavedName = '';
+      beginPolling();
+      renderStatus(await video.status());
+      const dark = await video.dark(true);
+      if (dark !== true) notify('録画開始しましたが、暗転できませんでした。', true);
+    } catch (error) {
+      notify('録画を開始できませんでした：' + String(error.message || error), true);
+      await pollStatus();
+    } finally {
+      starting = false; updateControls();
+    }
+  }
+  async function stopRecording() {
+    if (!video || !recording || stopping) return;
+    stopping = true; updateControls();
+    try { await video.stop(); await pollStatus(); }
+    catch (error) { notify('停止に失敗：' + String(error.message || error), true); }
+    finally { stopping = false; updateControls(); }
+  }
+
+  $('lensBack').addEventListener('click', () => setLens('back'));
+  $('lensFront').addEventListener('click', () => setLens('front'));
+  $('refreshCapacity').addEventListener('click', () => { void refreshCapacity(); });
+  $('recordDark').addEventListener('click', () => { void startDarkRecording(); });
+  $('recordStop').addEventListener('click', () => { void stopRecording(); });
+  $('toggleLibrary').addEventListener('click', () => {
+    libraryExpanded = !libraryExpanded;
+    $('libraryPanel').hidden = !libraryExpanded;
+    $('toggleLibrary').textContent = libraryExpanded ? '一覧を閉じる' : '一覧を表示';
+    $('toggleLibrary').setAttribute('aria-expanded', String(libraryExpanded));
+    if (libraryExpanded) void refreshLibrary();
+  });
+  $('refreshLibrary').addEventListener('click', () => { void refreshLibrary(); });
+  window.addEventListener('chappy-native-video-started', () => {
+    recording = true; stopping = false; starting = false; lastSavedName = '';
+    beginPolling(); updateControls(); void pollStatus();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (timer !== null) clearInterval(timer);
+      timer = null;
+      if (recording && video) void video.stop().catch(() => {});
+      recording = false; stopping = false; starting = false; updateControls();
+    } else {
+      void pollStatus(); void refreshCapacity();
+    }
+  });
+  window.addEventListener('pagehide', () => {
+    if (timer !== null) clearInterval(timer);
+    if (recording && video) void video.stop().catch(() => {});
+  });
+  updateControls();
+  void refreshCapacity();
+  if (video) void pollStatus();
+  else notify('録画・容量取得に対応した新しいChappy Player Debug APKが必要です。', true);
+})();
+</script>
+</body>
+</html>
