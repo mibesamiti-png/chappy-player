@@ -103,6 +103,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--ip", help="Private IPv4 of this PC's selected Wi-Fi/LAN adapter",
     )
     parser.add_argument(
+        "--qr", action="store_true",
+        help="Display an expiring QR invitation (requires --start --pair)",
+    )
+    parser.add_argument(
         "--pair", action="store_true",
         help="Use short-lived, fingerprint-verified TLS PC approval instead of an inert beacon",
     )
@@ -159,6 +163,9 @@ def run_beacon(ip: str, minutes: int) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.qr and not (args.start and args.pair):
+        print("QR requires explicit --start --pair --qr", file=sys.stderr)
+        return 2
     if not args.start:
         print("Not advertising. Use --start to opt in. See --help.")
         return 0
@@ -169,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
         address = validate_lan_ipv4(args.ip) if args.ip else discover_local_ipv4()
         if args.pair:
             from pairing_server import run_pairing
-            run_pairing(address, args.minutes)
+            run_pairing(address, args.minutes, qr=args.qr)
         else:
             run_beacon(address, args.minutes)
         return 0
