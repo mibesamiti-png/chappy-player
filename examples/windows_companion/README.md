@@ -101,3 +101,31 @@ On Android Debug, open **Network Lab → PC連携用の端末キーを準備・�
 independently prepare a key in Android KeyStore. No keys are shared between
 devices yet. Real authenticated pairing and per-device revoke lists remain
 future work in [the identity foundation design](../../docs/pc-link-identity-foundation.md).
+
+## Previously verified Android key comparison (NETLAB-03B-6B preview)
+
+After completing a QR-v3 mutual P-256 proof and **separately typing `SAVE`**
+to store the phone's public key fingerprint in current-user DPAPI history,
+you can manually compare that phone's identity in the *next* one-shot session.
+
+```powershell
+.\ChappyCompanion.exe --verified-list
+.\ChappyCompanion.exe --start --pair --qr --identity-pair --compare-known-phone
+```
+
+Before creating a network listener, the console shows numbered previously
+verified Android public-key fingerprints. Read the full fingerprint and type
+`SELECT 1` (or the correct number). Empty/corrupted history or Enter cancels
+**without advertising the PC**. The PC then displays a fresh QR-v3 invite.
+A different phone key **claim** is rejected before the PC `YES` prompt;
+an equal claim is **not authentication** and must still pass the fresh
+Android private-key proof, PC approval and Android consent. There is no
+automatic trust, stored access grant, PC control or remote key revocation.
+
+To change phones or rotate a key deliberately, stop the current session, run
+a new ordinary QR-v3 mutual verification, then choose whether to `SAVE` the
+new public fingerprint and `--verified-forget` the old record. A saved
+record is a history note only, not a paired or trusted device.
+
+Full security boundaries and real-device QA to do:
+[NETLAB-03B-6B Windows known-phone comparison](../../docs/pc-link-windows-known-phone-comparison.md).
