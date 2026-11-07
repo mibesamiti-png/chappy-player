@@ -39,6 +39,7 @@ class MutualProofSession:
         self, *, invitation: str, tls_fingerprint: str,
         pc_fingerprint: str, android_fingerprint: str,
         expires_at: int, now_epoch_seconds: int | None = None,
+        phone_issued_nonce: str | None = None,
     ) -> None:
         now = int(time.time()) if now_epoch_seconds is None else now_epoch_seconds
         if type(now) is not int or type(expires_at) is not int or not (
@@ -60,10 +61,22 @@ class MutualProofSession:
             tls_fingerprint=tls_fingerprint, peer_fingerprint=pc_fingerprint,
             nonce=secrets.token_hex(32), expires_at=expires_at,
         )
+        # The actual Android verifier issues its own nonce; the PC may not
+        # silently replace it with a nonce of its choosing.
+        if phone_issued_nonce is not None:
+            canonical_challenge(
+                role="pc", invitation=invitation,
+                tls_fingerprint=tls_fingerprint,
+                peer_fingerprint=android_fingerprint,
+                nonce=phone_issued_nonce, expires_at=expires_at,
+            )
+            if phone_issued_nonce == self._pc_request.nonce:
+                raise ValueError("Verifier nonces must be distinct")
         self._phone_request = ProofRequest(
             role="pc", invitation=invitation,
             tls_fingerprint=tls_fingerprint, peer_fingerprint=android_fingerprint,
-            nonce=secrets.token_hex(32), expires_at=expires_at,
+            nonce=phone_issued_nonce if phone_issued_nonce is not None
+                else secrets.token_hex(32), expires_at=expires_at,
         )
         self._pc_fingerprint = pc_fingerprint
         self._android_fingerprint = android_fingerprint
