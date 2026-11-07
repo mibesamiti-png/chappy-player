@@ -294,8 +294,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         throw StateError('Wi-Fi接続中の前面画面のみ対応しています');
       }
       if (!mounted || generation != _generation) return;
-      stage = PcPairingStage.network;
       final identityMode = invite?.pcIdentityFingerprint != null;
+      stage = identityMode ? PcPairingStage.identity : PcPairingStage.network;
       final nonce = identityMode
           ? CompanionIdentityClient.newNonce()
           : CompanionPairingClient.newNonce();
