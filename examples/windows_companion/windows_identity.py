@@ -70,9 +70,10 @@ def _dpapi(data: bytes, *, protect: bool) -> bytes:
             raise ValueError("Invalid Windows identity blob")
         return result
     finally:
-        ctypes.WinDLL("kernel32", use_last_error=True).LocalFree(
-            ctypes.cast(output_blob.pbData, ctypes.c_void_p)
-        )
+        local_free = ctypes.WinDLL("kernel32", use_last_error=True).LocalFree
+        local_free.argtypes = [ctypes.c_void_p]
+        local_free.restype = ctypes.c_void_p
+        local_free(ctypes.cast(output_blob.pbData, ctypes.c_void_p))
 
 
 def _identity_path(directory: Path | None = None) -> Path:
@@ -159,8 +160,7 @@ def revoke_identity(directory: Path | None = None) -> bool:
     path = _identity_path(directory)
     if not path.exists():
         return False
-    # Check first: fail closed on corrupted/unreadable state rather than
-    # claiming a valid paired relationship was cleanly revoked.
-    _load_private(path)
+    # Explicit local revocation must also recover from corrupted DPAPI data.
+    # It never signals any remote device (mutual pairing is not implemented).
     path.unlink()
     return True
