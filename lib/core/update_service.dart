@@ -10,6 +10,13 @@ import 'package:path/path.dart' as p;
 /// Never put a GitHub PAT, signing secret, or private release URL in an APK.
 const chappyUpdateFeedUrl = String.fromEnvironment('CHAPPY_UPDATE_FEED_URL');
 
+/// Debug uses a distinct *public* feed and app ID. No auth token is embedded.
+const chappyDebugUpdateFeedUrl =
+    'https://raw.githubusercontent.com/mibesamiti-png/'
+    'chappy-player-updates/main/debug-update.json';
+const chappyProductionPackageId = 'dev.chappy.chappy_player';
+const chappyDebugPackageId = 'dev.chappy.chappy_player.debug';
+
 String? currentAndroidAbi() {
   final abi = Abi.current();
   if (abi == Abi.androidArm64) return 'arm64-v8a';
@@ -80,11 +87,17 @@ class UpdateRelease {
     required this.artifacts,
   });
 
-  static UpdateRelease parse(String jsonText) {
+  static UpdateRelease parse(String jsonText, {
+    String expectedPackageId = chappyProductionPackageId,
+  }) {
+    if (expectedPackageId != chappyProductionPackageId &&
+        expectedPackageId != chappyDebugPackageId) {
+      throw const FormatException('Unknown application update channel');
+    }
     final raw = jsonDecode(jsonText);
     if (raw is! Map<String, dynamic> ||
         raw['schemaVersion'] != 1 ||
-        raw['packageId'] != 'dev.chappy.chappy_player') {
+        raw['packageId'] != expectedPackageId) {
       throw const FormatException('未対応のChappy Player更新情報です');
     }
     final version = raw['version'];
@@ -182,7 +195,9 @@ class UpdateService {
     throw const FormatException('更新はHTTPSの正規配布元からのみ取得できます');
   }
 
-  Future<UpdateRelease> fetch(Uri feedUrl) async {
+  Future<UpdateRelease> fetch(Uri feedUrl, {
+    String expectedPackageId = chappyProductionPackageId,
+  }) async {
     _validateUrl(feedUrl);
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 8);
@@ -205,7 +220,8 @@ class UpdateService {
         }
         bytes.addAll(part);
       }
-      return UpdateRelease.parse(utf8.decode(bytes));
+      return UpdateRelease.parse(utf8.decode(bytes),
+          expectedPackageId: expectedPackageId);
     } finally {
       client.close(force: true);
     }

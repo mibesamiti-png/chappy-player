@@ -19,8 +19,12 @@ class PlayerUpdatePage extends StatefulWidget {
 
 class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
   final UpdateService _updates = UpdateService();
-  final ApkReleaseHistoryService _releaseHistory =
-      const ApkReleaseHistoryService();
+  // The installed package decides the channel, never an untrusted mini-app.
+  bool get _isDebug => _installed?.packageName == chappyDebugPackageId;
+  String get _feedUrl => _isDebug
+      ? chappyDebugUpdateFeedUrl : chappyUpdateFeedUrl;
+  ApkReleaseHistoryService get _releaseHistory =>
+      ApkReleaseHistoryService(debug: _isDebug);
   List<UpdateRelease> _history = const [];
   String? _historyError;
   final ApkUpgradeChecker _apkChecker = const ApkUpgradeChecker();
@@ -54,7 +58,7 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
   int? get _installedBuild => int.tryParse(_installed?.buildNumber ?? '');
 
   Future<void> _check() async {
-    if (_busy || chappyUpdateFeedUrl.isEmpty) return;
+    if (_busy || _feedUrl.isEmpty || _installed == null) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -66,8 +70,9 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
       _pendingInstallApk = null;
     });
     try {
-      final url = Uri.parse(chappyUpdateFeedUrl);
-      final release = await _updates.fetch(url);
+      final url = Uri.parse(_feedUrl);
+      final release = await _updates.fetch(url,
+          expectedPackageId: _installed!.packageName);
       final installed = _installedBuild;
       if (installed == null) {
         throw StateError('インストール済みビルド番号が不明です');
@@ -104,7 +109,9 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
       if (mounted) {
         setState(() {
           _error = '$error';
-          _status = '更新を確認できませんでした';
+          _status = _isDebug && '$error'.contains('404')
+              ? 'Debug版APKはまだ公開されていません。固定署名付きの初回Debug版を発行してください。'
+              : '更新を確認できませんでした';
         });
       }
     } finally {
@@ -257,18 +264,25 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
         artifact != null && installedBuild != null &&
         release.newerThan(installedBuild, abi: currentAndroidAbi());
     return Scaffold(
-      appBar: AppBar(title: const Text('プレイヤー本体の更新')),
+      appBar: AppBar(title: Text(
+          _isDebug ? 'Debug版プレイヤーの更新' : 'プレイヤー本体の更新')),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.all(18), children: [
-          Text('Chappy Player 更新センター',
+          Text(_isDebug ? 'Chappy Player Debug 更新センター' :
+              'Chappy Player 更新センター',
               style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 6),
+          Text(_isDebug
+              ? 'Debug専用の公開APK一覧です。正式版には上書きしません。'
+              : '正式版専用の更新一覧です。Debug版には上書きしません。',
+              style: const TextStyle(fontSize: 12, color: Colors.white70)),
           const SizedBox(height: 12),
           Text('現在のバージョン：${_installed?.version ?? '確認中'} '
               '(ビルド ${_installed?.buildNumber ?? '—'})'),
           const SizedBox(height: 4),
           Text('端末CPU：${currentAndroidAbi() ?? '未対応のCPU'}'),
           const SizedBox(height: 18),
-          if (chappyUpdateFeedUrl.isEmpty)
+          if (_feedUrl.isEmpty)
             const Card(child: Padding(
               padding: EdgeInsets.all(16),
               child: Text('更新配信先はまだ未設定です。'
@@ -277,7 +291,8 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
                   '現時点では自動更新は利用できません。'),
             )),
           FilledButton.icon(
-            onPressed: _busy || chappyUpdateFeedUrl.isEmpty ? null : _check,
+            onPressed: _busy || _feedUrl.isEmpty || _installed == null
+                ? null : _check,
             icon: const Icon(Icons.refresh_outlined),
             label: const Text('最新版を確認'),
           ),
@@ -369,7 +384,7 @@ class _PlayerUpdatePageState extends State<PlayerUpdatePage> {
             '更新APKは署名・アプリID・ビルド番号を照合してから'
             'Android標準のインストール画面に渡します。'
             '実際の更新にはAndroid側での確認操作が必要です。'
-            '現在のデバッグAPKと新しい署名付きAPKでは上書きできない場合があります。'
+            'Debug版の初回固定署名移行には、旧デバッグ版を上書きできない場合があります。'
             'アンインストールすると保存データが消えるため、'
             '更新前に必ずバックアップを取ってください。'
             'ダウンロードしたAPKの署名証明書・アプリID・ビルド番号を確認し、'
