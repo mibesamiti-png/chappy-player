@@ -23,10 +23,10 @@ void main() {
       CompanionQrInvitation(
         ip: ip,
         port: 49152,
-        fingerprint: 'a' * 64,
-        invitation: 'b' * 32,
+        fingerprint: List<String>.filled(64, 'a').join(),
+        invitation: List<String>.filled(32, 'b').join(),
         expiresUnix: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 120,
-        pcIdentityFingerprint: 'c' * 64,
+        pcIdentityFingerprint: List<String>.filled(64, 'c').join(),
       );
 
   Widget page(Future<CompanionQrInvitation?> Function(BuildContext) reader) =>
@@ -52,7 +52,7 @@ void main() {
     final field = tester.widget<TextField>(
       find.byKey(const Key('pair_fingerprint')),
     );
-    expect(field.controller!.text, 'a' * 64);
+    expect(field.controller!.text, List<String>.filled(64, 'a').join());
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     await tester.pump();
@@ -141,7 +141,7 @@ void main() {
     await tester.pumpWidget(page((_) async => invitation()));
     await scan(tester);
     await tester.enterText(
-      find.byKey(const Key('pair_fingerprint')), 'd' * 64,
+      find.byKey(const Key('pair_fingerprint')), List<String>.filled(64, 'd').join(),
     );
     await tester.pump();
     expect(find.byKey(const Key('pair_qr_mode')), findsNothing);
