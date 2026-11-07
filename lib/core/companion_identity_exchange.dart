@@ -56,7 +56,7 @@ class CompanionIdentityExchange {
     _busy = true;
     _cancelled = false;
     try {
-      onStage?.call(PcPairingStage.network);
+      onStage?.call(PcPairingStage.identity);
       final local = await identity.status();
       _ensureActive();
       if (!local.created || local.fingerprint == null ||
@@ -64,6 +64,7 @@ class CompanionIdentityExchange {
         throw StateError('先にNetwork Labでスマホの端末キーを作成してください');
       }
       final phoneFp = local.fingerprint!;
+      onStage?.call(PcPairingStage.network);
       final begin = await _post(
         ip: ip, port: port, tlsPin: tlsFingerprint,
         path: '/v3/identity-begin',
