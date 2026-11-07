@@ -124,6 +124,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="With --start --pair, show an expiring, one-time QR pairing invitation",
     )
     parser.add_argument(
+        "--identity-qr", action="store_true",
+        help="EXPERIMENTAL: with --start --pair --qr use opt-in P-256 proof QR-v3 (phone client pending)",
+    )
+    parser.add_argument(
         "--minutes", type=int, default=DEFAULT_MINUTES,
         help="Automatic stop after 1–30 minutes (default: 10)",
     )
@@ -177,7 +181,7 @@ def run_beacon(ip: str, minutes: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.identity_create or args.identity_status or args.identity_revoke:
-        if args.pair or args.qr or args.ip or args.minutes != DEFAULT_MINUTES:
+        if args.pair or args.qr or args.identity_qr or args.ip or args.minutes != DEFAULT_MINUTES:
             print("Identity commands cannot be combined with network options",
                   file=sys.stderr)
             return 2
@@ -208,6 +212,9 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, RuntimeError, ValueError, FileExistsError) as exc:
             print("PC identity operation failed: " + str(exc), file=sys.stderr)
             return 1
+    if args.identity_qr and not (args.start and args.pair and args.qr):
+        print("--identity-qr requires --start --pair --qr", file=sys.stderr)
+        return 2
     if not args.start:
         print("Not advertising. Use --start to opt in. See --help.")
         return 0
@@ -221,7 +228,8 @@ def main(argv: list[str] | None = None) -> int:
         address = validate_lan_ipv4(args.ip) if args.ip else discover_local_ipv4()
         if args.pair:
             from pairing_server import run_pairing
-            run_pairing(address, args.minutes, qr=args.qr)
+            run_pairing(address, args.minutes, qr=args.qr,
+                        identity_qr=args.identity_qr)
         else:
             run_beacon(address, args.minutes)
         return 0
