@@ -41,6 +41,7 @@ class MainActivity : FlutterActivity() {
     private val nativeVideo = NativeVideoRecorder(this)
     private val miniDevices = NativeMiniAppDevices(this)
     private val networkDiscovery = NativeNetworkDiscovery(this)
+    private val pcIdentity = NativePcIdentity()
     private val trafficCounters = NativeTrafficCounters()
     private val videoExporter = NativeVideoExport(this)
     private val zipBackup = NativeVideoZipBackup(this)
@@ -237,6 +238,25 @@ class MainActivity : FlutterActivity() {
                     "pairingAllowed" -> {
                         result.success(micActivityVisible &&
                             networkDiscovery.pairingAllowed())
+                    }
+                    "pcIdentityStatus", "pcIdentityCreate", "pcIdentityRevoke" -> {
+                        if (!micActivityVisible) {
+                            result.error("NETLAB_NOT_FOREGROUND",
+                                "Device identity needs the visible trusted host", null)
+                        } else {
+                            try {
+                                when (call.method) {
+                                    "pcIdentityStatus" ->
+                                        result.success(pcIdentity.status())
+                                    "pcIdentityCreate" ->
+                                        result.success(pcIdentity.create())
+                                    else -> result.success(pcIdentity.revoke())
+                                }
+                            } catch (error: Exception) {
+                                result.error("NETLAB_IDENTITY_FAILED",
+                                    "端末キー操作に失敗: ${error.javaClass.simpleName}", null)
+                            }
+                        }
                     }
                     "trafficSnapshot" -> {
                         if (!micActivityVisible) {
