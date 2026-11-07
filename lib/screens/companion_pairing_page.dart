@@ -123,6 +123,15 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     // Consume the scanned one-shot invite before any awaited operation.
     // Do not allow a second attempt using the same QR even after an error.
     if (invite != null) _qrConsumed = true;
+    // Lock the page before the first await so another QR cannot replace
+    // this invitation while Wi-Fi eligibility is being checked.
+    setState(() {
+      _busy = true;
+      _verified = false;
+      _savedHistory = false;
+      _error = null;
+      _code = null;
+    });
     try {
       CompanionPairingClient.validateTarget(
         widget.service.address, widget.service.port, _fingerprint.text,
