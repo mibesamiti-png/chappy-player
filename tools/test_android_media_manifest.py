@@ -40,7 +40,8 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
                  "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt",
                  "NativeNetworkDiscovery.kt", "NativeTrafficCounters.kt",
-                 "NativePcIdentity.kt", "NativePcProof.kt"]:
+                 "NativePcIdentity.kt", "NativePcProof.kt",
+                 "NativeVerifiedPcHistory.kt"]:
         (templates / name).write_bytes(
             (PROJECT / "tools/android" / name).read_bytes()
         )
