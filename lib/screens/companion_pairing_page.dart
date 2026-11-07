@@ -156,7 +156,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       });
     } catch (error) {
       if (!mounted || generation != _generation) return;
-      setState(() => _error = '確認履歴を安全に読み込めません: $error');
+      setState(() => _error = '確認履歴を安全に読み込めません [HISTORY-READ]。端末の保存状態を確認してください。');
     } finally {
       if (mounted && generation == _generation) {
         setState(() => _busy = false);
@@ -415,7 +415,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       setState(() => _savedHistory = true);
     } catch (error) {
       if (!mounted || generation != _generation) return;
-      setState(() => _error = '確認履歴を保存できません: $error');
+      setState(() => _error = '確認履歴を保存できません [HISTORY-SAVE]。端末の保存状態を確認してください。');
     } finally {
       if (mounted && generation == _generation) {
         setState(() => _savingHistory = false);
