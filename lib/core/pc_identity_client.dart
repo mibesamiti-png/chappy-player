@@ -19,8 +19,17 @@ class PcIdentityClient {
     await _channel.invokeMapMethod<String, dynamic>('pcIdentityCreate'),
   );
 
-  Future<bool> revoke() async =>
-      await _channel.invokeMethod<bool>('pcIdentityRevoke') == true;
+  /// Requires the exact public fingerprint that the user confirmed in the UI.
+  /// The native KeyStore owner must compare this again before any deletion.
+  Future<bool> revoke(String expectedFingerprint) async {
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(expectedFingerprint)) {
+      throw const FormatException('削除対象の端末公開鍵指紋が不正です');
+    }
+    return await _channel.invokeMethod<bool>(
+      'pcIdentityRevoke',
+      <String, String>{'fingerprint': expectedFingerprint},
+    ) == true;
+  }
 }
 
 class PcIdentityStatus {
