@@ -80,6 +80,9 @@ void main() {
     expect(tester.widget<TextField>(
       find.byKey(const Key('pair_fingerprint')),
     ).controller!.text, isEmpty);
+    // Flutter resumes from pause through hidden -> inactive -> resumed.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
   });
