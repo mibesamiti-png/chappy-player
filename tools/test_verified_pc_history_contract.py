@@ -91,6 +91,8 @@ for token in (
     "pair_expected_pc_fingerprint",
     "pair_known_pc_matched",
     "pair_clear_known_pc",
+    "_rejectedQrInvitation = invite.invitation",
+    "if (_rejectedQrInvitation == invite.invitation)",
     "void _clearKnownPc()",
     "await widget.historyClient.remember(fp)",
 ):
