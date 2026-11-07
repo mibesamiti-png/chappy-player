@@ -14,6 +14,39 @@ void main() {
       expect(GameNetworkPolicy.origin(https), 'https://game.example.org:8443');
       expect(GameNetworkPolicy.origin(wss), 'wss://game.example.org:443');
     });
+    test('normalizes only implicit WSS port to 443 before HTTPS upgrade', () {
+      final implicit = GameNetworkPolicy.validate(
+        'wss://ws.postman-echo.com/raw', websocket: true);
+      expect(implicit.hasPort, false);
+      // Dart Uri only recognizes http/https defaults; wss.port == 0.
+      expect(implicit.port, 0);
+      final explicit = GameNetworkPolicy.websocketConnectUri(implicit);
+      expect(explicit.scheme, 'wss');
+      expect(explicit.hasPort, true);
+      expect(explicit.port, 443);
+      expect(explicit.host, implicit.host);
+      expect(explicit.path, '/raw');
+      expect(GameNetworkPolicy.origin(implicit),
+          'wss://ws.postman-echo.com:443');
+
+      // This mirrors the conversion in Dart SDK WebSocket.connect:
+      // wss -> https, copying [uri.port]. Port must stay 443, never 0.
+      final httpsUpgrade = Uri(
+        scheme: 'https', host: explicit.host, port: explicit.port,
+        path: explicit.path, query: explicit.query,
+      );
+      expect(httpsUpgrade.port, 443);
+      expect(httpsUpgrade.scheme, 'https');
+
+      final custom = GameNetworkPolicy.validate(
+        'wss://game.example.org:8443/room?x=1', websocket: true);
+      final unchanged = GameNetworkPolicy.websocketConnectUri(custom);
+      expect(unchanged.toString(), custom.toString());
+      expect(unchanged.port, 8443);
+      expect(() => GameNetworkPolicy.websocketConnectUri(
+          Uri.parse('https://game.example.org/room')), throwsFormatException);
+    });
+
     test('rejects dangerous or ambiguous destinations', () {
       for (final value in <String>[
         'http://game.example.org/',
