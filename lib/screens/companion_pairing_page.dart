@@ -1,4 +1,5 @@
 import 'package:chappy_player/core/companion_pairing_client.dart';
+import 'package:chappy_player/core/pc_pairing_failure.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/verified_pc_history_client.dart';
@@ -155,7 +156,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       });
     } catch (error) {
       if (!mounted || generation != _generation) return;
-      setState(() => _error = '確認履歴を安全に読み込めません: $error');
+      setState(() => _error = '確認履歴を安全に読み込めません [HISTORY-READ]。端末の保存状態を確認してください。');
     } finally {
       if (mounted && generation == _generation) {
         setState(() => _busy = false);
@@ -363,7 +364,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       setState(() {
         _busy = false;
         _verified = false;
-        _error = '接続確認に失敗: $error';
+        _error = PcPairingFailure.classify(error).safeMessage;
       });
     }
   }
@@ -414,7 +415,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       setState(() => _savedHistory = true);
     } catch (error) {
       if (!mounted || generation != _generation) return;
-      setState(() => _error = '確認履歴を保存できません: $error');
+      setState(() => _error = '確認履歴を保存できません [HISTORY-SAVE]。端末の保存状態を確認してください。');
     } finally {
       if (mounted && generation == _generation) {
         setState(() => _savingHistory = false);
