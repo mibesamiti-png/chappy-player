@@ -30,6 +30,8 @@ for name in (
     "CompressionOptions.compressionOff",
     "_queue.length >= GameNetworkPolicy.maxQueuedMessages",
     "now - _lastSendMs < 50",
+    "++_epoch; // Invalidate an in-flight DNS or TLS handshake.",
+    "_pendingWebSocketClient?.close(force: true)",
     "void pause()", "void close()", "_generation",
 ):
     if name == "_generation":
@@ -42,6 +44,8 @@ for name in (
     "_approvedGameOrigins.clear()",
     "_gameNetwork.pause()",
     "_gameNetwork.resume()",
+    "requestEpoch != _gameConnectEpoch",
+    "++_gameConnectEpoch",
     "'network.request'", "'network.connect'",
     "'network.send'", "'network.poll'", "'network.close'",
     "showDialog<bool>", "この画面だけ許可",
@@ -57,7 +61,10 @@ for name in (
     "call('network.send'", "call('network.poll'",
     "call('network.close'",
     "connect-src 'none'",
+    "networkConnectTimeoutMs = 45000",
+    "method: 'network.close'",
 ):
+
     assert name in bridge, name
 
 for name in ("'network'", "暗号化サーバー通信"):
@@ -67,6 +74,10 @@ assert '"network"' in catalog
 assert 'android.permission.INTERNET' in manifest
 assert '"network"' not in txt("tools/android/MainActivity.kt"), (
     "Network broker should be in Dart, not an unaudited Android native bridge")
+assert 'id="httpsBody"' in ui
+assert "$('httpsBody').value" in ui
+assert "timed(pending,30000" in ui
+assert "status('接続失敗" in ui
 assert "window.Chappy.network" in ui
 assert "motion.sample('gravity')" in ui
 assert "haptics.play('tick')" in ui
