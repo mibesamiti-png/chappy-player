@@ -213,6 +213,9 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, RuntimeError, ValueError, FileExistsError) as exc:
             print("PC identity operation failed: " + str(exc), file=sys.stderr)
             return 1
+    if args.identity_pair and not args.start:
+        print("--identity-pair requires explicit --start", file=sys.stderr)
+        return 2
     if not args.start:
         print("Not advertising. Use --start to opt in. See --help.")
         return 0
