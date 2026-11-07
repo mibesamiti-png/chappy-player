@@ -61,6 +61,14 @@ class IdentityPairingAttempt:
         self._phone_nonce = None
         self._pc_nonce = None
         self._proof_expires = None
+        # Set only after an authenticated Android proof, never on begin/denial.
+        self._verified_phone = None
+
+    @property
+    def verified_phone_fingerprint(self) -> str | None:
+        # The result is informational and cannot authorize later connections.
+        with self._lock:
+            return self._verified_phone if self.finished.is_set() else None
 
     def _expired(self, now: int) -> bool:
         return now >= self.qr_expires
@@ -156,6 +164,8 @@ class IdentityPairingAttempt:
                 expires_at=expires, now_epoch_seconds=now,
             ):
                 raise ValueError("Phone failed identity proof")
+            with self._lock:
+                self._verified_phone = fp
             return {
                 "status": "approved", "protocol": PROTOCOL,
                 "phone_nonce": phone_nonce, "pc_nonce": pc_nonce,

@@ -158,9 +158,13 @@ def create_identity(directory: Path | None = None) -> str:
 def revoke_identity(directory: Path | None = None) -> bool:
     """Local explicit invalidation: delete the only private signing key."""
     path = _identity_path(directory)
+    # Clear the separately encrypted verification HISTORY before removing
+    # the key. Do not leave stale phone fingerprints after identity rotation.
+    # This is local deletion only; it does not contact or revoke any phone.
+    from verified_phone_history import clear_verified_phone_history
+    clear_verified_phone_history(directory)
     if not path.exists():
         return False
-    # Explicit local revocation must also recover from corrupted DPAPI data.
-    # It never signals any remote device (mutual pairing is not implemented).
+    # Explicit local revocation also recovers from corrupt DPAPI key blobs.
     path.unlink()
     return True
