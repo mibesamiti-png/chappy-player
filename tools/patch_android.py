@@ -176,7 +176,8 @@ print('Installed foreground-only native video recorder (private by default)')
 for filename in ('NativeMiniAppDevices.kt', 'NativeVideoExport.kt',
                  'NativeMiniAppDocuments.kt', 'NativeVideoZipBackup.kt',
                  'NativeVideoZipRestore.kt', 'NativeMiniAppAssets.kt',
-                 'NativeNetworkDiscovery.kt', 'NativeTrafficCounters.kt'):
+                 'NativeNetworkDiscovery.kt', 'NativeTrafficCounters.kt',
+                 'NativePcIdentity.kt'):
     source = Path('tools/android') / filename
     if not source.is_file():
         raise SystemExit(f'Missing native mini-app capability host: {filename}')

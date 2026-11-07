@@ -66,3 +66,38 @@ For older builds without a QR reader, the legacy **manual fingerprint-only** pre
 Windows console uses `chcp 65001` for the block-character QR. If the rendered QR is corrupted or the camera cannot read it, use the non-QR legacy preview instead. The first QR preview does **not** register persistent device keys, work in background, transfer files, or grant PC/phone access. A successful scan is not proof of persistent pairing.
 
 See [QR security, expiry, device test and remaining work](../../docs/network-lab-qr-bootstrap.md).
+
+
+## Offline Windows device identity foundation (NETLAB-03B-2)
+
+The **optional** PC identity is separate from the temporary discovery beacon
+and one-shot QR connection confirmation. It supports a future *mutually
+authenticated* PC/Android pairing design, but **does not pair or reconnect
+anything yet**.
+
+From an extracted Windows preview artifact folder, run these in a console:
+
+```powershell
+.\ChappyCompanion.exe --identity-status
+.\ChappyCompanion.exe --identity-create
+.\ChappyCompanion.exe --identity-status
+.\ChappyCompanion.exe --identity-revoke
+```
+
+`--identity-create` must be an **explicit** user action. It creates one
+P-256 identity key protected with **Windows current-user DPAPI**, storing only
+encrypted key material under `%LOCALAPPDATA%\ChappyCompanion`.
+`--identity-status` displays the *public* SHA-256 fingerprint, not a secret.
+`--identity-revoke` requires you to type exactly **REVOKE** and removes
+the local key. Recreating it changes the fingerprint irreversibly.
+Never move the encrypted identity file between PCs or put it on GitHub.
+
+These identity commands do **not** advertise mDNS, open any listening port,
+grant PC commands, access files, read traffic or silently trust a phone. The
+existing `--start --pair --qr` still only approves one transient
+confirmation and **does not consume or register** this new persistent identity.
+
+On Android Debug, open **Network Lab → PC連携用の端末キーを準備・削除** to
+independently prepare a key in Android KeyStore. No keys are shared between
+devices yet. Real authenticated pairing and per-device revoke lists remain
+future work in [the identity foundation design](../../docs/pc-link-identity-foundation.md).
