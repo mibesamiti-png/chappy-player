@@ -1,4 +1,5 @@
 import 'package:chappy_player/core/pc_identity_client.dart';
+import 'package:chappy_player/screens/verified_pc_history_page.dart';
 import 'package:flutter/material.dart';
 
 /// Host-only device identity management, NOT a paired-PC list.
@@ -166,10 +167,10 @@ class _PcIdentityPageState extends State<PcIdentityPage> {
             ),
             const SizedBox(height: 12),
             const Text(
-              '現在は「端末キーの作成・確認・削除」だけです。'
-              'PCとの相互認証、接続先の登録、通信量監視、ファイル転送、'
-              '遠隔操作はまだできません。'
-              '鍵の公開指紋が表示されてもPCの本人確認が済んだ意味ではありません。',
+              'ここでは端末キーの作成・確認・削除と、'
+              'QR-v3で検証したPCの履歴を管理できます。'
+              '鍵や確認履歴だけでは、永続的なペアリング、'
+              '自動接続、通信監視、ファイル転送、遠隔操作はできません。',
             ),
             const SizedBox(height: 18),
             Text(
@@ -206,6 +207,18 @@ class _PcIdentityPageState extends State<PcIdentityPage> {
               onPressed: !_busy && status?.created == true ? _revoke : null,
               icon: const Icon(Icons.delete_outline),
               label: const Text('この端末の秘密鍵を削除'),
+            ),
+            OutlinedButton.icon(
+              key: const Key('pc_verified_history_open'),
+              onPressed: _busy || status?.created != true
+                  ? null
+                  : () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const VerifiedPcHistoryPage(),
+                        ),
+                      ),
+              icon: const Icon(Icons.devices_other_outlined),
+              label: const Text('確認済みPCの記録を確認・削除'),
             ),
             TextButton.icon(
               key: const Key('pc_identity_refresh'),

@@ -1,6 +1,7 @@
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
+import 'package:chappy_player/core/verified_pc_history_client.dart';
 import 'package:chappy_player/core/companion_qr_invitation.dart';
 import 'package:chappy_player/screens/companion_qr_scanner_page.dart';
 import 'package:chappy_player/core/lan_discovery_client.dart';
@@ -24,6 +25,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   final _fingerprint = TextEditingController();
   final _pairing = CompanionPairingClient();
   final _identityExchange = CompanionIdentityExchange();
+  final _verifiedHistory = const VerifiedPcHistoryClient();
+  bool _savingHistory = false;
+  bool _savedHistory = false;
   bool _busy = false;
   bool _verified = false;
   String? _code;
@@ -47,6 +51,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         setState(() {
           _busy = false;
           _verified = false;
+          _savedHistory = false;
           _code = null;
         });
       }
@@ -84,6 +89,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _invite = invite;
       _error = null;
       _verified = false;
+      _savedHistory = false;
     });
   }
 
@@ -117,6 +123,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         _busy = true;
         _error = null;
         _verified = false;
+        _savedHistory = false;
         _code = code;
       });
       final approved = identityMode
@@ -183,6 +190,59 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     }
   }
 
+  Future<void> _rememberPc() async {
+    final fp = _invite?.pcIdentityFingerprint;
+    if (_busy || _savingHistory || _savedHistory || !_verified ||
+        fp == null || ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    final consent = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('PCの確認履歴を記録'),
+        content: Text(
+          'QR-v3で署名を確認したPCの公開鍵指紋を、'
+          'このスマホに暗号化して保存しますか？\n'
+          '$fp\n\n'
+          '保存はメモだけです。自動接続、PC操作、通信監視の'
+          '許可にはなりません。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('保存しない'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('確認履歴だけ保存'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || consent != true || !_verified ||
+        fp != _invite?.pcIdentityFingerprint) {
+      return;
+    }
+    final generation = _generation;
+    setState(() {
+      _savingHistory = true;
+      _error = null;
+    });
+    try {
+      await _verifiedHistory.remember(fp);
+      if (!mounted || generation != _generation) return;
+      setState(() => _savedHistory = true);
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _error = '確認履歴を保存できません: $error');
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _savingHistory = false);
+      }
+    }
+  }
+
   void _stop() {
     _generation++;
     _pairing.cancel();
@@ -190,6 +250,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     setState(() {
       _busy = false;
       _verified = false;
+      _savedHistory = false;
       _code = null;
       _error = '確認をキャンセルしました';
     });
@@ -221,7 +282,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             const SizedBox(height: 12),
             OutlinedButton.icon(
               key: const Key('pair_scan_qr'),
-              onPressed: _busy ? null : _scanQr,
+              onPressed: _busy || _savingHistory ? null : _scanQr,
               icon: const Icon(Icons.qr_code_scanner),
               label: const Text('PCの招待QRをカメラで読み取る'),
             ),
@@ -249,11 +310,11 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                 hintText: 'abcdef...（コロン区切りも可）',
                 border: OutlineInputBorder(),
               ),
-              enabled: !_busy,
+              enabled: !_busy && !_savingHistory,
             ),
             FilledButton.icon(
               key: const Key('pair_confirm'),
-              onPressed: _busy ? null : _confirm,
+              onPressed: _busy || _savingHistory ? null : _confirm,
               icon: const Icon(Icons.verified_user_outlined),
               label: const Text('このPCとの接続を確認'),
             ),
@@ -293,6 +354,22 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                   ),
                 ),
               ),
+            if (_verified && _invite?.pcIdentityFingerprint != null) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                key: const Key('pair_save_verified_pc'),
+                onPressed: _savedHistory || _savingHistory
+                    ? null
+                    : _rememberPc,
+                icon: const Icon(Icons.bookmark_add_outlined),
+                label: const Text('このPCの公開鍵を確認履歴に記録'),
+              ),
+              if (_savedHistory)
+                const Text(
+                  'このスマホに暗号化して記録しました（接続権限なし）。',
+                  key: Key('pair_verified_pc_saved'),
+                ),
+            ],
             if (_error != null)
               SelectableText(
                 _error!,
