@@ -54,6 +54,8 @@ jobs:
         run: python3 tools/test_windows_pairing.py
       - name: PC identity isolation, no auto trust, native source contract
         run: python3 tools/test_pc_identity_contract.py
+      - name: PC proof-only signing isolation and Kotlin parity contract
+        run: python3 tools/test_pc_proof_contract.py
       - name: Scoped Android SAF document import/export contract
         run: python3 tools/test_native_documents_contract.py
       - name: Native large binary asset vault boundary and checksum checks
