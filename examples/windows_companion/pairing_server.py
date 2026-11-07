@@ -131,7 +131,8 @@ def _ask_pc_user(nonce: str) -> bool:
 
 
 def invite_payload(ip: str, port: int, fingerprint: str,
-                   token: str, expires_at: int) -> str:
+                   token: str, expires_at: int,
+                   identity_fingerprint: str | None = None) -> str:
     """Strict, short-lived QR transfer string; nothing grants PC commands."""
     validate_lan_ipv4(ip)
     if not 1 <= port <= 65535:
@@ -142,9 +143,16 @@ def invite_payload(ip: str, port: int, fingerprint: str,
         raise ValueError("Invalid invitation")
     if expires_at <= 0:
         raise ValueError("Invalid expiry")
+    if identity_fingerprint is not None and (
+        len(identity_fingerprint) != 64
+        or any(c not in "0123456789abcdef" for c in identity_fingerprint)
+    ):
+        raise ValueError("Invalid PC public identity fingerprint")
+    version = "v3" if identity_fingerprint is not None else "v2"
     return (
-        "chappy-pair://v2?ip=" + ip + "&port=" + str(port)
+        "chappy-pair://" + version + "?ip=" + ip + "&port=" + str(port)
         + "&fp=" + fingerprint + "&inv=" + token + "&exp=" + str(expires_at)
+        + ("&id=" + identity_fingerprint if identity_fingerprint else "")
     )
 
 
@@ -293,13 +301,42 @@ class BoundedHttpsServer(ThreadingHTTPServer):
             self._active.release()
 
 
-def run_pairing(ip: str, minutes: int, qr: bool = False) -> None:
-    """Expose a single, explicitly PC-approved HTTPS confirmation session."""
+def _ask_pc_proof_user(code: str) -> bool:
+    """Extra QR-v3 preview approval: confirmation code + exact YES, max 25s."""
+    answer: queue.Queue[str] = queue.Queue(maxsize=1)
+
+    def read_console() -> None:
+        try:
+            answer.put(input("Approve this mutual identity preview? Type YES: ").strip())
+        except (EOFError, OSError):
+            answer.put("")
+
+    threading.Thread(target=read_console, daemon=True).start()
+    try:
+        return answer.get(timeout=MAX_APPROVAL_SECONDS) == "YES"
+    except queue.Empty:
+        print("Proof confirmation timed out.")
+        return False
+
+
+def run_pairing(
+    ip: str, minutes: int, qr: bool = False, identity_qr: bool = False,
+) -> None:
+    """Explicitly PC-approved HTTPS, with independent opt-in QR-v3 preview."""
     from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
     address = validate_lan_ipv4(ip)
     if not 1 <= minutes <= MAX_MINUTES:
         raise ValueError("Duration must be 1-30 minutes")
+    if identity_qr and not qr:
+        raise ValueError("Identity QR-v3 requires the explicit QR mode")
+    pc_identity_fp: str | None = None
+    if identity_qr:
+        # No implicit key generation; the owner must create this key offline.
+        from windows_identity import identity_status
+        pc_identity_fp = identity_status()
+        if pc_identity_fp is None:
+            raise ValueError("No PC identity. Run --identity-create explicitly.")
     pem, key, fingerprint = create_ephemeral_certificate(address)
 
     with tempfile.TemporaryDirectory(prefix="chappy-pair-session-") as folder:
@@ -317,14 +354,27 @@ def run_pairing(ip: str, minutes: int, qr: bool = False) -> None:
         lifetime_seconds = min(minutes * 60, MAX_INVITE_SECONDS) if qr else minutes * 60
         expires_at = int(time.time() + lifetime_seconds)
         invitation = secrets.token_hex(16) if qr else None
-        session = PairingSession(invitation=invitation, expires_at=expires_at)
-        with BoundedHttpsServer((address, 0), make_handler(session)) as server:
+        if identity_qr:
+            from identity_proof import sign_pc_challenge
+            from proof_pairing_transport import QrProofSession, make_qr_proof_handler
+            assert invitation is not None and pc_identity_fp is not None
+            session = QrProofSession(
+                invitation=invitation, tls_fingerprint=fingerprint,
+                pc_fingerprint=pc_identity_fp, expires_at=expires_at,
+                ask_pc_user=_ask_pc_proof_user, sign_pc=sign_pc_challenge,
+            )
+            handler = make_qr_proof_handler(session)
+        else:
+            session = PairingSession(invitation=invitation, expires_at=expires_at)
+            handler = make_handler(session)
+        with BoundedHttpsServer((address, 0), handler) as server:
             server.context = context
             port = server.server_address[1]
             nonce = secrets.token_hex(4)
             details = service_descriptor(address, port, nonce)
             details["properties"] = {
-                b"app": b"chappy", b"mode": b"pair-preview-v1",
+                b"app": b"chappy",
+                b"mode": b"pair-proof-v3" if identity_qr else b"pair-preview-v1",
             }
             info = ServiceInfo(**details)
             zeroconf = Zeroconf(
@@ -342,9 +392,13 @@ def run_pairing(ip: str, minutes: int, qr: bool = False) -> None:
                 if qr:
                     assert invitation is not None
                     invite_text = invite_payload(
-                        address, port, fingerprint, invitation, expires_at
+                        address, port, fingerprint, invitation, expires_at,
+                        identity_fingerprint=pc_identity_fp,
                     )
-                    print("Scan this QR on your Android Chappy Network Lab:")
+                    if identity_qr:
+                        print("EXPERIMENTAL QR-v3 (phone client not released yet).")
+                        print("PC persistent public identity SHA-256: " + pc_identity_fp)
+                    print("Scan this QR on a compatible Android Chappy Network Lab:")
                     # The terminal may use a legacy encoding. Do not log the
                     # raw invitation token in that fallback.
                     try:
