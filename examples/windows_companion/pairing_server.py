@@ -42,6 +42,22 @@ from companion import (
 MAX_REQUEST = 256
 MAX_IDENTITY_REQUEST = 2048
 MAX_APPROVAL_SECONDS = 25
+
+def _strict_identity_json(data: bytes) -> dict[str, object]:
+    """Reject duplicate names at every JSON object level before state changes."""
+    def unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Duplicate identity JSON key")
+            result[key] = value
+        return result
+
+    parsed = json.loads(data, object_pairs_hook=unique_pairs)
+    if not isinstance(parsed, dict):
+        raise ValueError("Identity payload must be a JSON object")
+    return parsed
+
 MAX_INVITE_SECONDS = 600
 
 
@@ -226,19 +242,27 @@ def make_handler(session: PairingSession,
             ):
                 self._reply(404, {"status": "not_found"})
                 return
-            length_text = self.headers.get("Content-Length", "")
-            if not length_text.isascii() or not length_text.isdecimal():
+            # No duplicate/framing-ambiguous Content-Length, chunked encoding,
+            # or malformed oversized numeric headers on security-sensitive v3.
+            lengths = self.headers.get_all("Content-Length", [])
+            if (len(lengths) != 1 or len(lengths[0]) > 5
+                    or not lengths[0].isascii()
+                    or not lengths[0].isdecimal()
+                    or self.headers.get_all("Transfer-Encoding", [])):
                 self._reply(400, {"status": "bad_request"})
                 return
-            length = int(length_text)
+            length = int(lengths[0])
             if not 1 <= length <= MAX_IDENTITY_REQUEST:
                 self._reply(413, {"status": "too_large"})
                 return
-            if self.headers.get("Content-Type") != "application/json":
+            if self.headers.get_all("Content-Type", []) != ["application/json"]:
                 self._reply(415, {"status": "unsupported_type"})
                 return
             try:
-                data = json.loads(self.rfile.read(length))
+                incoming = self.rfile.read(length)
+                if len(incoming) != length:
+                    raise ValueError("Incomplete identity JSON")
+                data = _strict_identity_json(incoming)
                 if not isinstance(data, dict) or data.get("protocol") != IDENTITY_PROTOCOL:
                     raise ValueError("Invalid identity protocol")
                 if self.path == "/v3/identity-begin":

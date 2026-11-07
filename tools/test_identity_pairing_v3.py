@@ -6,6 +6,7 @@ No PC trust storage, traffic reading, file transfer or remote-control access.
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 from pathlib import Path
 import sys
@@ -271,6 +272,84 @@ class IdentityV3Tests(unittest.TestCase):
             http.shutdown()
             http.server_close()
             runner.join(timeout=2)
+
+    def test_v3_json_duplicates_and_http_framing_are_rejected_without_claiming(self):
+        for raw in (
+            b'{"protocol":"pair-identity-v3","protocol":"pair-identity-v3"}',
+            b'{"phone_proof":{"spki":"a","spki":"b"}}',
+            b'[]',
+        ):
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                server._strict_identity_json(raw)
+        self.assertEqual(
+            server._strict_identity_json(b'{"protocol":"pair-identity-v3"}'),
+            {"protocol": "pair-identity-v3"},
+        )
+
+        state = self.session()
+        legacy = server.PairingSession(invitation=INV, expires_at=self.expiry)
+        httpd = ThreadingHTTPServer(
+            ("127.0.0.1", 0), server.make_handler(legacy, state),
+        )
+        worker = threading.Thread(target=httpd.serve_forever, daemon=True)
+        worker.start()
+
+        def bad_post(body, extra_headers=()):
+            conn = http.client.HTTPConnection(
+                "127.0.0.1", httpd.server_port, timeout=3,
+            )
+            try:
+                conn.putrequest("POST", "/v3/identity-begin")
+                conn.putheader("Content-Type", "application/json")
+                conn.putheader("Content-Length", str(len(body)))
+                for header, value in extra_headers:
+                    conn.putheader(header, value)
+                conn.endheaders(body)
+                response = conn.getresponse()
+                response.read()
+                return response.status
+            finally:
+                conn.close()
+
+        try:
+            values = {
+                "protocol": v3.PROTOCOL, "invitation": INV,
+                "phone_fp": self.phone_fp, "phone_nonce": PHONE_NONCE,
+            }
+            valid_json = json.dumps(values).encode()
+            duplicate = (
+                b'{"protocol":"pair-identity-v3",'
+                b'"protocol":"pair-identity-v3",'
+                b'"invitation":"' + INV.encode() + b'",'
+                b'"phone_fp":"' + self.phone_fp.encode() + b'",'
+                b'"phone_nonce":"' + PHONE_NONCE.encode() + b'"}'
+            )
+            with mock.patch.object(server, "_ask_pc_user", return_value=True) as approve:
+                self.assertEqual(bad_post(duplicate), 403)
+                self.assertEqual(bad_post(
+                    valid_json, (("Content-Length", str(len(valid_json))),),
+                ), 400)
+                self.assertEqual(bad_post(
+                    valid_json, (("Transfer-Encoding", "chunked"),),
+                ), 400)
+                approve.assert_not_called()
+                self.assertFalse(state.finished.is_set())
+                self.assertFalse(legacy.claimed)
+
+                request = urllib.request.Request(
+                    "http://127.0.0.1:" + str(httpd.server_port)
+                    + "/v3/identity-begin", data=valid_json,
+                    headers={"Content-Type": "application/json"},
+                )
+                with urllib.request.urlopen(request, timeout=4) as response:
+                    begin = json.load(response)
+                self.assertEqual(begin["status"], "challenge")
+                approve.assert_called_once_with(PHONE_NONCE)
+                self.assertFalse(legacy.claimed)
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            worker.join(timeout=2)
 
     def test_requires_explicit_cli_flags_and_no_network_identity_side_effects(self):
         self.assertEqual(companion.main(["--identity-pair"]), 2)
