@@ -57,7 +57,7 @@ class _CompanionQrScannerPageState extends State<CompanionQrScannerPage>
     if (_accepted || !mounted) return;
     for (final barcode in capture.barcodes) {
       final raw = barcode.rawValue;
-      if (raw == null || raw.length > 256) continue;
+      if (raw == null || raw.length > 384) continue;
       try {
         final invite = CompanionQrInvitation.parse(raw);
         _accepted = true;
