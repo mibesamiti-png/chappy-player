@@ -19,7 +19,7 @@ for name in (
     "static Uri validate(", "GameNetworkPolicy.resolvePublic(uri.host)",
     "InternetAddress.tryParse(host) != null",
     "addresses.any((ip) => !isPublicAddress(ip))",
-    "client.connectionFactory =", "Socket.startConnect(address,",
+    "client.connectionFactory =", "SecureSocket.startConnect(",
     "..findProxy = ((_) => 'DIRECT')",
     "uri.scheme != (websocket ? 'wss' : 'https')",
     "uri.userInfo.isNotEmpty", "uri.fragment.isNotEmpty",
@@ -28,6 +28,8 @@ for name in (
     "client.openUrl(method, uri)", "utf8.decode(bytes, allowMalformed: false)",
     "maxPayloadLength: GameNetworkPolicy.maxMessageBytes",
     "CompressionOptions.compressionOff",
+    "GameNetworkPolicy.websocketConnectUri(uri).toString()",
+    "return uri.hasPort ? uri : uri.replace(port: 443);",
     "_queue.length >= GameNetworkPolicy.maxQueuedMessages",
     "now - _lastSendMs < 50",
     "++_epoch; // Invalidate an in-flight DNS or TLS handshake.",
@@ -78,6 +80,11 @@ assert 'id="httpsBody"' in ui
 assert "$('httpsBody').value" in ui
 assert "timed(pending,30000" in ui
 assert "status('接続失敗" in ui
+assert "return Socket.startConnect(address," not in net, (
+    "Never send plain HTTP over the pinned TLS port")
+assert "badCertificateCallback" not in net
+assert "onBadCertificate:" not in net, (
+    "No accept-all certificate callback in the game network broker")
 assert "window.Chappy.network" in ui
 assert "motion.sample('gravity')" in ui
 assert "haptics.play('tick')" in ui

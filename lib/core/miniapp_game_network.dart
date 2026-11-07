@@ -35,6 +35,17 @@ class GameNetworkPolicy {
   static String origin(Uri uri) =>
       '${uri.scheme}://${uri.host}:${uri.hasPort ? uri.port : 443}';
 
+  /// Dart Uri defaults unknown schemes (including wss) to port 0.
+  /// WebSocket.connect converts wss -> https using [Uri.port], so an
+  /// implicit wss port would otherwise become HTTPS port 0. Carry the
+  /// validated 443 default explicitly into Dart's WebSocket handshake.
+  static Uri websocketConnectUri(Uri uri) {
+    if (uri.scheme != 'wss') {
+      throw const FormatException('Only WSS can be upgraded');
+    }
+    return uri.hasPort ? uri : uri.replace(port: 443);
+  }
+
   static bool isPublicAddress(InternetAddress ip) {
     final a = ip.rawAddress;
     if (a.length == 16) {
@@ -130,9 +141,15 @@ class MiniAppGameNetwork {
           url.port != (uri.hasPort ? uri.port : 443)) {
         throw StateError('Proxy or different destination blocked');
       }
-      // Connect to the already-vetted IP, no second DNS lookup or redirect.
-      // Dart still verifies TLS for the requested DNS hostname.
-      return Socket.startConnect(address, uri.hasPort ? uri.port : 443);
+      // Pin the already-vetted DNS result. A custom HttpClient factory must
+      // return a TLS *SecureSocket* for HTTPS: Dart does NOT automatically
+      // upgrade a plain Socket supplied by connectionFactory.
+      //
+      // InternetAddress.lookup retains the original hostname (SNI/cert
+      // verification). SecureSocket.startConnect uses that hostname and the
+      // platform trust roots. Never accept invalid certificates.
+      return SecureSocket.startConnect(
+          address, uri.hasPort ? uri.port : 443);
     };
     return client;
   }
@@ -200,7 +217,8 @@ class MiniAppGameNetwork {
       _active(epoch);
       client = _client(uri, address);
       _pendingWebSocketClient = client;
-      final socket = await WebSocket.connect(uri.toString(),
+      final socket = await WebSocket.connect(
+        GameNetworkPolicy.websocketConnectUri(uri).toString(),
         customClient: client,
         compression: CompressionOptions.compressionOff,
         maxPayloadLength: GameNetworkPolicy.maxMessageBytes,

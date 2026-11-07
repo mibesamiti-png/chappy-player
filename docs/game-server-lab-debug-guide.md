@@ -2,6 +2,21 @@
 
 対象：公開 Chappy Apps → **Debug** の **Chappy Game Server Lab v0.1.1以降**。2026-11-07にXiaomi 11T Pro / Android 14実機から報告された「POSTの送信欄がない」「WSSが3分以上『接続を確認中…』のまま」を受けた操作説明と修正内容。
 
+## 2026-11-07追加：実機通信ログから特定したホスト側の2つの根本原因
+
+Xiaomi 11T ProでGame Server Lab v0.1.1を使った再テストにより、次の通信ログを確認。
+
+- WSS：`WSS接続失敗: Bad state: Proxy or different destination blocked`。これは**相手側サーバーが返した拒否ではなく、Chappy Player自身の接続先安全チェックが投げた例外**。
+- HTTPS GET/POST：Cloudflareから `400 The plain HTTP request was sent to HTTPS port` が返った。これはサーバーに到達はしたが、**HTTPSポート443へTLSではない平文HTTPを送ってしまった**症状。GET/POST本文の内容やPostman固有のBANが原因ではない。
+
+**技術的原因**：プレイヤーがDNSで事前検証したIPへ接続するために設定した `HttpClient.connectionFactory` が、HTTPS接続なのに `Socket.startConnect`（平文ソケット）を返していた。DartのHttpClientはカスタムconnectionFactoryの戻り値を自動TLS化しないため、本来は`SecureSocket.startConnect`で暗号化する必要がある（Dart SDKの実装確認済み）。加えて、Dartの`Uri`は`wss`スキームの省略ポートを**0**と扱い、`WebSocket.connect`が`wss`を`https`へ変換するときにその0を引き継ぐ。ホスト側は443以外を拒否するため、正当な`wss://...`接続でも「different destination blocked」が発生していた。
+
+**修正方針**：既存の公開DNS・DNS解決結果IP固定・TLS証明書検証・明示的接続先許可・プライベートIP拒否・リダイレクト拒否を一切緩和せず、カスタム接続を`SecureSocket.startConnect`に置換。`wss`省略ポートはWebSocketライブラリに渡す前に明示的な443へ正規化。8443/9443等の許可済み明示ポートはそのまま維持。誤った404/400を成功扱いしない。テストでTLS/ポートを退行防止する。
+
+**利用条件**：この変更は`Chappy Player`の**信頼済みホスト側Dartコード**なので、公開カタログの`.chappy`だけ更新しても直らない。GitHub Actionsで新しいDebug APKが成功し、ユーザーがインストール後、同じGame Server Lab v0.1.1のGET/POST/WSSを再検証する必要がある。サーバーから実際に200/101が返るかは実機テストまで未検証。正式版APKと公開Stableカタログには影響させない。
+
+参考：[Dart HttpClient.connectionFactory](https://api.dart.dev/dart-io/HttpClient/connectionFactory.html)、[Dart Uri.port](https://api.dart.dev/dart-core/Uri/port.html)。
+
 ## 診断結果と修正
 
 - 旧v0.1.0のHTTPS POSTは**上段WSSの `message` テキスト欄を再利用**していた。セクションが離れていたためUIの説明不足。v0.1.1ではHTTPSセクション内に**専用JSON入力欄 `httpsBody`**を設置。
