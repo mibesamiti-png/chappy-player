@@ -29,6 +29,22 @@ HEX32 = re.compile(r"[a-f0-9]{64}\Z")
 HEX16 = re.compile(r"[a-f0-9]{32}\Z")
 
 
+def strict_json_object(raw: bytes) -> dict[str, object]:
+    """Reject duplicate JSON field names, including in nested proof objects."""
+    def unique_object(items: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for name, value in items:
+            if name in result:
+                raise ValueError("Duplicate JSON field")
+            result[name] = value
+        return result
+
+    parsed = json.loads(raw, object_pairs_hook=unique_object)
+    if not isinstance(parsed, dict):
+        raise ValueError("Expected JSON object")
+    return parsed
+
+
 def verified_android_fingerprint(encoded: str) -> str:
     """Parse a canonical, bounded P-256 SPKI DER supplied by the phone."""
     if not isinstance(encoded, str) or len(encoded) > 344:
@@ -251,8 +267,13 @@ def make_qr_proof_handler(state: QrProofSession):
             if self.path not in ("/v3/proof-begin", "/v3/proof-finish"):
                 self._reply(404, {"status": "not_found"})
                 return
-            length = self.headers.get("Content-Length", "")
-            if not length.isascii() or not length.isdecimal():
+            lengths = self.headers.get_all("Content-Length", [])
+            if len(lengths) != 1:
+                self._reply(400, {"status": "bad_request"})
+                return
+            length = lengths[0]
+            if (len(length) > 5 or not length.isascii()
+                    or not length.isdecimal()):
                 self._reply(400, {"status": "bad_request"})
                 return
             size = int(length)
@@ -266,7 +287,7 @@ def make_qr_proof_handler(state: QrProofSession):
                 body = self.rfile.read(size)
                 if len(body) != size:
                     raise ValueError("Incomplete JSON")
-                value = json.loads(body)
+                value = strict_json_object(body)
                 if self.path == "/v3/proof-begin":
                     response = state.begin(value)
                 else:
