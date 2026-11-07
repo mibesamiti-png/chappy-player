@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
+import 'package:chappy_player/core/pc_pairing_stage.dart';
 import 'package:crypto/crypto.dart';
 
 /// Explicit, one-shot QR-v3 proof exchange. No trusted peer is saved.
@@ -40,6 +41,7 @@ class CompanionIdentityExchange {
     required int qrExpires,
     required String phoneNonce,
     required Future<bool> Function() approvePhoneProof,
+    void Function(PcPairingStage stage)? onStage,
   }) async {
     if (_busy) throw StateError('認証要求が既に実行中です');
     CompanionPairingClient.validateTarget(ip, port, tlsFingerprint);
@@ -54,6 +56,7 @@ class CompanionIdentityExchange {
     _busy = true;
     _cancelled = false;
     try {
+      onStage?.call(PcPairingStage.network);
       final local = await identity.status();
       _ensureActive();
       if (!local.created || local.fingerprint == null ||
@@ -86,6 +89,7 @@ class CompanionIdentityExchange {
       if (expiry <= current || expiry > qrExpires || expiry - current > 90) {
         throw const FormatException('PCの認証期限が不正です');
       }
+      onStage?.call(PcPairingStage.pcProof);
       final pcProof = CompanionIdentityClient.parseProof(
         begin['pc_proof'] as Map<dynamic, dynamic>,
       );
@@ -102,6 +106,7 @@ class CompanionIdentityExchange {
       if (!verified) {
         throw StateError('PC固有の公開鍵と署名を確認できません');
       }
+      onStage?.call(PcPairingStage.phoneConsent);
       // Android user consents again AFTER the pinned PC proof is verified.
       if (!await approvePhoneProof()) {
         throw StateError('スマホ側で端末署名を拒否しました');
@@ -118,6 +123,7 @@ class CompanionIdentityExchange {
         expiresUnix: expiry,
       );
       _ensureActive();
+      onStage?.call(PcPairingStage.finish);
       final result = await _post(
         ip: ip, port: port, tlsPin: tlsFingerprint,
         path: '/v3/identity-finish',

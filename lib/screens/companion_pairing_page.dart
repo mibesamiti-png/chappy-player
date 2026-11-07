@@ -1,5 +1,6 @@
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:chappy_player/core/pc_pairing_failure.dart';
+import 'package:chappy_player/core/pc_pairing_stage.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/verified_pc_history_client.dart';
@@ -257,6 +258,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     }
     final generation = ++_generation;
     final invite = _invite;
+    // Attempt-local diagnostic only; never persisted or used for trust.
+    var stage = PcPairingStage.qr;
     // Optional pinned-to-history check blocks manual/v1/v2 downgrades too.
     if (_expectedPcFingerprint != null &&
         invite?.pcIdentityFingerprint != _expectedPcFingerprint) {
@@ -291,6 +294,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         throw StateError('Wi-Fi接続中の前面画面のみ対応しています');
       }
       if (!mounted || generation != _generation) return;
+      stage = PcPairingStage.network;
       final identityMode = invite?.pcIdentityFingerprint != null;
       final nonce = identityMode
           ? CompanionIdentityClient.newNonce()
@@ -314,6 +318,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
               invitation: invite.invitation,
               qrExpires: invite.expiresUnix,
               phoneNonce: nonce,
+              onStage: (current) => stage = current,
               approvePhoneProof: () async {
                 if (!mounted || generation != _generation ||
                     ModalRoute.of(context)?.isCurrent != true) {
@@ -364,7 +369,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       setState(() {
         _busy = false;
         _verified = false;
-        _error = PcPairingFailure.classify(error).safeMessage;
+        _error = '${stage.safeSummary}。'
+            '${PcPairingFailure.classify(error).safeMessage}';
       });
     }
   }
