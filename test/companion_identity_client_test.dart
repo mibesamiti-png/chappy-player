@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('dev.chappy.player/network_lab');
   final fingerprint = List<String>.filled(64, 'a').join();
   final invitation = List<String>.filled(32, 'b').join();
