@@ -66,7 +66,9 @@ internal class NativeVerifiedPcHistory(
     }
 
     private fun decrypt(): JSONObject? {
-        if (!file.exists()) return null
+        // AtomicFile may recover a legacy .bak after an interrupted write.
+        if (!file.baseFile.exists() &&
+            !File(file.baseFile.path + ".bak").exists()) return null
         val encrypted = file.openRead().use { input ->
             // Compatible with minSdk 24, bounded even for corrupt/cyclic input.
             val output = ByteArrayOutputStream()
