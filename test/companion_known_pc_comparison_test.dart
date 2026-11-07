@@ -47,7 +47,7 @@ void main() {
     await tester.tap(find.byKey(const Key('pair_choose_known_pc')));
     await tester.pumpAndSettle();
     expect(find.text('比較するPCの公開鍵指紋を選択'), findsOneWidget);
-    await tester.tap(find.byKey(Key('pair_choose_fp_' + savedFp)));
+    await tester.tap(find.byKey(Key('pair_choose_fp_$savedFp')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('pair_expected_pc_fingerprint')),
         findsOneWidget);
@@ -69,7 +69,7 @@ void main() {
           <String, Object>{'fingerprint': savedFp, 'added': 2000000000},
         ];
       }
-      throw StateError('Unexpected network or history write: ' + call.method);
+      throw StateError('Unexpected network or history write: ${call.method}');
     });
   });
   tearDown(() {
