@@ -41,6 +41,7 @@ class MainActivity : FlutterActivity() {
     private val nativeVideo = NativeVideoRecorder(this)
     private val miniDevices = NativeMiniAppDevices(this)
     private val networkDiscovery = NativeNetworkDiscovery(this)
+    private val trafficCounters = NativeTrafficCounters()
     private val videoExporter = NativeVideoExport(this)
     private val zipBackup = NativeVideoZipBackup(this)
     private val zipRestore = NativeVideoZipRestore(this)
@@ -236,6 +237,14 @@ class MainActivity : FlutterActivity() {
                     "pairingAllowed" -> {
                         result.success(micActivityVisible &&
                             networkDiscovery.pairingAllowed())
+                    }
+                    "trafficSnapshot" -> {
+                        if (!micActivityVisible) {
+                            result.error("NETLAB_NOT_FOREGROUND",
+                                "Device traffic read requires a visible player", null)
+                        } else {
+                            result.success(trafficCounters.snapshot())
+                        }
                     }
                     "stop" -> {
                         result.success(networkDiscovery.stop())
