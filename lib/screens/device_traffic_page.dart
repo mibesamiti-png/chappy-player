@@ -299,7 +299,8 @@ class _DeviceTrafficPageState extends State<DeviceTrafficPage>
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: CustomPaint(
-                    painter: _TrafficChartPainter(_history),
+                    painter: _TrafficChartPainter(
+                      List<DeviceTrafficRate>.unmodifiable(_history)),
                     child: Center(
                       child: _history.isEmpty
                           ? const Text('計測開始後、2回目の取得でグラフを表示します')
