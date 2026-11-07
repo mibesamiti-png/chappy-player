@@ -14,7 +14,7 @@ void main() {
       TimeoutException('private invitation=do-not-print'),
     ).code, 'PAIR-TIME');
     expect(PcPairingFailure.classify(
-      const HandshakeException('private certificate details'),
+      HandshakeException('private certificate details'),
     ).code, 'PAIR-TLS');
     expect(PcPairingFailure.classify(
       const FormatException('invite=private'),
@@ -32,7 +32,7 @@ void main() {
     final samples = <Object>[
       const SocketException(secret),
       TimeoutException(secret),
-      const HandshakeException(secret),
+      HandshakeException(secret),
       const FormatException(secret),
       PlatformException(code: secret, message: secret),
       StateError(secret),
