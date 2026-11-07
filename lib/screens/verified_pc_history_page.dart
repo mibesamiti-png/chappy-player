@@ -155,14 +155,11 @@ class _VerifiedPcHistoryPageState extends State<VerifiedPcHistoryPage> {
                         const SizedBox(height: 6),
                         SelectableText(
                           record.fingerprint,
-                          key: Key('verified_pc_\${record.fingerprint}'),
+                          key: Key('verified_pc_${record.fingerprint}'),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '保存日時: '
-                          '\${DateTime.fromMillisecondsSinceEpoch(
-                            record.addedUnix * 1000,
-                          ).toLocal()}',
+                          '保存日時: ${DateTime.fromMillisecondsSinceEpoch(record.addedUnix * 1000).toLocal()}',
                         ),
                         Align(
                           alignment: Alignment.centerRight,
