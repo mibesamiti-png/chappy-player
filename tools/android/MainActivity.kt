@@ -252,8 +252,17 @@ class MainActivity : FlutterActivity() {
                                     "pcIdentityCreate" ->
                                         result.success(pcIdentity.create())
                                     else -> {
-                                        val revoked = pcIdentity.revoke()
-                                        verifiedPcHistory.clearAll()
+                                        // A foreground UI confirmation is not enough:
+                                        // native deletion must match the exact P-256
+                                        // public fingerprint the user reviewed.
+                                        val args = call.arguments as? Map<*, *>
+                                            ?: throw IllegalArgumentException("Expected fingerprint")
+                                        require(args.size == 1 && args["fingerprint"] is String) {
+                                            "Expected only a public-key fingerprint"
+                                        }
+                                        val expectedFingerprint = args["fingerprint"] as String
+                                        val revoked = pcIdentity.revoke(expectedFingerprint)
+                                        if (revoked) verifiedPcHistory.clearAll()
                                         result.success(revoked)
                                     }
                                 }

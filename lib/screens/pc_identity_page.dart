@@ -104,37 +104,77 @@ class _PcIdentityPageState extends State<PcIdentityPage> {
   }
 
   Future<void> _revoke() async {
-    if (_busy || _identity?.created != true) return;
+    final fingerprint = _identity?.fingerprint;
+    if (_busy || _identity?.created != true || fingerprint == null) return;
+    final confirmationGeneration = _generation;
+    final suffix = fingerprint.substring(fingerprint.length - 8);
+    var entered = '';
     final consent = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('この端末のキーを削除'),
-        content: const Text(
-          'この端末の秘密鍵をAndroid KeyStoreから削除します。'
-          '元の鍵は復元できません。将来ペアリング済みの場合は再登録が必要です。'
-          'PC側に保存された情報の削除は、後続機能で別途行う必要があります。',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, updateDialog) => AlertDialog(
+          title: const Text('この端末のキーを削除'),
+          scrollable: true,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Android KeyStoreの秘密鍵を完全に削除します。'
+                '元の鍵は復元できず、作り直すと公開鍵指紋が変わります。'
+                'このスマホに保存した確認済みPCの暗号化履歴も消去されます。'
+                'Windows側の記録・秘密鍵は変更せず、'
+                '相手PCへの失効通知も送られません。'
+                'PC側の古い記録はPCで別途確認・削除してください。',
+              ),
+              const SizedBox(height: 12),
+              Text('確認用：公開鍵指紋の末尾8文字「$suffix」'),
+              const SizedBox(height: 8),
+              TextField(
+                key: const Key('pc_identity_revoke_suffix'),
+                maxLength: 8,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: const InputDecoration(
+                  labelText: '末尾8文字を正確に入力',
+                  helperText: '入力が一致するまで削除できません',
+                ),
+                onChanged: (value) =>
+                    updateDialog(() => entered = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('削除しない'),
+            ),
+            FilledButton(
+              key: const Key('pc_identity_revoke_confirm'),
+              onPressed: entered == suffix
+                  ? () => Navigator.of(ctx).pop(true)
+                  : null,
+              child: const Text('秘密鍵を削除'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('削除しない'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('秘密鍵を削除'),
-          ),
-        ],
       ),
     );
-    if (!mounted || consent != true || _busy) return;
+    if (!mounted || consent != true || _busy ||
+        confirmationGeneration != _generation ||
+        _identity?.fingerprint != fingerprint) {
+      return;
+    }
     final generation = ++_generation;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final removed = await widget.client.revoke();
+      // The Android native host must also compare the exact fingerprint
+      // before deleting, so stale UI consent can never revoke a new key.
+      final removed = await widget.client.revoke(fingerprint);
       if (!mounted || generation != _generation) return;
       if (!removed) {
         throw StateError('秘密鍵が存在しません');
@@ -144,7 +184,19 @@ class _PcIdentityPageState extends State<PcIdentityPage> {
       setState(() => _identity = next);
     } catch (error) {
       if (!mounted || generation != _generation) return;
-      setState(() => _error = '削除できませんでした: $error');
+      // The native key may already have been deleted when encrypted history
+      // cleanup reports an error. Re-read the actual state, never display
+      // an old public fingerprint as if the key still existed.
+      try {
+        final current = await widget.client.status();
+        if (!mounted || generation != _generation) return;
+        setState(() => _identity = current);
+      } catch (_) {
+        // Keep the original failure visible; user may refresh/recover.
+      }
+      if (!mounted || generation != _generation) return;
+      setState(() => _error =
+          '端末キーの削除結果を確認してください。操作エラー: $error');
     } finally {
       if (mounted && generation == _generation) {
         setState(() => _busy = false);

@@ -65,10 +65,23 @@ class NativePcIdentity {
         return status()
     }
 
+    /**
+     * Re-read and compare the precise public identity under the same lock
+     * before deleting. The Flutter dialog alone cannot authorize a stale
+     * fingerprint after an identity change.
+     */
     @Synchronized
-    fun revoke(): Boolean {
+    fun revoke(expectedFingerprint: String): Boolean {
+        require(Regex("^[0-9a-f]{64}$").matches(expectedFingerprint)) {
+            "Invalid expected identity fingerprint"
+        }
         val keyStore = store()
         if (!keyStore.containsAlias(ALIAS)) return false
+        val currentFingerprint = status()["fingerprint"] as? String
+            ?: throw IllegalStateException("Current device identity unavailable")
+        require(currentFingerprint == expectedFingerprint) {
+            "Device identity changed; retry with the current public fingerprint"
+        }
         keyStore.deleteEntry(ALIAS)
         return true
     }
