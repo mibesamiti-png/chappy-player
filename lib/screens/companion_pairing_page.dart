@@ -34,6 +34,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   bool _savingHistory = false;
   // Optional user-chosen expected PC key; never selected from device names.
   String? _expectedPcFingerprint;
+  // A comparison-rejected invite cannot be scanned again on this page.
+  String? _rejectedQrInvitation;
   bool _savedHistory = false;
   bool _busy = false;
   bool _verified = false;
@@ -189,11 +191,25 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             MaterialPageRoute(builder: (_) => const CompanionQrScannerPage()),
           );
     if (!mounted || generation != _generation || invite == null) return;
+    if (_rejectedQrInvitation == invite.invitation) {
+      setState(() {
+        _invite = null;
+        _fingerprint.clear();
+        _qrConsumed = false;
+        _code = null;
+        _verified = false;
+        _savedHistory = false;
+        _error = 'このQR招待は公開鍵の不一致で既に拒否されました。'
+            'PCで新しいQRを発行して再読取してください。';
+      });
+      return;
+    }
     // Do not silently accept a changed key for the PC the user explicitly
     // chose from prior verified public-fingerprint history.
     if (_expectedPcFingerprint != null &&
         invite.pcIdentityFingerprint != _expectedPcFingerprint) {
       setState(() {
+        _rejectedQrInvitation = invite.invitation;
         _invite = null;
         _qrConsumed = false;
         _verified = false;
