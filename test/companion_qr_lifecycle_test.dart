@@ -151,4 +151,35 @@ void main() {
     expect(find.byKey(const Key('pair_save_verified_pc')), findsNothing);
     expect(find.byKey(const Key('pair_verified')), findsNothing);
   });
+
+  testWidgets('native LAN errors are redacted and QR remains consumed',
+      (tester) async {
+    const sensitive = 'private-invitation-and-local-endpoint';
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'pairingAllowed') {
+        throw PlatformException(code: sensitive, message: sensitive);
+      }
+      throw StateError('Unexpected host call');
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    await tester.pumpWidget(page((_) async => invitation()));
+    await scan(tester);
+    await tester.ensureVisible(find.byKey(const Key('pair_confirm')));
+    await tester.tap(find.byKey(const Key('pair_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('PAIR-HOST'), findsOneWidget);
+    expect(find.textContaining(sensitive), findsNothing);
+    expect(find.byKey(const Key('pair_qr_consumed')), findsOneWidget);
+    expect(tester.widget<FilledButton>(
+      find.byKey(const Key('pair_confirm')),
+    ).onPressed, isNull);
+    expect(find.byKey(const Key('pair_verified')), findsNothing);
+  });
+
 }
