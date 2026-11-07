@@ -31,6 +31,73 @@ void main() {
     }
   });
 
+  test('revoke client rejects invalid fingerprints before native call',
+      () async {
+    final calls = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (method) async {
+      calls.add(method.method);
+      throw StateError('No native operation is expected');
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    const client = PcIdentityClient(channel: channel);
+    for (final invalid in <String>[
+      '', 'abc', List<String>.filled(64, 'A').join(),
+      List<String>.filled(63, 'a').join(),
+    ]) {
+      await expectLater(client.revoke(invalid), throwsFormatException);
+    }
+    expect(calls, isEmpty);
+  });
+
+  testWidgets('partial revoke failure refreshes the actual identity state',
+      (tester) async {
+    var exists = true;
+    final calls = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (method) async {
+      calls.add(method.method);
+      if (method.method == 'pcIdentityStatus') {
+        return <String, Object>{
+          'created': exists, 'algorithm': 'P-256',
+          if (exists) 'fingerprint': fingerprint,
+        };
+      }
+      if (method.method == 'pcIdentityRevoke') {
+        expect(method.arguments,
+            <String, String>{'fingerprint': fingerprint});
+        exists = false;
+        throw PlatformException(code: 'HISTORY_CLEAN_FAILED');
+      }
+      throw StateError('Unexpected host method');
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    await tester.pumpWidget(const MaterialApp(home: PcIdentityPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pc_identity_revoke')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('pc_identity_revoke_suffix')),
+      fingerprint.substring(56),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('pc_identity_revoke_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(calls, <String>[
+      'pcIdentityStatus', 'pcIdentityRevoke', 'pcIdentityStatus',
+    ]);
+    expect(find.text('Android端末キー：未作成'), findsOneWidget);
+    expect(find.byKey(const Key('pc_identity_fingerprint')), findsNothing);
+    expect(find.byKey(const Key('pc_identity_error')), findsOneWidget);
+  });
+
   testWidgets('key is never generated without explicit on-screen approval',
       (tester) async {
     final calls = <String>[];
@@ -53,6 +120,8 @@ void main() {
         };
       }
       if (method.method == 'pcIdentityRevoke') {
+        expect(method.arguments,
+            <String, String>{'fingerprint': fingerprint});
         created = false;
         return true;
       }
@@ -93,7 +162,29 @@ void main() {
     expect(calls.contains('pcIdentityRevoke'), isFalse);
     await tester.tap(find.byKey(const Key('pc_identity_revoke')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('秘密鍵を削除').last);
+    var delete = tester.widget<FilledButton>(
+      find.byKey(const Key('pc_identity_revoke_confirm')),
+    );
+    expect(delete.onPressed, isNull);
+    await tester.enterText(
+      find.byKey(const Key('pc_identity_revoke_suffix')), 'WRONG123',
+    );
+    await tester.pump();
+    delete = tester.widget<FilledButton>(
+      find.byKey(const Key('pc_identity_revoke_confirm')),
+    );
+    expect(delete.onPressed, isNull);
+    expect(calls.contains('pcIdentityRevoke'), isFalse);
+    await tester.enterText(
+      find.byKey(const Key('pc_identity_revoke_suffix')),
+      fingerprint.substring(56),
+    );
+    await tester.pump();
+    delete = tester.widget<FilledButton>(
+      find.byKey(const Key('pc_identity_revoke_confirm')),
+    );
+    expect(delete.onPressed, isNotNull);
+    await tester.tap(find.byKey(const Key('pc_identity_revoke_confirm')));
     await tester.pumpAndSettle();
     expect(calls, <String>[
       'pcIdentityStatus', 'pcIdentityCreate', 'pcIdentityRevoke',
