@@ -1,4 +1,5 @@
 import 'package:chappy_player/core/companion_pairing_client.dart';
+import 'package:chappy_player/core/pc_pairing_failure.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/verified_pc_history_client.dart';
@@ -363,7 +364,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       setState(() {
         _busy = false;
         _verified = false;
-        _error = '接続確認に失敗: $error';
+        _error = PcPairingFailure.classify(error).safeMessage;
       });
     }
   }
