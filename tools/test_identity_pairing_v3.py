@@ -193,6 +193,54 @@ class IdentityV3Tests(unittest.TestCase):
                     expected_phone_fingerprint=bad,
                 )
 
+    def test_http_changed_phone_key_is_rejected_before_yes_or_qr_claim(self):
+        other_key = ec.generate_private_key(ec.SECP256R1())
+        other_fp = fingerprint(other_key)
+        state = v3.IdentityPairingAttempt(
+            invitation=INV, qr_expires=self.expiry,
+            tls_fingerprint=TLS, pc_fingerprint=self.pc_fp,
+            signer=self.signer, expected_phone_fingerprint=self.phone_fp,
+        )
+        legacy = server.PairingSession(invitation=INV, expires_at=self.expiry)
+        httpd = ThreadingHTTPServer(
+            ("127.0.0.1", 0), server.make_handler(legacy, state),
+        )
+        worker = threading.Thread(target=httpd.serve_forever, daemon=True)
+        worker.start()
+
+        def begin(fp):
+            request = urllib.request.Request(
+                "http://127.0.0.1:" + str(httpd.server_port)
+                + "/v3/identity-begin",
+                data=json.dumps({
+                    "protocol": v3.PROTOCOL, "invitation": INV,
+                    "phone_fp": fp, "phone_nonce": PHONE_NONCE,
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            return urllib.request.urlopen(request, timeout=4)
+
+        try:
+            with mock.patch.object(server, "_ask_pc_user",
+                                   return_value=True) as ask:
+                with self.assertRaises(urllib.error.HTTPError) as rejected:
+                    begin(other_fp)
+                self.assertEqual(rejected.exception.code, 403)
+                ask.assert_not_called()
+                self.assertFalse(state.finished.is_set())
+                self.assertFalse(legacy.claimed)
+                self.assertEqual(self.calls, [])
+
+                with begin(self.phone_fp) as response:
+                    answer = json.load(response)
+                self.assertEqual(answer["status"], "challenge")
+                ask.assert_called_once_with(PHONE_NONCE)
+                self.assertFalse(legacy.claimed)
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            worker.join(timeout=2)
+
     def test_invalid_begin_does_not_sign_or_approve(self):
         s = self.session()
         approve = mock.Mock(return_value=True)
