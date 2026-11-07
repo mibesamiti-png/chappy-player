@@ -124,6 +124,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="With --start --pair, show an expiring, one-time QR pairing invitation",
     )
     parser.add_argument(
+        "--identity-pair", action="store_true",
+        help="Explicit QR-v3 mutual device key proof (requires --start --pair --qr)",
+    )
+    parser.add_argument(
         "--minutes", type=int, default=DEFAULT_MINUTES,
         help="Automatic stop after 1–30 minutes (default: 10)",
     )
@@ -177,7 +181,8 @@ def run_beacon(ip: str, minutes: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.identity_create or args.identity_status or args.identity_revoke:
-        if args.pair or args.qr or args.ip or args.minutes != DEFAULT_MINUTES:
+        if (args.pair or args.qr or args.identity_pair or args.ip
+                or args.minutes != DEFAULT_MINUTES):
             print("Identity commands cannot be combined with network options",
                   file=sys.stderr)
             return 2
@@ -214,6 +219,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.qr and not args.pair:
         print("--qr requires --pair", file=sys.stderr)
         return 2
+    if args.identity_pair and not (args.pair and args.qr):
+        print("--identity-pair requires --start --pair --qr", file=sys.stderr)
+        return 2
     if not 1 <= args.minutes <= MAX_MINUTES:
         print("Duration must be between 1 and 30 minutes", file=sys.stderr)
         return 2
@@ -221,7 +229,10 @@ def main(argv: list[str] | None = None) -> int:
         address = validate_lan_ipv4(args.ip) if args.ip else discover_local_ipv4()
         if args.pair:
             from pairing_server import run_pairing
-            run_pairing(address, args.minutes, qr=args.qr)
+            run_pairing(
+                address, args.minutes, qr=args.qr,
+                identity_mode=args.identity_pair,
+            )
         else:
             run_beacon(address, args.minutes)
         return 0
