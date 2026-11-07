@@ -142,6 +142,17 @@ class CompanionIdentityExchange {
     }
   }
 
+  static Future<List<int>> _readBounded(SecureSocket socket) async {
+    final bytes = <int>[];
+    await for (final chunk in socket) {
+      if (bytes.length + chunk.length > 2048) {
+        throw const FormatException('PC応答が大きすぎます');
+      }
+      bytes.addAll(chunk);
+    }
+    return bytes;
+  }
+
   Future<Map<String, dynamic>> _post({
     required String ip,
     required int port,
@@ -177,13 +188,9 @@ class CompanionIdentityExchange {
       socket.add(utf8.encode(header));
       socket.add(body);
       await socket.flush();
-      final bytes = <int>[];
-      await for (final chunk in socket.timeout(const Duration(seconds: 35))) {
-        if (bytes.length + chunk.length > 2048) {
-          throw const FormatException('PC応答が大きすぎます');
-        }
-        bytes.addAll(chunk);
-      }
+      // Absolute wall-clock deadline, not a per-chunk inactivity timeout.
+      final bytes = await _readBounded(socket)
+          .timeout(const Duration(seconds: 35));
       _ensureActive();
       final response = utf8.decode(bytes);
       final cut = response.indexOf('\r\n\r\n');
