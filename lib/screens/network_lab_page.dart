@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:chappy_player/core/lan_discovery_client.dart';
 import 'package:chappy_player/screens/companion_pairing_page.dart';
 import 'package:chappy_player/screens/device_traffic_page.dart';
+import 'package:chappy_player/screens/pc_identity_page.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:flutter/material.dart';
 
@@ -198,6 +199,18 @@ class _NetworkLabPageState extends State<NetworkLabPage>
               'すべてのWi-Fi端末を列挙する機能ではありません。',
             ),
             const SizedBox(height: 16),
+            OutlinedButton.icon(
+              key: const Key('netlab_pc_identity'),
+              onPressed: () {
+                _cancelScan(clearResults: true);
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const PcIdentityPage(),
+                ));
+              },
+              icon: const Icon(Icons.key_outlined),
+              label: const Text('PC連携用の端末キーを準備・削除'),
+            ),
+            const SizedBox(height: 12),
             OutlinedButton.icon(
               key: const Key('netlab_device_traffic'),
               onPressed: () {
