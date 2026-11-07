@@ -42,6 +42,7 @@ class MainActivity : FlutterActivity() {
     private val miniDevices = NativeMiniAppDevices(this)
     private val networkDiscovery = NativeNetworkDiscovery(this)
     private val pcIdentity = NativePcIdentity()
+    private val verifiedPcHistory = NativeVerifiedPcHistory(this, pcIdentity)
     private val trafficCounters = NativeTrafficCounters()
     private val videoExporter = NativeVideoExport(this)
     private val zipBackup = NativeVideoZipBackup(this)
@@ -250,7 +251,11 @@ class MainActivity : FlutterActivity() {
                                         result.success(pcIdentity.status())
                                     "pcIdentityCreate" ->
                                         result.success(pcIdentity.create())
-                                    else -> result.success(pcIdentity.revoke())
+                                    else -> {
+                                        val revoked = pcIdentity.revoke()
+                                        verifiedPcHistory.clearAll()
+                                        result.success(revoked)
+                                    }
                                 }
                             } catch (error: Exception) {
                                 result.error("NETLAB_IDENTITY_FAILED",
@@ -298,6 +303,36 @@ class MainActivity : FlutterActivity() {
                             } catch (error: Exception) {
                                 result.error("NETLAB_PROOF_DENIED",
                                     "PC相互認証の検証に失敗: ${error.javaClass.simpleName}", null)
+                            }
+                        }
+                    }
+                    "verifiedPcList", "verifiedPcRemember", "verifiedPcForget" -> {
+                        if (!micActivityVisible) {
+                            result.error("NETLAB_NOT_FOREGROUND",
+                                "Verified PC history needs visible trusted host", null)
+                        } else if (call.method == "verifiedPcRemember" &&
+                            !networkDiscovery.pairingAllowed()) {
+                            result.error("NETLAB_WIFI_REQUIRED",
+                                "Saving verified PC history needs Wi-Fi", null)
+                        } else {
+                            try {
+                                when (call.method) {
+                                    "verifiedPcList" ->
+                                        result.success(verifiedPcHistory.list())
+                                    "verifiedPcRemember" -> {
+                                        val fp = call.argument<String>("fingerprint")
+                                            ?: throw IllegalArgumentException("Missing fingerprint")
+                                        result.success(verifiedPcHistory.remember(fp))
+                                    }
+                                    else -> {
+                                        val fp = call.argument<String>("fingerprint")
+                                            ?: throw IllegalArgumentException("Missing fingerprint")
+                                        result.success(verifiedPcHistory.forget(fp))
+                                    }
+                                }
+                            } catch (error: Exception) {
+                                result.error("NETLAB_PC_HISTORY_FAILED",
+                                    "PC確認履歴の操作に失敗: ${error.javaClass.simpleName}", null)
                             }
                         }
                     }
