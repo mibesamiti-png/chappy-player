@@ -141,6 +141,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Explicit QR-v3 mutual device key proof (requires --start --pair --qr)",
     )
     parser.add_argument(
+        "--compare-known-phone", action="store_true",
+        help="Manually choose a saved DPAPI phone fingerprint BEFORE QR-v3; "
+             "no auto-trust, still requires PC YES and mutual proof",
+    )
+    parser.add_argument(
         "--minutes", type=int, default=DEFAULT_MINUTES,
         help="Automatic stop after 1–30 minutes (default: 10)",
     )
@@ -196,7 +201,7 @@ def main(argv: list[str] | None = None) -> int:
     if (args.identity_create or args.identity_status or args.identity_revoke
             or args.verified_list or args.verified_forget is not None
             or args.verified_clear):
-        if (args.pair or args.qr or args.identity_pair or args.ip
+        if (args.pair or args.qr or args.identity_pair or args.compare_known_phone or args.ip
                 or args.minutes != DEFAULT_MINUTES):
             print("Identity commands cannot be combined with network options",
                   file=sys.stderr)
@@ -273,6 +278,12 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, RuntimeError, ValueError, FileExistsError) as exc:
             print("PC identity operation failed: " + str(exc), file=sys.stderr)
             return 1
+    if args.compare_known_phone and not (
+        args.start and args.pair and args.qr and args.identity_pair
+    ):
+        print("--compare-known-phone requires --start --pair --qr --identity-pair",
+              file=sys.stderr)
+        return 2
     if args.identity_pair and not args.start:
         print("--identity-pair requires explicit --start", file=sys.stderr)
         return 2
@@ -289,13 +300,29 @@ def main(argv: list[str] | None = None) -> int:
         print("Duration must be between 1 and 30 minutes", file=sys.stderr)
         return 2
     try:
+        expected_phone = None
+        if args.compare_known_phone:
+            from verified_phone_history import select_expected_verified_phone
+            # Selection happens OFFLINE before discovering an adapter, opening
+            # any listener or advertising mDNS. No default or auto-selected key.
+            expected_phone = select_expected_verified_phone()
+            if expected_phone is None:
+                print("No phone selected. Nothing advertised.")
+                return 2
         address = validate_lan_ipv4(args.ip) if args.ip else discover_local_ipv4()
         if args.pair:
             from pairing_server import run_pairing
-            run_pairing(
-                address, args.minutes, qr=args.qr,
-                identity_mode=args.identity_pair,
-            )
+            if expected_phone is None:
+                run_pairing(
+                    address, args.minutes, qr=args.qr,
+                    identity_mode=args.identity_pair,
+                )
+            else:
+                run_pairing(
+                    address, args.minutes, qr=args.qr,
+                    identity_mode=args.identity_pair,
+                    expected_phone_fingerprint=expected_phone,
+                )
         else:
             run_beacon(address, args.minutes)
         return 0

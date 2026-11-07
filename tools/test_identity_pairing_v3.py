@@ -126,6 +126,121 @@ class IdentityV3Tests(unittest.TestCase):
                 phone_proof=self.phone_proof(begin),
             )
 
+    def test_manual_known_phone_comparison_rejects_changed_key_before_consent(self):
+        expected = self.phone_fp
+        other = fingerprint(ec.generate_private_key(ec.SECP256R1()))
+        session = v3.IdentityPairingAttempt(
+            invitation=INV, qr_expires=self.expiry, tls_fingerprint=TLS,
+            pc_fingerprint=self.pc_fp, signer=self.signer,
+            expected_phone_fingerprint=expected,
+        )
+        approve = mock.Mock(return_value=True)
+        with self.assertRaisesRegex(ValueError, "differs"):
+            session.begin(
+                invitation=INV, phone_fingerprint=other,
+                phone_nonce=PHONE_NONCE, approve_on_pc=approve,
+            )
+        approve.assert_not_called()
+        self.assertEqual(self.calls, [])
+        self.assertFalse(session.finished.is_set())
+        self.assertIsNone(session.verified_phone_fingerprint)
+
+        # An unrelated spoofed claim must not consume the one-use QR.
+        begin = session.begin(
+            invitation=INV, phone_fingerprint=expected,
+            phone_nonce=PHONE_NONCE, approve_on_pc=approve,
+        )
+        approve.assert_called_once_with(PHONE_NONCE)
+        self.assertEqual(len(self.calls), 1)
+        self.assertIsNone(session.verified_phone_fingerprint)
+        result = session.finish(
+            invitation=INV, phone_fingerprint=expected,
+            phone_proof=self.phone_proof(begin),
+        )
+        self.assertEqual(result["status"], "approved")
+        self.assertEqual(session.verified_phone_fingerprint, expected)
+
+    def test_claimed_known_phone_still_requires_actual_private_key_signature(self):
+        other_key = ec.generate_private_key(ec.SECP256R1())
+        session = v3.IdentityPairingAttempt(
+            invitation=INV, qr_expires=self.expiry, tls_fingerprint=TLS,
+            pc_fingerprint=self.pc_fp, signer=self.signer,
+            expected_phone_fingerprint=self.phone_fp,
+        )
+        begin = session.begin(
+            invitation=INV, phone_fingerprint=self.phone_fp,
+            phone_nonce=PHONE_NONCE, approve_on_pc=lambda _: True,
+        )
+        forged = proof._sign_with_key(
+            other_key, role="android", invitation=INV,
+            tls_fingerprint=TLS, peer_fingerprint=self.pc_fp,
+            nonce=begin["pc_nonce"], expires_at=begin["expires"],
+        )
+        with self.assertRaises(ValueError):
+            session.finish(
+                invitation=INV, phone_fingerprint=self.phone_fp,
+                phone_proof=forged,
+            )
+        self.assertIsNone(session.verified_phone_fingerprint)
+        self.assertTrue(session.finished.is_set())
+
+    def test_manual_phone_expectation_rejects_bad_fingerprint_at_bootstrap(self):
+        for bad in ("", "X" * 64, "a" * 63, "0" * 65, 11):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                v3.IdentityPairingAttempt(
+                    invitation=INV, qr_expires=self.expiry,
+                    tls_fingerprint=TLS, pc_fingerprint=self.pc_fp,
+                    expected_phone_fingerprint=bad,
+                )
+
+    def test_http_changed_phone_key_is_rejected_before_yes_or_qr_claim(self):
+        other_key = ec.generate_private_key(ec.SECP256R1())
+        other_fp = fingerprint(other_key)
+        state = v3.IdentityPairingAttempt(
+            invitation=INV, qr_expires=self.expiry,
+            tls_fingerprint=TLS, pc_fingerprint=self.pc_fp,
+            signer=self.signer, expected_phone_fingerprint=self.phone_fp,
+        )
+        legacy = server.PairingSession(invitation=INV, expires_at=self.expiry)
+        httpd = ThreadingHTTPServer(
+            ("127.0.0.1", 0), server.make_handler(legacy, state),
+        )
+        worker = threading.Thread(target=httpd.serve_forever, daemon=True)
+        worker.start()
+
+        def begin(fp):
+            request = urllib.request.Request(
+                "http://127.0.0.1:" + str(httpd.server_port)
+                + "/v3/identity-begin",
+                data=json.dumps({
+                    "protocol": v3.PROTOCOL, "invitation": INV,
+                    "phone_fp": fp, "phone_nonce": PHONE_NONCE,
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            return urllib.request.urlopen(request, timeout=4)
+
+        try:
+            with mock.patch.object(server, "_ask_pc_user",
+                                   return_value=True) as ask:
+                with self.assertRaises(urllib.error.HTTPError) as rejected:
+                    begin(other_fp)
+                self.assertEqual(rejected.exception.code, 403)
+                ask.assert_not_called()
+                self.assertFalse(state.finished.is_set())
+                self.assertFalse(legacy.claimed)
+                self.assertEqual(self.calls, [])
+
+                with begin(self.phone_fp) as response:
+                    answer = json.load(response)
+                self.assertEqual(answer["status"], "challenge")
+                ask.assert_called_once_with(PHONE_NONCE)
+                self.assertFalse(legacy.claimed)
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            worker.join(timeout=2)
+
     def test_invalid_begin_does_not_sign_or_approve(self):
         s = self.session()
         approve = mock.Mock(return_value=True)

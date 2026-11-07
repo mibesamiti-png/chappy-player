@@ -44,11 +44,17 @@ class IdentityPairingAttempt:
         self, *, invitation: str, qr_expires: int, tls_fingerprint: str,
         pc_fingerprint: str,
         signer: Callable[..., dict[str, str]] = sign_pc_challenge,
+        expected_phone_fingerprint: str | None = None,
     ) -> None:
         if not _hex(invitation, _HEX16) or not all(
             _hex(item, _HEX32) for item in (tls_fingerprint, pc_fingerprint)
         ) or type(qr_expires) is not int or qr_expires <= 0:
             raise ValueError("Invalid identity session bootstrap")
+        if (expected_phone_fingerprint is not None and not _hex(
+            expected_phone_fingerprint, _HEX32
+        )):
+            raise ValueError("Invalid manually selected phone fingerprint")
+        self.expected_phone_fingerprint = expected_phone_fingerprint
         self.invitation = invitation
         self.qr_expires = qr_expires
         self.tls_fingerprint = tls_fingerprint
@@ -84,6 +90,14 @@ class IdentityPairingAttempt:
             phone_nonce, _HEX32
         ) or self._expired(now):
             raise ValueError("Invalid or expired identity invitation")
+        # A caller-chosen, previously verified key is an EXPECTATION, not
+        # an authorization. Reject a different phone claim BEFORE prompting
+        # the PC operator, claiming the QR invite, or signing any challenge.
+        # A matching claim still must prove P-256 key possession at finish.
+        if self.expected_phone_fingerprint is not None and not hmac.compare_digest(
+            phone_fingerprint, self.expected_phone_fingerprint
+        ):
+            raise ValueError("Phone public fingerprint differs from chosen history")
         with self._lock:
             if self._state != "new":
                 raise ValueError("Identity invitation already claimed")
