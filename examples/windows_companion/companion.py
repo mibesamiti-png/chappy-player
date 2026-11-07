@@ -266,8 +266,12 @@ def main(argv: list[str] | None = None) -> int:
                 print("Public SHA-256 fingerprint: " + public_id)
                 print("No phone is paired. No network service started.")
             else:
-                print("WARNING: This revokes the local PC signing identity.")
-                print("Future authenticated pairing will require a new identity.")
+                print("WARNING: This deletes the local PC signing identity")
+                print("AND its current-user verified-phone fingerprint history.")
+                print("The old key cannot be recovered; a new key has a NEW")
+                print("public fingerprint and requires fresh QR-v3 verification.")
+                print("Android device keys and Android-side history are NOT")
+                print("changed or remotely revoked by this local operation.")
                 answer = input("Type REVOKE to remove the PC identity: ").strip()
                 if answer != "REVOKE":
                     print("No changes made.")
