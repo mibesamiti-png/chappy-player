@@ -467,3 +467,12 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                 finally:
                     zeroconf.close()
                     print("Chappy Companion: secure confirmation preview OFF")
+    # The TLS listener and mDNS beacon are already stopped. Only the outcome
+    # of a successfully verified QR-v3 Android signature can reach this prompt.
+    # A second PC operator confirmation is required before writing any record.
+    if identity is not None:
+        authenticated_phone = identity.verified_phone_fingerprint
+        if authenticated_phone is not None:
+            from verified_phone_history import offer_remember_verified_phone
+            offer_remember_verified_phone(authenticated_phone)
+
