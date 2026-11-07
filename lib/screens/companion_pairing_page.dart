@@ -11,12 +11,15 @@ import 'package:flutter/material.dart';
 class CompanionPairingPage extends StatefulWidget {
   final LanDiscoveredService service;
   final LanDiscoveryClient discoveryClient;
+  /// Explicit, read-only history access. Never an authentication decision.
+  final VerifiedPcHistoryClient historyClient;
   /// Optional host-side QR reader injection for deterministic widget tests.
   final Future<CompanionQrInvitation?> Function(BuildContext)? qrReader;
   const CompanionPairingPage({
     super.key,
     required this.service,
     this.discoveryClient = const LanDiscoveryClient(),
+    this.historyClient = const VerifiedPcHistoryClient(),
     this.qrReader,
   });
   @override
@@ -28,8 +31,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   final _fingerprint = TextEditingController();
   final _pairing = CompanionPairingClient();
   final _identityExchange = CompanionIdentityExchange();
-  final _verifiedHistory = const VerifiedPcHistoryClient();
   bool _savingHistory = false;
+  // Optional user-chosen expected PC key; never selected from device names.
+  String? _expectedPcFingerprint;
   bool _savedHistory = false;
   bool _busy = false;
   bool _verified = false;
@@ -60,6 +64,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
           _savedHistory = false;
           _code = null;
           _qrConsumed = false;
+          _expectedPcFingerprint = null;
           // The short-lived, single-use QR cannot survive an app pause/lock.
           if (_invite != null) _fingerprint.clear();
           _invite = null;
@@ -79,6 +84,99 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     super.dispose();
   }
 
+
+  /// Optional user-initiated local fingerprint comparison. A remembered key
+  /// has NO authority: every matching QR still needs fresh proof and consent.
+  Future<void> _chooseKnownPc() async {
+    if (_busy || _savingHistory || _verified || _invite != null ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    final generation = _generation;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      // No network, no pairing approval, no write to AndroidKeyStore.
+      final records = await widget.historyClient.list();
+      if (!mounted || generation != _generation) return;
+      if (records.isEmpty) {
+        setState(() => _error = '確認履歴が空です。QR-v3での相互認証後に、'
+            '保存を明示承認したPCだけが表示されます。');
+        return;
+      }
+      final selected = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('比較するPCの公開鍵指紋を選択'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: ListView(
+              children: [
+                const Text(
+                  '以前に確認したPCの指紋を手動選択します。'
+                  '同じPC名でも鍵が変わる可能性があるため、'
+                  '一致しなければ接続確認は進めません。',
+                ),
+                for (final record in records)
+                  TextButton(
+                    key: Key('pair_choose_fp_' + record.fingerprint),
+                    onPressed: () => Navigator.of(ctx).pop(record.fingerprint),
+                    child: Text(
+                      record.fingerprint,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('比較しない'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || generation != _generation || selected == null) return;
+      setState(() {
+        _expectedPcFingerprint = selected;
+        _verified = false;
+        _savedHistory = false;
+        _code = null;
+      });
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _error = '確認履歴を安全に読み込めません: $error');
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  void _clearKnownPc() {
+    if (_busy || _savingHistory || _verified) return;
+    // Clearing an expected key must not cause a previously scanned QR to
+    // become valid. Require the user to physically scan a NEW invitation.
+    _generation++;
+    _pairing.cancel();
+    _identityExchange.cancel();
+    setState(() {
+      _expectedPcFingerprint = null;
+      _invite = null;
+      _qrConsumed = false;
+      _fingerprint.clear();
+      _code = null;
+      _verified = false;
+      _savedHistory = false;
+      _error = '比較を解除しました。PCで新しいQRを表示して読み取ってください。';
+    });
+  }
+
   Future<void> _scanQr() async {
     if (_busy || ModalRoute.of(context)?.isCurrent != true) return;
     final generation = _generation;
@@ -88,6 +186,24 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             MaterialPageRoute(builder: (_) => const CompanionQrScannerPage()),
           );
     if (!mounted || generation != _generation || invite == null) return;
+    // Do not silently accept a changed key for the PC the user explicitly
+    // chose from prior verified public-fingerprint history.
+    if (_expectedPcFingerprint != null &&
+        invite.pcIdentityFingerprint != _expectedPcFingerprint) {
+      setState(() {
+        _invite = null;
+        _qrConsumed = false;
+        _verified = false;
+        _savedHistory = false;
+        _code = null;
+        _fingerprint.clear();
+        _error = '保存済みPCの公開鍵指紋とQRが一致しません。'
+            '別PCまたは端末キー変更の可能性があります。'
+            'PC側の鍵を確認してから新しいQRを発行してください。'
+            '履歴の比較をやめる場合も、比較解除後に新しいQRが必要です。';
+      });
+      return;
+    }
     // mDNS is never an identity provider. Refuse an invitation that changes
     // the endpoint selected by the user from the discovery result.
     if (invite.ip != widget.service.address ||
@@ -121,6 +237,12 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     }
     final generation = ++_generation;
     final invite = _invite;
+    // Optional pinned-to-history check blocks manual/v1/v2 downgrades too.
+    if (_expectedPcFingerprint != null &&
+        invite?.pcIdentityFingerprint != _expectedPcFingerprint) {
+      setState(() => _error = '保存済みのPC公開鍵指紋とQR-v3を照合してください。');
+      return;
+    }
     if (invite != null && _qrConsumed) return;
     // Consume the scanned one-shot invite before any awaited operation.
     // Do not allow a second attempt using the same QR even after an error.
@@ -268,7 +390,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _error = null;
     });
     try {
-      await _verifiedHistory.remember(fp);
+      await widget.historyClient.remember(fp);
       if (!mounted || generation != _generation) return;
       setState(() => _savedHistory = true);
     } catch (error) {
@@ -295,6 +417,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       if (_invite != null) _fingerprint.clear();
       _invite = null;
       _qrConsumed = false;
+      _expectedPcFingerprint = null;
       _error = '確認をキャンセルしました。QRは再読取してください。';
     });
   }
@@ -324,11 +447,45 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
+              key: const Key('pair_choose_known_pc'),
+              onPressed: _busy || _savingHistory || _verified ||
+                      _invite != null
+                  ? null : _chooseKnownPc,
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('以前確認したPCの公開鍵指紋を選んで照合'),
+            ),
+            if (_expectedPcFingerprint != null) ...[
+              const SizedBox(height: 8),
+              const Text('今回のQR-v3に期待するPC公開鍵指紋：'),
+              SelectableText(
+                _expectedPcFingerprint!,
+                key: const Key('pair_expected_pc_fingerprint'),
+              ),
+              const Text(
+                '一致しても自動接続・端末の信頼登録はしません。'
+                '必ず新しいQRとPCのYES、双方の署名確認が必要です。',
+              ),
+              TextButton(
+                key: const Key('pair_clear_known_pc'),
+                onPressed: _busy || _savingHistory || _verified
+                    ? null : _clearKnownPc,
+                child: const Text('過去の指紋との比較を解除（次は新しいQRが必要）'),
+              ),
+            ],
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
               key: const Key('pair_scan_qr'),
               onPressed: _busy || _savingHistory ? null : _scanQr,
               icon: const Icon(Icons.qr_code_scanner),
               label: const Text('PCの招待QRをカメラで読み取る'),
             ),
+            if (_expectedPcFingerprint != null &&
+                _invite?.pcIdentityFingerprint == _expectedPcFingerprint)
+              const Text(
+                '選択した保存済みPCの指紋とQRが一致。'
+                'ただし本人認証は未完了です。',
+                key: Key('pair_known_pc_matched'),
+              ),
             if (_invite != null)
               Text(
                 _invite!.pcIdentityFingerprint != null
@@ -362,7 +519,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             FilledButton.icon(
               key: const Key('pair_confirm'),
               onPressed: _busy || _savingHistory ||
-                  (_invite != null && _qrConsumed)
+                  (_invite != null && _qrConsumed) ||
+                  (_expectedPcFingerprint != null &&
+                   _invite?.pcIdentityFingerprint != _expectedPcFingerprint)
                   ? null : _confirm,
               icon: const Icon(Icons.verified_user_outlined),
               label: const Text('このPCとの接続を確認'),
