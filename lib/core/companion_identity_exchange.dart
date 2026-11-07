@@ -184,7 +184,7 @@ class CompanionIdentityExchange {
           'Content-Type: application/json\r\n'
           'Cache-Control: no-store\r\n'
           'Connection: close\r\n'
-          'Content-Length: ' + body.length.toString() + '\r\n\r\n';
+          'Content-Length: ${body.length}\r\n\r\n';
       socket.add(utf8.encode(header));
       socket.add(body);
       await socket.flush();
