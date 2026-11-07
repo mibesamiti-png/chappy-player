@@ -23,11 +23,11 @@ void main() {
   final invitation = List<String>.filled(32, 'b').join();
   final calls = <String>[];
 
-  CompanionQrInvitation qr(String? pcFp) => CompanionQrInvitation(
+  CompanionQrInvitation qr(String? pcFp, {String? token}) => CompanionQrInvitation(
         ip: service.address,
         port: service.port,
         fingerprint: tlsFp,
-        invitation: invitation,
+        invitation: token ?? invitation,
         expiresUnix: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 120,
         pcIdentityFingerprint: pcFp,
       );
@@ -97,7 +97,8 @@ void main() {
     var scans = 0;
     await tester.pumpWidget(page((_) async {
       scans++;
-      return qr(otherFp);
+      return qr(otherFp,
+          token: scans > 2 ? List<String>.filled(32, 'e').join() : null);
     }));
     await selectSaved(tester);
     await scan(tester);
@@ -119,6 +120,21 @@ void main() {
     expect(find.byKey(const Key('pair_expected_pc_fingerprint')), findsNothing);
     expect(find.byKey(const Key('pair_qr_mode')), findsNothing);
     expect(scans, 1);
+    expect(calls, <String>['verifiedPcList']);
+
+    // Scanning the SAME once-rejected invitation cannot bypass comparison.
+    await scan(tester);
+    expect(scans, 2);
+    expect(find.byKey(const Key('pair_qr_mode')), findsNothing);
+    expect(find.byKey(const Key('pair_error')), findsOneWidget);
+    expect(calls, <String>['verifiedPcList']);
+
+    // A distinct freshly generated QR may proceed as a new identity, but
+    // still cannot grant access before the normal mutual signing protocol.
+    await scan(tester);
+    expect(scans, 3);
+    expect(find.byKey(const Key('pair_qr_mode')), findsOneWidget);
+    expect(find.byKey(const Key('pair_verified')), findsNothing);
     expect(calls, <String>['verifiedPcList']);
   });
 
