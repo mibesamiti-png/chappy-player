@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:chappy_player/core/lan_discovery_client.dart';
 import 'package:chappy_player/screens/companion_pairing_page.dart';
+import 'package:chappy_player/screens/device_traffic_page.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:flutter/material.dart';
 
@@ -197,6 +198,18 @@ class _NetworkLabPageState extends State<NetworkLabPage>
               'すべてのWi-Fi端末を列挙する機能ではありません。',
             ),
             const SizedBox(height: 16),
+            OutlinedButton.icon(
+              key: const Key('netlab_device_traffic'),
+              onPressed: () {
+                _cancelScan(clearResults: true);
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const DeviceTrafficPage(),
+                ));
+              },
+              icon: const Icon(Icons.monitor_heart_outlined),
+              label: const Text('このスマホの通信量を測定'),
+            ),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               key: const Key('netlab_service_type'),
               initialValue: _serviceType,
@@ -300,7 +313,8 @@ class _NetworkLabPageState extends State<NetworkLabPage>
             ),
             const SizedBox(height: 20),
             const Text(
-              '通信量の取得・通信内容の解析・PC操作はこの試作版にはありません。'
+              '通信量は別画面で、このスマホ全体の累積値だけを確認できます。'
+              '他のLAN機器の通信量・通信内容の解析・PC操作はまだありません。'
               'Android 17以降でアプリがSDK 37以上を対象とする場合は、'
               'OSのサービス選択方式が完成するまで探索を行いません。'
               '画面を閉じるかアプリが裏に回ると探索を終了します。',

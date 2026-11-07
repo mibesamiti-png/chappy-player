@@ -13,6 +13,10 @@ def read(path):
 
 
 native = read("tools/android/NativeNetworkDiscovery.kt")
+traffic_native = read("tools/android/NativeTrafficCounters.kt")
+traffic_client = read("lib/core/device_traffic_client.dart")
+traffic_page = read("lib/screens/device_traffic_page.dart")
+traffic_tests = read("test/device_traffic_page_widget_test.dart")
 host = read("tools/android/MainActivity.kt")
 manifest = read("tools/patch_android.py")
 dart = read("lib/core/lan_discovery_client.dart")
@@ -82,6 +86,62 @@ for token in (
 assert "const NetworkLabPage()" in home
 assert "network_lab" not in webview, (
     "Untrusted mini-apps must not receive any direct LAN or NSD bridge")
+# NETLAB-02: Trust boundary and truthful read-only foreground metrics.
+for token in (
+    "TrafficStats.getTotalRxBytes()",
+    "TrafficStats.getTotalTxBytes()",
+    "TrafficStats.getUidRxBytes(myUid)",
+    "TrafficStats.getUidTxBytes(myUid)",
+    "SystemClock.elapsedRealtime()",
+    '"source" to "android.trafficstats.since_boot"',
+):
+    assert token in traffic_native, token
+for forbidden in ("VpnService", "NetworkStatsManager", "HttpClient",
+                  "DatagramSocket", "File(", "SharedPreferences"):
+    assert forbidden not in traffic_native, forbidden
+for token in (
+    'private val trafficCounters = NativeTrafficCounters()',
+    '"trafficSnapshot" -> {',
+    '"NETLAB_NOT_FOREGROUND"',
+    'result.success(trafficCounters.snapshot())',
+):
+    assert token in host, token
+for token in (
+    "'NativeTrafficCounters.kt'",
+    "'android.permission.ACCESS_NETWORK_STATE'",
+):
+    assert token in manifest, token
+assert "PACKAGE_USAGE_STATS" not in manifest
+assert "android.permission.BIND_VPN_SERVICE" not in manifest
+for token in (
+    "DeviceTrafficSnapshot.fromWire",
+    "'trafficSnapshot'",
+    "since(DeviceTrafficSnapshot older)",
+    "return null;",
+):
+    assert token in traffic_client, token
+for token in (
+    "showDialog<bool>",
+    "'60秒間計測する'",
+    "WidgetsBindingObserver",
+    "Timer.periodic(",
+    "Duration(seconds: 60)",
+    "_stop(",
+    "unawaited(_sample(generation))",
+    "List<DeviceTrafficRate>.unmodifiable(_history)",
+    "このスマホの通信量",
+):
+    assert token in traffic_page, token
+for token in (
+    "no traffic read until explicit user confirmation",
+    "background transition stops collection",
+    "auto stops after the 60 second time limit",
+):
+    assert token in traffic_tests, token
+assert "DeviceTrafficPage()" in screen
+assert "trafficSnapshot" not in webview, (
+    "Never expose device traffic statistics to untrusted .chappy JavaScript")
+
 assert "expect(calls, isEmpty)" in test
 assert "find.byKey(const Key('netlab_stop'))" in test
 
