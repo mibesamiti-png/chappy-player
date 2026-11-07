@@ -21,6 +21,7 @@ const get=id=>{
 get('wssUrl').value='wss://game.example.org/room';
 get('httpsUrl').value='https://game.example.org/status';
 get('message').value='{"type":"ping"}';
+get('httpsBody').value='{"type":"http-post"}';
 const events={};
 let hidden=false;
 const document={
@@ -29,6 +30,10 @@ const document={
   addEventListener(name,fn){events[name]=fn}
 };
 const intervals=new Map();
+const timeouts=new Map();
+let timeoutId=0;
+const fakeSetTimeout=(fn,ms)=>{const id=++timeoutId;timeouts.set(id,{fn,ms});return id};
+const fakeClearTimeout=id=>timeouts.delete(id);
 let intervalId=0;
 const fakeSetInterval=fn=>{const id=++intervalId;intervals.set(id,fn);return id};
 const fakeClearInterval=id=>intervals.delete(id);
@@ -52,7 +57,8 @@ const Chappy={
 };
 vm.runInNewContext(match[1],{
   window:{Chappy},document,String,Number,Math,JSON,Array,Error,
-  setInterval:fakeSetInterval,clearInterval:fakeClearInterval
+  setInterval:fakeSetInterval,clearInterval:fakeClearInterval,
+  setTimeout:fakeSetTimeout,clearTimeout:fakeClearTimeout
 });
 async function settle(){for(let i=0;i<12;i++)await new Promise(done=>setImmediate(done))}
 async function click(id){const fn=get(id).callbacks.get('click');
@@ -63,6 +69,7 @@ async function click(id){const fn=get(id).callbacks.get('click');
   await click('connect');
   assert.deepEqual(actions[0],['connect','wss://game.example.org/room']);
   assert.equal(intervals.size,1);
+  assert.equal(timeouts.size,0,'Successful connection clears watchdog');
   assert.match(get('state').textContent,/接続中/);
   for(const fn of intervals.values())fn();
   await settle();
@@ -74,15 +81,44 @@ async function click(id){const fn=get(id).callbacks.get('click');
   assert.ok(actions.some(a=>a[0]==='send'&&a[1].includes('"gravity"')));
   await click('haptic');
   assert.ok(actions.some(a=>a[0]==='haptic'&&a[1]==='tick'));
+  await click('fillGetExample');
+  assert.equal(get('httpsUrl').value,'https://postman-echo.com/get?test=chappy');
   await click('get');
   assert.ok(actions.some(a=>a[0]==='request'&&a[2]==='GET'&&a[3]===''));
   await click('post');
   assert.ok(actions.some(a=>a[0]==='request'&&a[2]==='POST'&&
-    a[3]==='{"type":"ping"}'));
+    a[3]==='{"type":"http-post"}'),'HTTPS POST must NOT reuse WSS message field');
+  assert.equal(get('message').value,'{"type":"ping"}');
+  await click('fillPostExample');
+  assert.equal(get('httpsUrl').value,'https://postman-echo.com/post');
+  assert.equal(get('httpsBody').value,'{"type":"ping"}');
+  await click('fillWssExample');
+  assert.equal(get('wssUrl').value,'wss://ws.postman-echo.com/raw');
+  assert.equal(actions.filter(a=>a[0]==='connect').length,1,
+    'Preset buttons must not connect to network');
   hidden=true;events.visibilitychange();await settle();
   assert.equal(intervals.size,0,'Poller must stop when app hidden');
   assert.ok(actions.some(a=>a[0]==='close'));
   assert.match(get('state').textContent,/未接続/);
+
+  // A rejected TLS handshake, DNS failure or denied permission must NOT
+  // strand the status label in "接続を確認中…" indefinitely.
+  Chappy.network.connect=async()=>{throw new Error('TLS rejected')};
+  await click('connect');
+  assert.match(get('state').textContent,/接続失敗/);
+  assert.match(get('log').textContent,/TLS rejected/);
+
+  // Reproduce an unresolved host bridge request, then fire the 30s watchdog.
+  Chappy.network.connect=()=>new Promise(()=>{});
+  await click('connect');
+  assert.match(get('state').textContent,/接続を確認中/);
+  const pendingTimer=[...timeouts.values()].find(x=>x.ms===30000);
+  assert.ok(pendingTimer,'WSS must have a 30-second watchdog');
+  pendingTimer.fn();
+  await settle();
+  assert.match(get('state').textContent,/接続失敗/);
+  assert.match(get('log').textContent,/30秒以内/);
+  assert.equal(timeouts.size,0,'WSS timeout timer must be cleaned up');
   await click('clearLog');
   assert.equal(get('log').textContent,'');
   console.log('Game Server Lab passed: explicit WSS, bounded poll, HTTPS, gravity, haptic and background close');

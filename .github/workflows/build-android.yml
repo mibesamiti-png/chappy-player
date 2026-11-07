@@ -107,7 +107,7 @@ jobs:
             --source sample_apps/game_server_lab \
             --id local.chappy.game_server_lab \
             --name 'Chappy Game Server Lab' \
-            --version 0.1.0 \
+            --version 0.1.1 \
             --permission network --permission motion --permission haptics \
             --output chappy-game-server-lab.chappy
       - name: Upload Game Server Lab preview

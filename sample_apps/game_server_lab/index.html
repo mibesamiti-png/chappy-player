@@ -25,9 +25,11 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
 <label for="wssUrl">暗号化WebSocketサーバー（自分で指定）</label>
 <input id="wssUrl" type="url" placeholder="wss://your-game.example.org/room"
  autocomplete="off" maxlength="1400">
+<div class="row"><button id="fillWssExample" type="button">公開テスト用WSSを入力</button></div>
 <div class="row"><button id="connect">サーバーに接続</button>
 <button id="disconnect">切断</button></div>
 <p id="state" role="status">未接続</p>
+<small>接続先を許可した後、サーバーと通信します。30秒以上応答がない場合は失敗として表示します。</small>
 <label for="message">送信するテキスト／JSON（8KiBまで）</label>
 <textarea id="message" maxlength="8000">{"type":"ping"}</textarea>
 <div class="row"><button id="send">メッセージ送信</button>
@@ -40,8 +42,13 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
 <label for="httpsUrl">HTTPS API URL</label>
 <input id="httpsUrl" type="url" placeholder="https://your-game.example.org/status"
  autocomplete="off" maxlength="1400">
+<div class="row"><button id="fillGetExample" type="button">GETテストURL</button>
+<button id="fillPostExample" type="button">POSTテストURLとJSON</button></div>
+<label for="httpsBody">HTTPS POSTで送信するJSON（WSSの送信欄とは別・8KiBまで）</label>
+<textarea id="httpsBody" maxlength="8000">{"type":"ping"}</textarea>
 <div class="row"><button id="get">GETで取得</button>
 <button id="post">POSTでJSON送信</button></div>
+<small>GETは本文を送りません。POSTはこの欄のJSONを送信します。公開テスト先へ個人情報や秘密情報を送らないでください。</small>
 <small>リダイレクトは禁止。リクエストは8KiB、レスポンスは64KiB以下。平文HTTP/WSやローカルIPへの接続はこの段階では不可。</small>
 </section>
 <section><h2>通信ログ（この画面だけ）</h2>
@@ -53,7 +60,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
   'use strict';
   const $=id=>document.getElementById(id);
   const net=window.Chappy && window.Chappy.network;
-  let connected=false, polling=null, busy=false;
+  let connected=false, polling=null, busy=false, connecting=false, connectEpoch=0;
   const lines=[];
   function addLog(line){
     lines.push(String(line).slice(0,1200));
@@ -79,29 +86,70 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
     }catch(error){addLog('受信エラー: '+String(error.message||error));stopPolling();}
     finally{busy=false;}
   }
+  function timed(promise,ms,label){
+    let timer;
+    return Promise.race([promise,new Promise((_,reject)=>{
+      timer=setTimeout(()=>reject(new Error(label)),ms);
+    })]).finally(()=>{if(timer!==undefined)clearTimeout(timer);});
+  }
   async function operate(id, action){
     const button=$(id);
     button.disabled=true;
-    try{await action();}catch(error){addLog('エラー: '+String(error.message||error));}
+    try{await action();}catch(error){
+      if(id==='connect'){stopPolling();status('接続失敗（通信ログを確認）');}
+      addLog('エラー: '+String(error.message||error));
+    }
     finally{button.disabled=false;}
   }
   $('connect').addEventListener('click',()=>{
     void operate('connect',async()=>{
       if(!net)throw new Error('新しいChappy Playerが必要です');
-      if(connected)throw new Error('先に切断してください');
+      if(connected || connecting)throw new Error('先に切断するか接続完了を待ってください');
       const url=$('wssUrl').value.trim();
-      status('接続を確認中…');
-      const result=await net.connect(url);
-      if(result.connected){
-        connected=true;
-        status('接続中');
-        addLog('接続成功: '+result.origin);
-        polling=setInterval(()=>{void poll();},450);
-      }else status('接続できませんでした');
+      const epoch=++connectEpoch;
+      connecting=true;
+      let expired=false;
+      status('接続を確認中…（最大30秒）');
+      addLog('WSS接続を開始: '+url);
+      const pending=net.connect(url);
+      try{
+        const result=await timed(pending,30000,
+          'WSS接続が30秒以内に完了しませんでした。URL・通信環境・許可画面を確認してください');
+        if(epoch!==connectEpoch){
+          if(result.connected)void net.close().catch(()=>{});
+          return;
+        }
+        if(result.connected){
+          connected=true;
+          status('接続中');
+          addLog('接続成功: '+result.origin);
+          polling=setInterval(()=>{void poll();},450);
+        }else{
+          stopPolling();
+          status('接続できませんでした（ログを確認）');
+        }
+      }catch(error){
+        if(epoch===connectEpoch){
+          expired=true;
+          stopPolling();
+          status('接続失敗（通信ログを確認）');
+          addLog('WSS接続失敗: '+String(error.message||error));
+          // Never leave a failed session connected on the host.
+          void net.close().catch(()=>{});
+        }
+      }finally{
+        connecting=false;
+        if(expired){
+          // An older host may answer after UI timeout: close that late socket.
+          void pending.then(()=>{if(!connected) return net.close();})
+            .catch(()=>{});
+        }
+      }
     });
   });
   $('disconnect').addEventListener('click',()=>{
     void operate('disconnect',async()=>{
+      ++connectEpoch;
       stopPolling();
       if(net)await net.close();
       addLog('切断しました');
@@ -139,7 +187,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
     $(method).addEventListener('click',()=>{
       void operate(method,async()=>{
         if(!net)throw new Error('新しいChappy Playerが必要です');
-        const body=method==='post' ? $('message').value:'';
+        const body=method==='post' ? $('httpsBody').value:'';
         const answer=await net.request($('httpsUrl').value.trim(),
           method.toUpperCase(),body);
         addLog('HTTPS '+method.toUpperCase()+' '+answer.status+
@@ -147,10 +195,24 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
       });
     });
   }
+  $('fillGetExample').addEventListener('click',()=>{
+    $('httpsUrl').value='https://postman-echo.com/get?test=chappy';
+    addLog('GETテストURLを入力しました（送信は未実行）');
+  });
+  $('fillPostExample').addEventListener('click',()=>{
+    $('httpsUrl').value='https://postman-echo.com/post';
+    $('httpsBody').value='{"type":"ping"}';
+    addLog('POSTテストURLとJSONを入力しました（送信は未実行）');
+  });
+  $('fillWssExample').addEventListener('click',()=>{
+    $('wssUrl').value='wss://ws.postman-echo.com/raw';
+    addLog('WSSテストURLを入力しました（接続は未実行）');
+  });
   $('clearLog').addEventListener('click',()=>{lines.length=0;$('log').textContent='';});
   if(typeof document.addEventListener==='function'){
     document.addEventListener('visibilitychange',()=>{
       if(document.hidden){
+        ++connectEpoch;
         stopPolling();
         if(net)void net.close().catch(()=>{});
       }

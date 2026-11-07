@@ -93,6 +93,7 @@ class MiniAppGameNetwork {
   bool _connecting = false;
   WebSocket? _socket;
   HttpClient? _webSocketClient;
+  HttpClient? _pendingWebSocketClient;
   StreamSubscription<dynamic>? _listener;
   final Set<HttpClient> _httpRequests = <HttpClient>{};
   final Queue<String> _queue = Queue<String>();
@@ -198,6 +199,7 @@ class MiniAppGameNetwork {
       final address = await GameNetworkPolicy.resolvePublic(uri.host);
       _active(epoch);
       client = _client(uri, address);
+      _pendingWebSocketClient = client;
       final socket = await WebSocket.connect(uri.toString(),
         customClient: client,
         compression: CompressionOptions.compressionOff,
@@ -230,6 +232,9 @@ class MiniAppGameNetwork {
       client?.close(force: true);
       rethrow;
     } finally {
+      if (identical(_pendingWebSocketClient, client)) {
+        _pendingWebSocketClient = null;
+      }
       _connecting = false;
     }
   }
@@ -257,6 +262,9 @@ class MiniAppGameNetwork {
   }
 
   void close() {
+    ++_epoch; // Invalidate an in-flight DNS or TLS handshake.
+    _pendingWebSocketClient?.close(force: true);
+    _pendingWebSocketClient = null;
     final socket = _socket;
     _socket = null;
     final listener = _listener;
