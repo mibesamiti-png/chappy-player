@@ -7,6 +7,8 @@ on:
       - "tools/test_windows_companion.py"
       - "tools/test_windows_pairing.py"
       - "tools/test_windows_identity.py"
+      - "tools/test_pc_proof.py"
+      - "examples/windows_companion/identity_proof.py"
       - ".github/workflows/build-windows-companion.yml"
   workflow_dispatch:
 
@@ -31,6 +33,8 @@ jobs:
         run: python tools/test_windows_pairing.py
       - name: Exercise real Windows current-user DPAPI P-256 identity lifecycle
         run: python tools/test_windows_identity.py
+      - name: Verify P-256 signed challenge is context-bound and never auto-pairs
+        run: python tools/test_pc_proof.py
       - name: Build console-only, user-invoked Windows preview
         run: python -m PyInstaller --onefile --console --name ChappyCompanion examples/windows_companion/companion.py
       - name: Verify bundled EXE does not start advertising by default
