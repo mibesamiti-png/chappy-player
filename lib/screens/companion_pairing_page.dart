@@ -1,4 +1,6 @@
 import 'package:chappy_player/core/companion_pairing_client.dart';
+import 'package:chappy_player/core/companion_identity_client.dart';
+import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/companion_qr_invitation.dart';
 import 'package:chappy_player/screens/companion_qr_scanner_page.dart';
 import 'package:chappy_player/core/lan_discovery_client.dart';
@@ -21,6 +23,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     with WidgetsBindingObserver {
   final _fingerprint = TextEditingController();
   final _pairing = CompanionPairingClient();
+  final _identityExchange = CompanionIdentityExchange();
   bool _busy = false;
   bool _verified = false;
   String? _code;
@@ -39,6 +42,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     if (state != AppLifecycleState.resumed) {
       _generation++;
       _pairing.cancel();
+      _identityExchange.cancel();
       if (mounted) {
         setState(() {
           _busy = false;
@@ -54,6 +58,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     WidgetsBinding.instance.removeObserver(this);
     _generation++;
     _pairing.cancel();
+    _identityExchange.cancel();
     _fingerprint.dispose();
     super.dispose();
   }
@@ -101,21 +106,69 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         throw StateError('Wi-Fi接続中の前面画面のみ対応しています');
       }
       if (!mounted || generation != _generation) return;
-      final nonce = CompanionPairingClient.newNonce();
-      final code = CompanionPairingClient.confirmationCode(nonce);
+      final identityMode = _invite?.pcIdentityFingerprint != null;
+      final nonce = identityMode
+          ? CompanionIdentityClient.newNonce()
+          : CompanionPairingClient.newNonce();
+      final code = identityMode
+          ? CompanionIdentityClient.confirmationCode(nonce)
+          : CompanionPairingClient.confirmationCode(nonce);
       setState(() {
         _busy = true;
         _error = null;
         _verified = false;
         _code = code;
       });
-      final approved = await _pairing.confirm(
-        ip: widget.service.address,
-        port: widget.service.port,
-        fingerprint: _fingerprint.text,
-        nonce: nonce,
-        invitation: _invite?.invitation,
-      );
+      final approved = identityMode
+          ? await _identityExchange.confirm(
+              ip: widget.service.address,
+              port: widget.service.port,
+              tlsFingerprint: _fingerprint.text,
+              pcFingerprint: _invite!.pcIdentityFingerprint!,
+              invitation: _invite!.invitation,
+              qrExpires: _invite!.expiresUnix,
+              phoneNonce: nonce,
+              approvePhoneProof: () async {
+                if (!mounted || generation != _generation ||
+                    ModalRoute.of(context)?.isCurrent != true) {
+                  return false;
+                }
+                final consent = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (dialogContext) => AlertDialog(
+                    title: const Text('PCの端末鍵を確認しました'),
+                    content: Text(
+                      'QRで指定したPCの署名を検証できました。\n'
+                      'PC公開鍵SHA-256:\n' +
+                      _invite!.pcIdentityFingerprint! +
+                      '\n\nこのスマホの秘密鍵で使い捨ての認証要求に'
+                      '署名してPCへ返しますか？'
+                      '永続登録やPC操作の許可はまだ行われません。',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        child: const Text('拒否する'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        child: const Text('この1回だけ署名する'),
+                      ),
+                    ],
+                  ),
+                );
+                return consent == true && mounted &&
+                    generation == _generation;
+              },
+            )
+          : await _pairing.confirm(
+              ip: widget.service.address,
+              port: widget.service.port,
+              fingerprint: _fingerprint.text,
+              nonce: nonce,
+              invitation: _invite?.invitation,
+            );
       if (!mounted || generation != _generation) return;
       setState(() {
         _verified = approved;
@@ -134,6 +187,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   void _stop() {
     _generation++;
     _pairing.cancel();
+    _identityExchange.cancel();
     setState(() {
       _busy = false;
       _verified = false;
@@ -158,7 +212,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             Text('接続先: ${device.address}:${device.port}'),
             const SizedBox(height: 12),
             const Text(
-              'QRモードはPCで --start --pair --qr を起動。\n'
+              'QR-v3の端末相互認証はPCで'
+              ' --start --pair --qr --identity-pair を起動。\n'
+              '旧QR-v2は --start --pair --qr を起動。\n'
               '旧手入力モードの場合は --start --pair で起動してください。\n'
               'PC画面に表示される証明書SHA-256指紋64文字を入力します。'
               'この指紋は毎回変わり、端末名だけでは本人確認できません。',
@@ -171,7 +227,12 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
               label: const Text('PCの招待QRをカメラで読み取る'),
             ),
             if (_invite != null)
-              const Text('QRを確認しました。内容を確認して接続を開始してください。'),
+              Text(
+                _invite!.pcIdentityFingerprint != null
+                    ? 'QR-v3：PC固有の端末鍵を双方の署名で確認します。'
+                    : 'QR-v2：1回だけPCの承認を確認します。',
+                key: const Key('pair_qr_mode'),
+              ),
             const SizedBox(height: 16),
             TextField(
               key: const Key('pair_fingerprint'),
@@ -218,14 +279,18 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                 label: const Text('確認を中止'),
               ),
             if (_verified)
-              const Card(
+              Card(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Text(
-                    '証明書指紋が一致し、PC側でも確認されました。'
-                    'この1回の確認だけが成功した状態です。'
-                    '永続的なペアリングやPC操作権限はまだありません。',
-                    key: Key('pair_verified'),
+                    _invite?.pcIdentityFingerprint == null
+                        ? '証明書指紋が一致し、PC側でも確認されました。'
+                          'この1回の確認だけが成功した状態です。'
+                          '永続的なペアリングやPC操作権限はまだありません。'
+                        : 'PCとAndroid双方の署名が検証されました。'
+                          '認証はこの1回限り。'
+                          '信頼済み端末としての保存やPC操作権限はまだありません。',
+                    key: const Key('pair_verified'),
                   ),
                 ),
               ),
