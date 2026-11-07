@@ -7,11 +7,23 @@ const match = dartSource.match(/const _bootScript = r'''([\s\S]*?)''';/);
 assert(match, 'Could not extract boot script');
 const sent = [];
 const listeners = {};
+const timers = new Map();
+let nextTimerId = 0;
+const fakeSetTimeout = (fn, ms) => {
+  const id = ++nextTimerId;
+  timers.set(id, {fn, ms});
+  return id;
+};
+const fakeClearTimeout = id => timers.delete(id);
 const window = {
   ChappyHost: { postMessage(input) { sent.push(JSON.parse(input)); } },
   addEventListener(name, cb) { listeners[name] = cb; }
 };
-vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTimeout, String, Error});
+vm.runInNewContext(match[1], {
+  window, Object, Map, Promise,
+  setTimeout:fakeSetTimeout, clearTimeout:fakeClearTimeout,
+  String, Error
+});
 (async () => {
   const pending = window.Chappy.storage.set('key', 'value');
   assert.equal(sent[0].method, 'storage.set');
@@ -138,6 +150,8 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   window.__chappyResolve({requestId:sent[23].requestId,ok:true,
     value:{connected:true,origin:'wss://game.example.org:443'}});
   assert.equal((await ws).connected,true);
+  assert.equal([...timers.values()].filter(x => x.ms === 45000).length, 0,
+    'Successful WSS connect must cancel the 45s watchdog');
   const send=window.Chappy.network.send('{"hello":1}');
   assert.equal(sent[24].method,'network.send');
   assert.equal(sent[24].params.text,'{"hello":1}');
@@ -158,5 +172,23 @@ vm.runInNewContext(match[1], {window, Object, Map, Promise, setTimeout, clearTim
   assert.equal(sent[27].method,'network.close');
   window.__chappyResolve({requestId:sent[27].requestId,ok:true,value:true});
   assert.equal(await close,true);
-  console.log('Bridge smoke tests passed: game motion/haptics and permission-gated HTTPS/WSS protocol');
+
+  // A host that never answers WSS must fail closed: reject caller, send a
+  // best-effort host cancel, and ignore a response arriving after timeout.
+  const hanging=window.Chappy.network.connect('wss://game.example.org/stuck');
+  const sentConnect=sent[sent.length-1];
+  assert.equal(sentConnect.method,'network.connect');
+  const watchdog=[...timers.entries()].find(([,t]) => t.ms===45000);
+  assert.ok(watchdog,'WSS must have a bounded 45s bridge timer');
+  const [watchdogId,watchdogTimer]=watchdog;
+  timers.delete(watchdogId);
+  watchdogTimer.fn();
+  await assert.rejects(hanging,/WSS connection timed out after 45 seconds/);
+  const cancelHost=sent[sent.length-1];
+  assert.equal(cancelHost.method,'network.close');
+  assert.equal(cancelHost.requestId,'');
+  window.__chappyResolve({requestId:sentConnect.requestId,ok:true,
+    value:{connected:true,origin:'wss://game.example.org:443'}});
+  assert.equal(timers.size,0,'No timers remain after WSS timeout');
+  console.log('Bridge smoke tests passed: HTTPS/WSS, WSS hang cancellation and game motion/haptics');
 })().catch(err => { console.error(err); process.exit(1); });
