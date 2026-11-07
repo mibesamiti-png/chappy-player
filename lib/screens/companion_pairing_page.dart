@@ -106,6 +106,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             '保存を明示承認したPCだけが表示されます。');
         return;
       }
+      // The modal barrier prevents interaction with the parent page;
+      // the loading animation must not run behind an open dialog.
+      setState(() => _busy = false);
       final selected = await showDialog<String>(
         context: context,
         barrierDismissible: false,
@@ -123,7 +126,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                 ),
                 for (final record in records)
                   TextButton(
-                    key: Key('pair_choose_fp_' + record.fingerprint),
+                    key: Key('pair_choose_fp_${record.fingerprint}'),
                     onPressed: () => Navigator.of(ctx).pop(record.fingerprint),
                     child: Text(
                       record.fingerprint,
