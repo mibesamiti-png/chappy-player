@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "examples" / "windows_companion"))
 import companion  # noqa: E402
 import identity_pairing_v3 as v3  # noqa: E402
 import identity_proof as proof  # noqa: E402
+import pairing_server as server  # noqa: E402
 import verified_phone_history as history  # noqa: E402
 import windows_identity as pc  # noqa: E402
 
@@ -154,6 +155,104 @@ class VerifiedHistoryTests(unittest.TestCase):
             self.assertEqual(companion.main(["--verified-clear", "--qr"]), 2)
             self.assertEqual(companion.main(["--verified-clear", "--identity-pair"]), 2)
             beacon.assert_not_called()
+
+    def test_compare_known_phone_requires_explicit_qr_v3_flags(self):
+        with mock.patch.object(companion, "run_beacon") as beacon, \
+             mock.patch.object(server, "run_pairing") as run, \
+             mock.patch.object(history, "select_expected_verified_phone") as choose:
+            for args in (
+                ["--compare-known-phone"],
+                ["--start", "--compare-known-phone"],
+                ["--start", "--pair", "--compare-known-phone"],
+                ["--start", "--pair", "--qr", "--compare-known-phone"],
+                ["--start", "--pair", "--identity-pair", "--compare-known-phone"],
+                ["--identity-status", "--compare-known-phone"],
+                ["--verified-list", "--compare-known-phone"],
+            ):
+                with self.subTest(args=args):
+                    self.assertEqual(companion.main(args), 2)
+            beacon.assert_not_called()
+            run.assert_not_called()
+            choose.assert_not_called()
+
+    def test_compare_known_phone_cancellation_is_offline(self):
+        cli = [
+            "--start", "--pair", "--qr", "--identity-pair",
+            "--compare-known-phone", "--ip", "192.168.1.7",
+        ]
+        with mock.patch.object(history, "select_expected_verified_phone",
+                               return_value=None) as choose, \
+             mock.patch.object(server, "run_pairing") as run, \
+             mock.patch.object(companion, "discover_local_ipv4") as discover:
+            self.assertEqual(companion.main(cli), 2)
+            choose.assert_called_once_with()
+            run.assert_not_called()
+            discover.assert_not_called()
+
+    @unittest.skipUnless(os.name == "nt", "Windows Crypt32 DPAPI required")
+    def test_manual_phone_selector_reads_dpapi_before_listener_and_never_trusts(self):
+        cli = [
+            "--start", "--pair", "--qr", "--identity-pair",
+            "--compare-known-phone", "--ip", "192.168.1.7",
+        ]
+        with tempfile.TemporaryDirectory() as tmp, \
+             mock.patch.dict(os.environ, {"LOCALAPPDATA": tmp}), \
+             mock.patch.object(server, "run_pairing") as run, \
+             mock.patch.object(companion, "run_beacon") as beacon:
+            directory = Path(tmp) / "ChappyCompanion"
+            original_identity = pc.create_identity(directory)
+            first, second = "d" * 64, "e" * 64
+            history.remember_verified_phone(first, directory)
+            history.remember_verified_phone(second, directory)
+            encrypted = (directory / history.HISTORY_FILENAME).read_bytes()
+            with mock.patch("builtins.input", return_value="SELECT 2"):
+                self.assertEqual(companion.main(cli), 0)
+            run.assert_called_once_with(
+                "192.168.1.7", 10, qr=True, identity_mode=True,
+                expected_phone_fingerprint=second,
+            )
+            beacon.assert_not_called()
+            self.assertEqual(pc.identity_status(directory), original_identity)
+            self.assertEqual(
+                (directory / history.HISTORY_FILENAME).read_bytes(), encrypted
+            )
+            self.assertEqual(len(history.list_verified_phones(directory)), 2)
+
+            run.reset_mock()
+            for decline in ("", "2", "select 2", "SELECT 0", "SELECT 25",
+                            "SELECT 01", "DELETE", "SELECT 3"):
+                with self.subTest(answer=decline), \
+                     mock.patch("builtins.input", return_value=decline):
+                    self.assertEqual(companion.main(cli), 2)
+                run.assert_not_called()
+            with mock.patch("builtins.input", side_effect=EOFError):
+                self.assertEqual(companion.main(cli), 2)
+            run.assert_not_called()
+            self.assertEqual(
+                (directory / history.HISTORY_FILENAME).read_bytes(), encrypted
+            )
+
+    @unittest.skipUnless(os.name == "nt", "Windows Crypt32 DPAPI required")
+    def test_missing_or_corrupt_known_phone_history_fails_closed(self):
+        cli = [
+            "--start", "--pair", "--qr", "--identity-pair",
+            "--compare-known-phone", "--ip", "192.168.1.7",
+        ]
+        with tempfile.TemporaryDirectory() as tmp, \
+             mock.patch.dict(os.environ, {"LOCALAPPDATA": tmp}), \
+             mock.patch.object(server, "run_pairing") as run, \
+             mock.patch.object(companion, "run_beacon") as beacon, \
+             mock.patch("builtins.input") as prompt:
+            directory = Path(tmp) / "ChappyCompanion"
+            pc.create_identity(directory)
+            self.assertEqual(companion.main(cli), 1)
+            prompt.assert_not_called()
+            history.remember_verified_phone("f" * 64, directory)
+            (directory / history.HISTORY_FILENAME).write_bytes(b"broken DPAPI")
+            self.assertEqual(companion.main(cli), 1)
+            run.assert_not_called()
+            beacon.assert_not_called()
+            prompt.assert_not_called()
 
     @unittest.skipUnless(os.name == "nt", "Windows Crypt32 DPAPI required")
     def test_clear_keeps_pc_key_and_recovers_corrupt_history(self):
