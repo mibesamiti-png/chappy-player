@@ -25,6 +25,14 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from typing import TYPE_CHECKING
+from windows_identity import identity_status
+
+if TYPE_CHECKING:
+    from identity_pairing_v3 import IdentityPairingAttempt
+
+IDENTITY_PROTOCOL = "pair-identity-v3"
+
 from companion import (
     MAX_MINUTES,
     service_descriptor,
@@ -32,6 +40,7 @@ from companion import (
 )
 
 MAX_REQUEST = 256
+MAX_IDENTITY_REQUEST = 2048
 MAX_APPROVAL_SECONDS = 25
 MAX_INVITE_SECONDS = 600
 
@@ -108,7 +117,11 @@ def create_ephemeral_certificate(ip: str) -> tuple[bytes, bytes, str]:
 
 
 def _ask_pc_user(nonce: str) -> bool:
-    code = confirmation_code(nonce)
+    if len(nonce) == 64:
+        from identity_pairing_v3 import comparison_code
+        code = comparison_code(nonce)
+    else:
+        code = confirmation_code(nonce)
     print()
     print("==== PHONE CONFIRMATION REQUEST ====")
     print("Code shown on phone: " + code)
@@ -131,7 +144,8 @@ def _ask_pc_user(nonce: str) -> bool:
 
 
 def invite_payload(ip: str, port: int, fingerprint: str,
-                   token: str, expires_at: int) -> str:
+                   token: str, expires_at: int,
+                   identity_fingerprint: str | None = None) -> str:
     """Strict, short-lived QR transfer string; nothing grants PC commands."""
     validate_lan_ipv4(ip)
     if not 1 <= port <= 65535:
@@ -142,9 +156,16 @@ def invite_payload(ip: str, port: int, fingerprint: str,
         raise ValueError("Invalid invitation")
     if expires_at <= 0:
         raise ValueError("Invalid expiry")
+    if identity_fingerprint is not None and (
+        len(identity_fingerprint) != 64 or
+        any(c not in "0123456789abcdef" for c in identity_fingerprint)
+    ):
+        raise ValueError("Invalid persistent PC identity fingerprint")
+    version = "v3" if identity_fingerprint is not None else "v2"
     return (
-        "chappy-pair://v2?ip=" + ip + "&port=" + str(port)
+        "chappy-pair://" + version + "?ip=" + ip + "&port=" + str(port)
         + "&fp=" + fingerprint + "&inv=" + token + "&exp=" + str(expires_at)
+        + ("&pc=" + identity_fingerprint if identity_fingerprint is not None else "")
     )
 
 
@@ -171,7 +192,8 @@ def render_qr(invitation: str) -> str:
     return "\n".join(rows)
 
 
-def make_handler(session: PairingSession):
+def make_handler(session: PairingSession,
+                 identity: IdentityPairingAttempt | None = None):
     class PairHandler(BaseHTTPRequestHandler):
         server_version = "ChappyPairPreview/1.0"
         sys_version = ""
@@ -198,7 +220,62 @@ def make_handler(session: PairingSession):
         def do_GET(self) -> None:
             self._reply(405, {"status": "not_supported"})
 
+        def _handle_identity(self) -> None:
+            if identity is None or self.path not in (
+                "/v3/identity-begin", "/v3/identity-finish",
+            ):
+                self._reply(404, {"status": "not_found"})
+                return
+            length_text = self.headers.get("Content-Length", "")
+            if not length_text.isascii() or not length_text.isdecimal():
+                self._reply(400, {"status": "bad_request"})
+                return
+            length = int(length_text)
+            if not 1 <= length <= MAX_IDENTITY_REQUEST:
+                self._reply(413, {"status": "too_large"})
+                return
+            if self.headers.get("Content-Type") != "application/json":
+                self._reply(415, {"status": "unsupported_type"})
+                return
+            try:
+                data = json.loads(self.rfile.read(length))
+                if not isinstance(data, dict) or data.get("protocol") != IDENTITY_PROTOCOL:
+                    raise ValueError("Invalid identity protocol")
+                if self.path == "/v3/identity-begin":
+                    if set(data) != {
+                        "protocol", "invitation", "phone_nonce", "phone_fp",
+                    }:
+                        raise ValueError("Invalid begin fields")
+                    def approve(phone_nonce: str) -> bool:
+                        print("Phone's PUBLIC identity fingerprint:")
+                        print(data["phone_fp"])
+                        print("Compare the confirmation code on BOTH devices.")
+                        return _ask_pc_user(phone_nonce)
+                    answer = identity.begin(
+                        invitation=data["invitation"],
+                        phone_fingerprint=data["phone_fp"],
+                        phone_nonce=data["phone_nonce"],
+                        approve_on_pc=approve,
+                    )
+                else:
+                    if set(data) != {
+                        "protocol", "invitation", "phone_fp", "phone_proof",
+                    } or not isinstance(data["phone_proof"], dict):
+                        raise ValueError("Invalid finish fields")
+                    answer = identity.finish(
+                        invitation=data["invitation"],
+                        phone_fingerprint=data["phone_fp"],
+                        phone_proof=data["phone_proof"],
+                    )
+                self._reply(200, answer)
+            except (ValueError, TypeError, KeyError, PermissionError, OSError):
+                # Do not reveal secrets or the reason a public identity failed.
+                self._reply(403, {"status": "identity_denied"})
+
         def do_POST(self) -> None:
+            if self.path.startswith("/v3/"):
+                self._handle_identity()
+                return
             if self.path != "/v1/pair-preview":
                 self._reply(404, {"status": "not_found"})
                 return
@@ -293,13 +370,22 @@ class BoundedHttpsServer(ThreadingHTTPServer):
             self._active.release()
 
 
-def run_pairing(ip: str, minutes: int, qr: bool = False) -> None:
+def run_pairing(ip: str, minutes: int, qr: bool = False,
+                identity_mode: bool = False) -> None:
     """Expose a single, explicitly PC-approved HTTPS confirmation session."""
     from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
     address = validate_lan_ipv4(ip)
     if not 1 <= minutes <= MAX_MINUTES:
         raise ValueError("Duration must be 1-30 minutes")
+    if identity_mode and not qr:
+        raise ValueError("Identity enrollment requires a scanned QR")
+    # Never create a persistent signing key when a PC listener is started.
+    pc_public_fingerprint = identity_status() if identity_mode else None
+    if identity_mode and pc_public_fingerprint is None:
+        raise ValueError("Create PC identity explicitly before v3 enrollment")
+    if identity_mode:
+        from identity_pairing_v3 import IdentityPairingAttempt
     pem, key, fingerprint = create_ephemeral_certificate(address)
 
     with tempfile.TemporaryDirectory(prefix="chappy-pair-session-") as folder:
@@ -318,7 +404,15 @@ def run_pairing(ip: str, minutes: int, qr: bool = False) -> None:
         expires_at = int(time.time() + lifetime_seconds)
         invitation = secrets.token_hex(16) if qr else None
         session = PairingSession(invitation=invitation, expires_at=expires_at)
-        with BoundedHttpsServer((address, 0), make_handler(session)) as server:
+        identity = (
+            IdentityPairingAttempt(
+                invitation=invitation, qr_expires=expires_at,
+                tls_fingerprint=fingerprint, pc_fingerprint=pc_public_fingerprint,
+            ) if identity_mode else None
+        )
+        with BoundedHttpsServer(
+            (address, 0), make_handler(session, identity),
+        ) as server:
             server.context = context
             port = server.server_address[1]
             nonce = secrets.token_hex(4)
@@ -342,7 +436,8 @@ def run_pairing(ip: str, minutes: int, qr: bool = False) -> None:
                 if qr:
                     assert invitation is not None
                     invite_text = invite_payload(
-                        address, port, fingerprint, invitation, expires_at
+                        address, port, fingerprint, invitation, expires_at,
+                        identity_fingerprint=pc_public_fingerprint,
                     )
                     print("Scan this QR on your Android Chappy Network Lab:")
                     # The terminal may use a legacy encoding. Do not log the
@@ -353,9 +448,12 @@ def run_pairing(ip: str, minutes: int, qr: bool = False) -> None:
                         print("Terminal lacks UTF-8 QR glyphs. Run chcp 65001.")
                 print("This fingerprint is generated fresh at every start.")
                 print("Your PC must separately approve one phone request.")
+                if identity_mode:
+                    print("Identity v3: mutual signed proof ONLY; no saved pairing.")
                 print("Auto-stop: " + str(minutes) + " min. Ctrl+C stops.")
                 deadline = time.monotonic() + lifetime_seconds
-                while time.monotonic() < deadline and not session.finished.is_set():
+                finished = identity.finished if identity is not None else session.finished
+                while time.monotonic() < deadline and not finished.is_set():
                     try:
                         server.handle_request()
                     except (ssl.SSLError, OSError):

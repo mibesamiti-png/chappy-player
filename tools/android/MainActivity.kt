@@ -258,6 +258,49 @@ class MainActivity : FlutterActivity() {
                             }
                         }
                     }
+                    "pcIdentitySignProof", "pcIdentityVerifyProof" -> {
+                        if (!micActivityVisible || !networkDiscovery.pairingAllowed()) {
+                            result.error("NETLAB_NOT_FOREGROUND",
+                                "PC identity proof requires visible trusted Wi-Fi UI", null)
+                        } else {
+                            try {
+                                val params = call.arguments as? Map<*, *>
+                                    ?: throw IllegalArgumentException("Missing proof context")
+                                fun field(name: String): String =
+                                    params[name] as? String
+                                        ?: throw IllegalArgumentException("Missing " + name)
+                                val expiry = (params["expires"] as? Number)?.toLong()
+                                    ?: throw IllegalArgumentException("Missing expiry")
+                                val invitation = field("invitation")
+                                val tlsFp = field("tlsFp")
+                                val peerFp = field("peerFp")
+                                val nonce = field("nonce")
+                                if (call.method == "pcIdentitySignProof") {
+                                    result.success(NativePcProof.signAndroid(
+                                        invitation, tlsFp, peerFp, nonce, expiry
+                                    ))
+                                } else {
+                                    val raw = params["proof"] as? Map<*, *>
+                                        ?: throw IllegalArgumentException("Missing signature")
+                                    if (raw.size != 3 || raw.keys.any { it !is String } ||
+                                        raw.values.any { it !is String }) {
+                                        throw IllegalArgumentException("Invalid signature fields")
+                                    }
+                                    val proof = raw.entries.associate {
+                                        (key, value) -> (key as String) to (value as String)
+                                    }
+                                    result.success(NativePcProof.verifyPeerProof(
+                                        proof, field("expectedFp"), field("role"),
+                                        invitation, tlsFp, peerFp, nonce, expiry,
+                                        System.currentTimeMillis() / 1000L
+                                    ))
+                                }
+                            } catch (error: Exception) {
+                                result.error("NETLAB_PROOF_DENIED",
+                                    "PC相互認証の検証に失敗: ${error.javaClass.simpleName}", null)
+                            }
+                        }
+                    }
                     "trafficSnapshot" -> {
                         if (!micActivityVisible) {
                             result.error("NETLAB_NOT_FOREGROUND",

@@ -1,0 +1,284 @@
+"""NETLAB-03B-4 QR-v3 offline state machine and HTTP handler contracts.
+
+Uses isolated localhost HTTP only for unit tests. Real connection is pinned TLS.
+No PC trust storage, traffic reading, file transfer or remote-control access.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+import sys
+import threading
+import time
+import unittest
+import urllib.error
+import urllib.request
+from http.server import ThreadingHTTPServer
+from unittest import mock
+
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "examples" / "windows_companion"))
+
+import identity_pairing_v3 as v3  # noqa: E402
+import identity_proof as proof  # noqa: E402
+import pairing_server as server  # noqa: E402
+import companion  # noqa: E402
+
+INV = "a" * 32
+TLS = "b" * 64
+PHONE_NONCE = "c" * 64
+
+
+def fingerprint(key):
+    spki = key.public_key().public_bytes(
+        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    return hashlib.sha256(spki).hexdigest()
+
+
+class IdentityV3Tests(unittest.TestCase):
+    def setUp(self):
+        self.pc = ec.generate_private_key(ec.SECP256R1())
+        self.phone = ec.generate_private_key(ec.SECP256R1())
+        self.pc_fp = fingerprint(self.pc)
+        self.phone_fp = fingerprint(self.phone)
+        self.expiry = int(time.time()) + 240
+        self.calls = []
+
+        def pc_signer(**kwargs):
+            self.calls.append(kwargs)
+            return proof._sign_with_key(self.pc, role="pc", **kwargs)
+
+        self.signer = pc_signer
+
+    def session(self):
+        return v3.IdentityPairingAttempt(
+            invitation=INV, qr_expires=self.expiry, tls_fingerprint=TLS,
+            pc_fingerprint=self.pc_fp, signer=self.signer,
+        )
+
+    def phone_proof(self, begin):
+        return proof._sign_with_key(
+            self.phone, role="android", invitation=INV,
+            tls_fingerprint=TLS, peer_fingerprint=self.pc_fp,
+            nonce=begin["pc_nonce"], expires_at=begin["expires"],
+        )
+
+    def test_v3_qr_strict_pc_identity_and_legacy_compatibility(self):
+        legacy = server.invite_payload(
+            "192.168.1.7", 49152, TLS, INV, self.expiry,
+        )
+        modern = server.invite_payload(
+            "192.168.1.7", 49152, TLS, INV, self.expiry,
+            identity_fingerprint=self.pc_fp,
+        )
+        self.assertIn("chappy-pair://v2?", legacy)
+        self.assertNotIn("&pc=", legacy)
+        self.assertIn("chappy-pair://v3?", modern)
+        self.assertTrue(modern.endswith("&pc=" + self.pc_fp))
+        self.assertLess(len(modern), 384)
+        with self.assertRaises(ValueError):
+            server.invite_payload(
+                "192.168.1.7", 49152, TLS, INV, self.expiry,
+                identity_fingerprint="X" * 64,
+            )
+
+    def test_full_two_device_proof_and_replay_refusal(self):
+        s = self.session()
+        approvals = []
+        def approve(nonce):
+            approvals.append(nonce)
+            return True
+        begin = s.begin(
+            invitation=INV, phone_fingerprint=self.phone_fp,
+            phone_nonce=PHONE_NONCE, approve_on_pc=approve,
+        )
+        self.assertEqual(approvals, [PHONE_NONCE])
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(begin["phone_nonce"], PHONE_NONCE)
+        self.assertRegex(begin["pc_nonce"], r"^[a-f0-9]{64}$")
+        self.assertTrue(proof.verify_identity_proof(
+            begin["pc_proof"], expected_signer_fingerprint=self.pc_fp,
+            role="pc", invitation=INV, tls_fingerprint=TLS,
+            peer_fingerprint=self.phone_fp, nonce=PHONE_NONCE,
+            expires_at=begin["expires"],
+        ))
+        with self.assertRaises(ValueError):
+            s.begin(
+                invitation=INV, phone_fingerprint=self.phone_fp,
+                phone_nonce=PHONE_NONCE, approve_on_pc=approve,
+            )
+        answer = s.finish(
+            invitation=INV, phone_fingerprint=self.phone_fp,
+            phone_proof=self.phone_proof(begin),
+        )
+        self.assertEqual(answer["status"], "approved")
+        self.assertEqual(answer["pc_nonce"], begin["pc_nonce"])
+        self.assertTrue(s.finished.is_set())
+        with self.assertRaises(ValueError):
+            s.finish(
+                invitation=INV, phone_fingerprint=self.phone_fp,
+                phone_proof=self.phone_proof(begin),
+            )
+
+    def test_invalid_begin_does_not_sign_or_approve(self):
+        s = self.session()
+        approve = mock.Mock(return_value=True)
+        for kwargs in (
+            {"invitation": "e" * 32},
+            {"phone_fingerprint": "Z" * 64},
+            {"phone_nonce": "invalid"},
+            {"invitation": INV.upper()},
+        ):
+            values = dict(
+                invitation=INV, phone_fingerprint=self.phone_fp,
+                phone_nonce=PHONE_NONCE, approve_on_pc=approve,
+            )
+            values.update(kwargs)
+            with self.assertRaises(ValueError):
+                s.begin(**values)
+        approve.assert_not_called()
+        self.assertEqual(self.calls, [])
+        self.assertFalse(s.finished.is_set())
+
+    def test_pc_denial_and_wrong_identity_never_succeed(self):
+        s = self.session()
+        with self.assertRaises(PermissionError):
+            s.begin(
+                invitation=INV, phone_fingerprint=self.phone_fp,
+                phone_nonce=PHONE_NONCE, approve_on_pc=lambda _: False,
+            )
+        self.assertEqual(self.calls, [])
+        self.assertTrue(s.finished.is_set())
+        with self.assertRaises(ValueError):
+            s.begin(
+                invitation=INV, phone_fingerprint=self.phone_fp,
+                phone_nonce=PHONE_NONCE, approve_on_pc=lambda _: True,
+            )
+        def wrong_signer(**kwargs):
+            return proof._sign_with_key(
+                ec.generate_private_key(ec.SECP256R1()), role="pc", **kwargs,
+            )
+        s = v3.IdentityPairingAttempt(
+            invitation=INV, qr_expires=self.expiry, tls_fingerprint=TLS,
+            pc_fingerprint=self.pc_fp, signer=wrong_signer,
+        )
+        with self.assertRaises(ValueError):
+            s.begin(
+                invitation=INV, phone_fingerprint=self.phone_fp,
+                phone_nonce=PHONE_NONCE, approve_on_pc=lambda _: True,
+            )
+        self.assertTrue(s.finished.is_set())
+
+    def test_replay_wrong_key_and_tampering_consume_final_challenge(self):
+        for attack in ("wrongkey", "altered", "wronginvite", "wrongpeer"):
+            with self.subTest(attack=attack):
+                s = self.session()
+                begin = s.begin(
+                    invitation=INV, phone_fingerprint=self.phone_fp,
+                    phone_nonce=PHONE_NONCE, approve_on_pc=lambda _: True,
+                )
+                signed = self.phone_proof(begin)
+                invite = INV
+                phone_fp = self.phone_fp
+                if attack == "wrongkey":
+                    signed = proof._sign_with_key(
+                        ec.generate_private_key(ec.SECP256R1()),
+                        role="android", invitation=INV, tls_fingerprint=TLS,
+                        peer_fingerprint=self.pc_fp, nonce=begin["pc_nonce"],
+                        expires_at=begin["expires"],
+                    )
+                elif attack == "altered":
+                    signed["signature"] = "broken!!"
+                elif attack == "wronginvite":
+                    invite = "f" * 32
+                else:
+                    phone_fp = self.pc_fp
+                with self.assertRaises(ValueError):
+                    s.finish(
+                        invitation=invite, phone_fingerprint=phone_fp,
+                        phone_proof=signed,
+                    )
+                self.assertTrue(s.finished.is_set())
+                with self.assertRaises(ValueError):
+                    s.finish(
+                        invitation=INV, phone_fingerprint=self.phone_fp,
+                        phone_proof=self.phone_proof(begin),
+                    )
+
+    def test_expired_invitation_is_rejected(self):
+        s = self.session()
+        with mock.patch.object(v3.time, "time", return_value=self.expiry):
+            with self.assertRaises(ValueError):
+                s.begin(
+                    invitation=INV, phone_fingerprint=self.phone_fp,
+                    phone_nonce=PHONE_NONCE, approve_on_pc=lambda _: True,
+                )
+        self.assertEqual(self.calls, [])
+
+    def test_comparison_code_is_not_authentication_secret(self):
+        self.assertRegex(v3.comparison_code(PHONE_NONCE), r"^[0-9A-F]{6}$")
+        self.assertEqual(
+            v3.comparison_code(PHONE_NONCE),
+            hashlib.sha256(bytes.fromhex(PHONE_NONCE)).hexdigest()[:6].upper(),
+        )
+        for invalid in ("a" * 32, "Z" * 64, ""):
+            with self.assertRaises(ValueError):
+                v3.comparison_code(invalid)
+
+    def test_http_v3_begin_finish_and_no_cross_protocol_downgrade(self):
+        s = self.session()
+        legacy = server.PairingSession(invitation=INV, expires_at=self.expiry)
+        http = ThreadingHTTPServer(
+            ("127.0.0.1", 0), server.make_handler(legacy, s),
+        )
+        runner = threading.Thread(target=http.serve_forever, daemon=True)
+        runner.start()
+
+        def send(path, data):
+            request = urllib.request.Request(
+                "http://127.0.0.1:" + str(http.server_port) + path,
+                data=json.dumps(data).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            return urllib.request.urlopen(request, timeout=4)
+
+        try:
+            with mock.patch.object(server, "_ask_pc_user", return_value=True) as approve:
+                begin_request = {
+                    "protocol": v3.PROTOCOL, "invitation": INV,
+                    "phone_fp": self.phone_fp, "phone_nonce": PHONE_NONCE,
+                }
+                with send("/v3/identity-begin", begin_request) as r:
+                    self.assertEqual(r.status, 200)
+                    begin = json.load(r)
+                approve.assert_called_once_with(PHONE_NONCE)
+                with self.assertRaises(urllib.error.HTTPError):
+                    send("/v3/identity-begin", begin_request)
+                with send("/v3/identity-finish", {
+                    "protocol": v3.PROTOCOL, "invitation": INV,
+                    "phone_fp": self.phone_fp,
+                    "phone_proof": self.phone_proof(begin),
+                }) as r:
+                    self.assertEqual(json.load(r)["status"], "approved")
+                self.assertTrue(s.finished.is_set())
+                self.assertFalse(legacy.claimed)
+        finally:
+            http.shutdown()
+            http.server_close()
+            runner.join(timeout=2)
+
+    def test_requires_explicit_cli_flags_and_no_network_identity_side_effects(self):
+        self.assertEqual(companion.main(["--identity-pair"]), 2)
+        self.assertEqual(companion.main(["--start", "--identity-pair"]), 2)
+        self.assertEqual(companion.main(["--start", "--pair", "--identity-pair"]), 2)
+        self.assertEqual(companion.main(["--identity-create", "--identity-pair"]), 2)
+        self.assertEqual(companion.main([]), 0)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

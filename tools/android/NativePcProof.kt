@@ -55,6 +55,10 @@ internal object NativePcProof {
         invitation: String, tlsFingerprint: String, peerFingerprint: String,
         nonce: String, expiresAt: Long
     ): Map<String, String> {
+        val now = System.currentTimeMillis() / 1000L
+        require(expiresAt > now && expiresAt - now <= 90L) {
+            "Identity proof must expire within 90 seconds"
+        }
         val message = canonicalChallenge(
             "android", invitation, tlsFingerprint, peerFingerprint, nonce, expiresAt
         )

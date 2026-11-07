@@ -9,6 +9,7 @@ on:
       - "tools/test_windows_identity.py"
       - "tools/test_pc_proof.py"
       - "tools/test_mutual_proof_session.py"
+      - "tools/test_identity_pairing_v3.py"
       - "examples/windows_companion/identity_proof.py"
       - ".github/workflows/build-windows-companion.yml"
   workflow_dispatch:
@@ -38,6 +39,8 @@ jobs:
         run: python tools/test_pc_proof.py
       - name: Check two-sided one-shot proof and approvals under replay/denial
         run: python tools/test_mutual_proof_session.py
+      - name: Verify QR-v3 one-time challenge, mutual ECDSA and replay denial
+        run: python tools/test_identity_pairing_v3.py
       - name: Build console-only, user-invoked Windows preview
         run: python -m PyInstaller --onefile --console --name ChappyCompanion examples/windows_companion/companion.py
       - name: Verify bundled EXE does not start advertising by default

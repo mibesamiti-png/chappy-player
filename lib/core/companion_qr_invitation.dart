@@ -12,6 +12,7 @@ class CompanionQrInvitation {
   final String fingerprint;
   final String invitation;
   final int expiresUnix;
+  final String? pcIdentityFingerprint;
 
   const CompanionQrInvitation({
     required this.ip,
@@ -19,27 +20,31 @@ class CompanionQrInvitation {
     required this.fingerprint,
     required this.invitation,
     required this.expiresUnix,
+    this.pcIdentityFingerprint,
   });
 
   static CompanionQrInvitation parse(
     String raw, {
     DateTime? now,
   }) {
-    if (raw.length > 256 || raw.length < 125 ||
+    if (raw.length > 384 || raw.length < 125 ||
         !RegExp(r'^[\x21-\x7e]+$').hasMatch(raw)) {
       throw const FormatException('QRデータの長さまたは文字が不正です');
     }
     final uri = Uri.tryParse(raw);
     if (uri == null ||
         uri.scheme != 'chappy-pair' ||
-        uri.host != 'v2' ||
+        (uri.host != 'v2' && uri.host != 'v3') ||
         uri.path.isNotEmpty ||
         uri.hasFragment ||
         uri.userInfo.isNotEmpty ||
         uri.hasPort) {
       throw const FormatException('Chappy PC用のQRではありません');
     }
-    const expected = <String>{'ip', 'port', 'fp', 'inv', 'exp'};
+    final isV3 = uri.host == 'v3';
+    final expected = <String>{
+      'ip', 'port', 'fp', 'inv', 'exp', if (isV3) 'pc',
+    };
     final parameters = uri.queryParametersAll;
     if (parameters.keys.toSet().difference(expected).isNotEmpty ||
         expected.difference(parameters.keys.toSet()).isNotEmpty ||
@@ -58,6 +63,10 @@ class CompanionQrInvitation {
     final expiryText = parameters['exp']!.single;
     final pin = parameters['fp']!.single;
     final token = parameters['inv']!.single;
+    final pc = isV3 ? parameters['pc']!.single : null;
+    if (pc != null && !RegExp(r'^[0-9a-f]{64}$').hasMatch(pc)) {
+      throw const FormatException('PCの端末公開鍵指紋が不正です');
+    }
     if (!RegExp(r'^[0-9]{1,5}$').hasMatch(portText) ||
         !RegExp(r'^[0-9]{10}$').hasMatch(expiryText) ||
         !RegExp(r'^[0-9a-f]{32}$').hasMatch(token)) {
@@ -76,6 +85,7 @@ class CompanionQrInvitation {
     return CompanionQrInvitation(
       ip: ip, port: port, fingerprint: pin,
       invitation: token, expiresUnix: expiry,
+      pcIdentityFingerprint: pc,
     );
   }
 }
