@@ -71,8 +71,11 @@ class PcIdentityTests(unittest.TestCase):
             # No--start launches no service or hidden identity creation.
             self.assertEqual(companion.main([]), 0)
             beacon.assert_not_called()
+            with self.assertRaises(SystemExit) as conflict:
+                companion.main(["--identity-create", "--start"])
+            self.assertEqual(conflict.exception.code, 2)
+            # Network flags are rejected even without --start.
             self.assertEqual(companion.main(["--identity-status", "--pair"]), 2)
-            self.assertEqual(companion.main(["--identity-create", "--start"]), 2)
             beacon.assert_not_called()
 
     @unittest.skipUnless(os.name == "nt", "Windows CLI only")
