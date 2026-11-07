@@ -163,6 +163,38 @@ def clear_verified_phone_history(directory: Path | None = None) -> None:
     _history_path(directory).unlink(missing_ok=True)
 
 
+def select_expected_verified_phone(directory: Path | None = None) -> str | None:
+    """Explicitly select one DPAPI history fingerprint before any LAN startup.
+
+    Returns only a PUBLIC fingerprint as an optional comparison condition,
+    never a trusted peer credential or permission for future requests.
+    A cancelled selection does not start pairing.
+    """
+    records = list_verified_phones(directory)
+    if not records:
+        raise ValueError("No saved phone history; verify and SAVE a QR-v3 phone first")
+    print("Choose a PREVIOUSLY VERIFIED Android public-key fingerprint:")
+    for index, row in enumerate(records, start=1):
+        print(f"  {index}. {row['fingerprint']}  verified_at={row['verified_at']}")
+    print("Matching the claimed key is NOT proof of possession or permission.")
+    print("The new QR-v3 exchange still needs PC YES and two signatures.")
+    try:
+        answer = input("Type SELECT <number> to compare, or Enter to cancel: ").strip()
+    except (EOFError, OSError):
+        return None
+    choice = re.fullmatch(r"SELECT ([1-9][0-9]?)", answer)
+    if choice is None:
+        return None
+    index = int(choice.group(1))
+    if index > len(records):
+        return None
+    fingerprint = records[index - 1]["fingerprint"]
+    assert isinstance(fingerprint, str)
+    print("Manually selected Android PUBLIC fingerprint: " + fingerprint)
+    print("Any different phone key claim will be rejected before PC approval.")
+    return fingerprint
+
+
 def offer_remember_verified_phone(fingerprint: str) -> bool:
     """Separate offline PC consent AFTER a successful one-shot mutual proof."""
     if not _valid_fp(fingerprint):
