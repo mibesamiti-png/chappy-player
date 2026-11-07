@@ -19,6 +19,10 @@ class VerifiedPcHistoryClient {
   Future<List<VerifiedPcRecord>> forget(String fingerprint) =>
       _load('verifiedPcForget', fingerprint);
 
+  /// Erase encrypted local history AND its AES key, retaining the P-256 identity.
+  /// The trusted UI must confirm this separate destructive action explicitly.
+  Future<List<VerifiedPcRecord>> clear() => _load('verifiedPcClear');
+
   Future<List<VerifiedPcRecord>> _load(
     String method, [
     String? fingerprint,

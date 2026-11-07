@@ -135,6 +135,55 @@ class VerifiedHistoryTests(unittest.TestCase):
                                 )
                 self.assertIsNone(other.verified_phone_fingerprint)
 
+    def test_clear_cli_requires_exact_consent_and_never_starts_network(self):
+        with mock.patch.object(companion, "run_beacon") as beacon, \
+             mock.patch.object(history, "clear_verified_phone_history") as clear:
+            with mock.patch("builtins.input", return_value="no"):
+                self.assertEqual(companion.main(["--verified-clear"]), 2)
+            with mock.patch("builtins.input", side_effect=EOFError):
+                self.assertEqual(companion.main(["--verified-clear"]), 2)
+            clear.assert_not_called()
+            with mock.patch("builtins.input", return_value="CLEAR"):
+                self.assertEqual(companion.main(["--verified-clear"]), 0)
+            clear.assert_called_once_with()
+            beacon.assert_not_called()
+            with self.assertRaises(SystemExit) as conflicting:
+                companion.main(["--verified-clear", "--start"])
+            self.assertEqual(conflicting.exception.code, 2)
+            self.assertEqual(companion.main(["--verified-clear", "--pair"]), 2)
+            self.assertEqual(companion.main(["--verified-clear", "--qr"]), 2)
+            self.assertEqual(companion.main(["--verified-clear", "--identity-pair"]), 2)
+            beacon.assert_not_called()
+
+    @unittest.skipUnless(os.name == "nt", "Windows Crypt32 DPAPI required")
+    def test_clear_keeps_pc_key_and_recovers_corrupt_history(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+             mock.patch.dict(os.environ, {"LOCALAPPDATA": tmp}), \
+             mock.patch.object(companion, "run_beacon") as beacon:
+            folder = Path(tmp) / "ChappyCompanion"
+            owner = pc.create_identity(folder)
+            history.remember_verified_phone("f" * 64, folder)
+            file = folder / history.HISTORY_FILENAME
+            self.assertTrue(file.exists())
+            with mock.patch("builtins.input", return_value="cancel"):
+                self.assertEqual(companion.main(["--verified-clear"]), 2)
+            self.assertEqual(len(history.list_verified_phones(folder)), 1)
+            with mock.patch("builtins.input", return_value="CLEAR"):
+                self.assertEqual(companion.main(["--verified-clear"]), 0)
+            self.assertFalse(file.exists())
+            self.assertEqual(pc.identity_status(folder), owner)
+            self.assertEqual(history.list_verified_phones(folder), [])
+
+            history.remember_verified_phone("e" * 64, folder)
+            file.write_bytes(b"corrupted ciphertext")
+            with self.assertRaises((ValueError, OSError)):
+                history.list_verified_phones(folder)
+            with mock.patch("builtins.input", return_value="CLEAR"):
+                self.assertEqual(companion.main(["--verified-clear"]), 0)
+            self.assertEqual(history.list_verified_phones(folder), [])
+            self.assertEqual(pc.identity_status(folder), owner)
+            beacon.assert_not_called()
+
     @unittest.skipUnless(os.name == "nt", "Windows Crypt32 DPAPI required")
     def test_encrypted_save_list_dedupe_forget_revoke_and_rotation(self):
         with tempfile.TemporaryDirectory() as tmp:

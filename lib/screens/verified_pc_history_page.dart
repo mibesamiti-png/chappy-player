@@ -55,6 +55,55 @@ class _VerifiedPcHistoryPageState extends State<VerifiedPcHistoryPage> {
     }
   }
 
+  /// Manual recovery also works when encrypted history cannot be decrypted.
+  /// Erasing locally never revokes a PC key or communicates over the network.
+  Future<void> _clearAll() async {
+    if (_busy) return;
+    final yes = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('すべてのPC確認履歴を削除'),
+        content: const Text(
+          'このスマホ内のPC公開鍵指紋の記録をすべて削除します。'
+          '暗号化用の保存鍵も削除され、元には戻せません。'
+          'Android本体の端末署名キーは残ります。'
+          'PC側の記録や秘密鍵は変更されず、相手への失効通知も送りません。'
+          '破損した履歴の初期化にも利用できます。'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('削除しない'),
+          ),
+          FilledButton(
+            key: const Key('verified_pc_clear_confirm'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('すべての記録を削除'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || yes != true || _busy) return;
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final result = await widget.client.clear();
+      if (!mounted || generation != _generation) return;
+      setState(() => _records = result);
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _error = 'すべての確認履歴を削除できません: $error');
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   Future<void> _forget(String fingerprint) async {
     if (_busy) return;
     final yes = await showDialog<bool>(
@@ -135,6 +184,14 @@ class _VerifiedPcHistoryPageState extends State<VerifiedPcHistoryPage> {
               icon: const Icon(Icons.refresh),
               label: const Text('確認履歴を更新'),
             ),
+            if ((records != null && records.isNotEmpty) ||
+                _error != null)
+              OutlinedButton.icon(
+                key: const Key('verified_pc_clear_all'),
+                onPressed: _busy ? null : _clearAll,
+                icon: const Icon(Icons.delete_sweep_outlined),
+                label: const Text('すべての確認履歴を消去'),
+              ),
             if (records != null && records.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(14),

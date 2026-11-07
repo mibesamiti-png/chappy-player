@@ -306,7 +306,8 @@ class MainActivity : FlutterActivity() {
                             }
                         }
                     }
-                    "verifiedPcList", "verifiedPcRemember", "verifiedPcForget" -> {
+                    "verifiedPcList", "verifiedPcRemember", "verifiedPcForget",
+                    "verifiedPcClear" -> {
                         if (!micActivityVisible) {
                             result.error("NETLAB_NOT_FOREGROUND",
                                 "Verified PC history needs visible trusted host", null)
@@ -323,6 +324,15 @@ class MainActivity : FlutterActivity() {
                                         val fp = call.argument<String>("fingerprint")
                                             ?: throw IllegalArgumentException("Missing fingerprint")
                                         result.success(verifiedPcHistory.remember(fp))
+                                    }
+                                    "verifiedPcClear" -> {
+                                        // Trusted Flutter UI confirms irreversible local-only
+                                        // reset. Preserve the P-256 signing identity itself.
+                                        if (call.arguments != null) {
+                                            throw IllegalArgumentException("No arguments accepted")
+                                        }
+                                        verifiedPcHistory.clearAll()
+                                        result.success(emptyList<Map<String, Any>>())
                                     }
                                     else -> {
                                         val fp = call.argument<String>("fingerprint")
