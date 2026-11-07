@@ -116,7 +116,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
 
   Future<void> _confirm() async {
     if (_busy || _savingHistory ||
-        ModalRoute.of(context)?.isCurrent != true) return;
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
     final generation = ++_generation;
     final invite = _invite;
     if (invite != null && _qrConsumed) return;
@@ -182,7 +184,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                     title: const Text('PCの端末鍵を確認しました'),
                     content: Text(
                       'QRで指定したPCの署名を検証できました。\n'
-                      'PC公開鍵SHA-256:\n${invite!.pcIdentityFingerprint!}\n\n'
+                      'PC公開鍵SHA-256:\n${invite.pcIdentityFingerprint!}\n\n'
                       'このスマホの秘密鍵で使い捨ての認証要求に'
                       '署名してPCへ返しますか？'
                       '永続登録やPC操作の許可はまだ行われません。',
