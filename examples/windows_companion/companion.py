@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import ipaddress
+import re
 import secrets
 import socket
 import sys
@@ -112,6 +113,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--identity-revoke", action="store_true",
         help="Explicitly DELETE this PC's local identity after typed confirmation",
     )
+    mode.add_argument(
+        "--verified-list", action="store_true",
+        help="Show only manually stored, DPAPI-protected verified phone fingerprints",
+    )
+    mode.add_argument(
+        "--verified-forget", metavar="PHONE_SHA256",
+        help="Locally delete one verified phone history record after typed FORGET",
+    )
     parser.add_argument(
         "--ip", help="Private IPv4 of this PC's selected Wi-Fi/LAN adapter",
     )
@@ -180,7 +189,8 @@ def run_beacon(ip: str, minutes: int) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if args.identity_create or args.identity_status or args.identity_revoke:
+    if (args.identity_create or args.identity_status or args.identity_revoke
+            or args.verified_list or args.verified_forget is not None):
         if (args.pair or args.qr or args.identity_pair or args.ip
                 or args.minutes != DEFAULT_MINUTES):
             print("Identity commands cannot be combined with network options",
@@ -190,7 +200,36 @@ def main(argv: list[str] | None = None) -> int:
             from windows_identity import (
                 create_identity, identity_status, revoke_identity,
             )
-            if args.identity_status:
+            if args.verified_list:
+                from verified_phone_history import list_verified_phones
+                rows = list_verified_phones()
+                print("Previously QR-v3 verified phones (LOCAL HISTORY ONLY):")
+                for row in rows:
+                    print(row["fingerprint"] + "  verified_at=" +
+                          str(row["verified_at"]))
+                if not rows:
+                    print("None saved.")
+                print("No automatic pairing, remote control or connection.")
+            elif args.verified_forget is not None:
+                from verified_phone_history import (
+                    list_verified_phones, forget_verified_phone,
+                )
+                fp = args.verified_forget
+                if re.fullmatch(r"[0-9a-f]{64}", fp) is None:
+                    print("Expected 64 lowercase hex characters", file=sys.stderr)
+                    return 2
+                if not any(row["fingerprint"] == fp
+                           for row in list_verified_phones()):
+                    print("No matching verification history found.")
+                    return 0
+                print("This removes only local public fingerprint history.")
+                print("Phone SHA-256: " + fp)
+                if input("Type FORGET to remove this history record: ").strip() != "FORGET":
+                    print("No changes made.")
+                    return 2
+                forget_verified_phone(fp)
+                print("Local fingerprint history removed; no remote action.")
+            elif args.identity_status:
                 public_id = identity_status()
                 print("PC identity fingerprint (SHA-256 public key): " +
                       (public_id or "NOT CREATED"))
