@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('dev.chappy.player/network_lab');
 
   test('parses supported Android device and own app counters', () {
