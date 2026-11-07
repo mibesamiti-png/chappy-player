@@ -395,7 +395,8 @@ class BoundedHttpsServer(ThreadingHTTPServer):
 
 
 def run_pairing(ip: str, minutes: int, qr: bool = False,
-                identity_mode: bool = False) -> None:
+                identity_mode: bool = False,
+                expected_phone_fingerprint: str | None = None) -> None:
     """Expose a single, explicitly PC-approved HTTPS confirmation session."""
     from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
@@ -404,6 +405,8 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
         raise ValueError("Duration must be 1-30 minutes")
     if identity_mode and not qr:
         raise ValueError("Identity enrollment requires a scanned QR")
+    if expected_phone_fingerprint is not None and not identity_mode:
+        raise ValueError("Known-phone comparison requires QR-v3 identity mode")
     # Never create a persistent signing key when a PC listener is started.
     pc_public_fingerprint = identity_status() if identity_mode else None
     if identity_mode and pc_public_fingerprint is None:
@@ -432,6 +435,7 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
             IdentityPairingAttempt(
                 invitation=invitation, qr_expires=expires_at,
                 tls_fingerprint=fingerprint, pc_fingerprint=pc_public_fingerprint,
+                expected_phone_fingerprint=expected_phone_fingerprint,
             ) if identity_mode else None
         )
         with BoundedHttpsServer(
@@ -474,6 +478,12 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                 print("Your PC must separately approve one phone request.")
                 if identity_mode:
                     print("Identity v3: mutual signed proof ONLY; no saved pairing.")
+                if expected_phone_fingerprint is not None:
+                    print("Manual known-phone comparison ON (NOT automatic trust).")
+                    print("Expected Android public key SHA-256:")
+                    print(expected_phone_fingerprint)
+                    print("A different phone key claim is blocked before YES.")
+                    print("An equal claim still requires Android signature proof.")
                 print("Auto-stop: " + str(minutes) + " min. Ctrl+C stops.")
                 deadline = time.monotonic() + lifetime_seconds
                 finished = identity.finished if identity is not None else session.finished
