@@ -11,10 +11,13 @@ import 'package:flutter/material.dart';
 class CompanionPairingPage extends StatefulWidget {
   final LanDiscoveredService service;
   final LanDiscoveryClient discoveryClient;
+  /// Optional host-side QR reader injection for deterministic widget tests.
+  final Future<CompanionQrInvitation?> Function(BuildContext)? qrReader;
   const CompanionPairingPage({
     super.key,
     required this.service,
     this.discoveryClient = const LanDiscoveryClient(),
+    this.qrReader,
   });
   @override
   State<CompanionPairingPage> createState() => _CompanionPairingPageState();
@@ -30,6 +33,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   bool _savedHistory = false;
   bool _busy = false;
   bool _verified = false;
+  // A QR invitation can be submitted at most once, even after failure.
+  bool _qrConsumed = false;
   String? _code;
   String? _error;
   CompanionQrInvitation? _invite;
@@ -50,9 +55,15 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       if (mounted) {
         setState(() {
           _busy = false;
+          _savingHistory = false;
           _verified = false;
           _savedHistory = false;
           _code = null;
+          _qrConsumed = false;
+          // The short-lived, single-use QR cannot survive an app pause/lock.
+          if (_invite != null) _fingerprint.clear();
+          _invite = null;
+          _error = '画面を離れたため確認を中止しました。QRは再読取してください。';
         });
       }
     }
@@ -70,16 +81,24 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
 
   Future<void> _scanQr() async {
     if (_busy || ModalRoute.of(context)?.isCurrent != true) return;
-    final invite = await Navigator.of(context).push<CompanionQrInvitation>(
-      MaterialPageRoute(builder: (_) => const CompanionQrScannerPage()),
-    );
-    if (!mounted || invite == null) return;
+    final generation = _generation;
+    final invite = widget.qrReader != null
+        ? await widget.qrReader!(context)
+        : await Navigator.of(context).push<CompanionQrInvitation>(
+            MaterialPageRoute(builder: (_) => const CompanionQrScannerPage()),
+          );
+    if (!mounted || generation != _generation || invite == null) return;
     // mDNS is never an identity provider. Refuse an invitation that changes
     // the endpoint selected by the user from the discovery result.
     if (invite.ip != widget.service.address ||
         invite.port != widget.service.port) {
       setState(() {
         _invite = null;
+        _qrConsumed = false;
+        _verified = false;
+        _savedHistory = false;
+        _code = null;
+        _fingerprint.clear();
         _error = 'QRのPCと発見したPCの接続先が違います。再確認してください。';
       });
       return;
@@ -87,6 +106,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     setState(() {
       _fingerprint.text = invite.fingerprint;
       _invite = invite;
+      _qrConsumed = false;
+      _code = null;
       _error = null;
       _verified = false;
       _savedHistory = false;
@@ -94,13 +115,18 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   }
 
   Future<void> _confirm() async {
-    if (_busy || ModalRoute.of(context)?.isCurrent != true) return;
+    if (_busy || _savingHistory ||
+        ModalRoute.of(context)?.isCurrent != true) return;
     final generation = ++_generation;
+    final invite = _invite;
+    if (invite != null && _qrConsumed) return;
+    // Consume the scanned one-shot invite before any awaited operation.
+    // Do not allow a second attempt using the same QR even after an error.
+    if (invite != null) _qrConsumed = true;
     try {
       CompanionPairingClient.validateTarget(
         widget.service.address, widget.service.port, _fingerprint.text,
       );
-      final invite = _invite;
       if (invite != null) {
         final current = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         if (invite.expiresUnix <= current ||
@@ -112,7 +138,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         throw StateError('Wi-Fi接続中の前面画面のみ対応しています');
       }
       if (!mounted || generation != _generation) return;
-      final identityMode = _invite?.pcIdentityFingerprint != null;
+      final identityMode = invite?.pcIdentityFingerprint != null;
       final nonce = identityMode
           ? CompanionIdentityClient.newNonce()
           : CompanionPairingClient.newNonce();
@@ -131,9 +157,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
               ip: widget.service.address,
               port: widget.service.port,
               tlsFingerprint: _fingerprint.text,
-              pcFingerprint: _invite!.pcIdentityFingerprint!,
-              invitation: _invite!.invitation,
-              qrExpires: _invite!.expiresUnix,
+              pcFingerprint: invite!.pcIdentityFingerprint!,
+              invitation: invite.invitation,
+              qrExpires: invite.expiresUnix,
               phoneNonce: nonce,
               approvePhoneProof: () async {
                 if (!mounted || generation != _generation ||
@@ -147,7 +173,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                     title: const Text('PCの端末鍵を確認しました'),
                     content: Text(
                       'QRで指定したPCの署名を検証できました。\n'
-                      'PC公開鍵SHA-256:\n${_invite!.pcIdentityFingerprint!}\n\n'
+                      'PC公開鍵SHA-256:\n${invite!.pcIdentityFingerprint!}\n\n'
                       'このスマホの秘密鍵で使い捨ての認証要求に'
                       '署名してPCへ返しますか？'
                       '永続登録やPC操作の許可はまだ行われません。',
@@ -173,7 +199,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
               port: widget.service.port,
               fingerprint: _fingerprint.text,
               nonce: nonce,
-              invitation: _invite?.invitation,
+              invitation: invite?.invitation,
             );
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -196,6 +222,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         fp == null || ModalRoute.of(context)?.isCurrent != true) {
       return;
     }
+    final generation = _generation;
     final consent = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -220,11 +247,11 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         ],
       ),
     );
-    if (!mounted || consent != true || !_verified ||
-        fp != _invite?.pcIdentityFingerprint) {
+    if (!mounted || consent != true || generation != _generation ||
+        !_verified || fp != _invite?.pcIdentityFingerprint ||
+        ModalRoute.of(context)?.isCurrent != true) {
       return;
     }
-    final generation = _generation;
     setState(() {
       _savingHistory = true;
       _error = null;
@@ -249,10 +276,15 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     _identityExchange.cancel();
     setState(() {
       _busy = false;
+      _savingHistory = false;
       _verified = false;
       _savedHistory = false;
       _code = null;
-      _error = '確認をキャンセルしました';
+      // A cancelled QR challenge must never be re-used.
+      if (_invite != null) _fingerprint.clear();
+      _invite = null;
+      _qrConsumed = false;
+      _error = '確認をキャンセルしました。QRは再読取してください。';
     });
   }
 
@@ -298,9 +330,13 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
               key: const Key('pair_fingerprint'),
               controller: _fingerprint,
               onChanged: (_) {
-                if (_invite != null) {
-                  setState(() => _invite = null);
-                }
+                setState(() {
+                  _invite = null;
+                  _qrConsumed = false;
+                  _verified = false;
+                  _savedHistory = false;
+                  _code = null;
+                });
               },
               maxLength: 95,
               autocorrect: false,
@@ -314,10 +350,17 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             ),
             FilledButton.icon(
               key: const Key('pair_confirm'),
-              onPressed: _busy || _savingHistory ? null : _confirm,
+              onPressed: _busy || _savingHistory ||
+                  (_invite != null && _qrConsumed)
+                  ? null : _confirm,
               icon: const Icon(Icons.verified_user_outlined),
               label: const Text('このPCとの接続を確認'),
             ),
+            if (_invite != null && _qrConsumed && !_busy)
+              const Text(
+                'このQRは一度使用しました。再確認にはPCで新しいQRを表示して再読取してください。',
+                key: Key('pair_qr_consumed'),
+              ),
             if (_busy) ...[
               const SizedBox(height: 12),
               const LinearProgressIndicator(),
