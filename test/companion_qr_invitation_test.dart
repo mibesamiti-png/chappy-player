@@ -27,7 +27,7 @@ void main() {
 
   test('QR-v3 binds short-lived TLS pin to explicit PC identity fingerprint', () {
     final pc = List<String>.filled(64, 'c').join();
-    final modern = encoded.replaceFirst('://v2', '://v3') + '&pc=' + pc;
+    final modern = '${encoded.replaceFirst('://v2', '://v3')}&pc=$pc';
     final parsed = CompanionQrInvitation.parse(modern, now: knownNow);
     expect(parsed.pcIdentityFingerprint, pc);
     expect(parsed.fingerprint, fp);
@@ -35,11 +35,11 @@ void main() {
     expect(CompanionQrInvitation.parse(encoded, now: knownNow)
         .pcIdentityFingerprint, isNull);
     for (final malformed in <String>[
-      modern.replaceFirst('&pc=' + pc, ''),
-      modern.replaceFirst('&pc=' + pc, '&pc=ABC'),
-      modern + '&pc=' + pc,
-      encoded + '&pc=' + pc,
-      modern.replaceFirst('pc=' + pc, 'pc=' + pc.toUpperCase()),
+      modern.replaceFirst('&pc=$pc', ''),
+      modern.replaceFirst('&pc=$pc', '&pc=ABC'),
+      '$modern&pc=$pc',
+      '$encoded&pc=$pc',
+      modern.replaceFirst('pc=$pc', 'pc=${pc.toUpperCase()}'),
       modern.replaceFirst('://v3', '://v4'),
     ]) {
       expect(() => CompanionQrInvitation.parse(malformed, now: knownNow),
