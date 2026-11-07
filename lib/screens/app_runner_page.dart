@@ -37,6 +37,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   final Set<String> _approvedNativeCapabilities = <String>{};
   final Set<String> _approvedGameOrigins = <String>{};
   bool _gameOriginPromptPending = false;
+  int _gameConnectEpoch = 0;
   final MiniAppGameNetwork _gameNetwork = MiniAppGameNetwork();
   final Stopwatch _nativeApiClock = Stopwatch()..start();
   int _lastMotionSampleAt = -1000;
@@ -195,6 +196,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     _darkSessionArmed = false;
     _approvedNativeCapabilities.clear();
     _approvedGameOrigins.clear();
+    ++_gameConnectEpoch; // Cancel a pending WSS consent as we leave foreground.
     _gameNetwork.pause();
     _lastVideoOptions = null;
     _nativeMicActive = false;
@@ -723,7 +725,11 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
       Map<String, dynamic> params) async {
     final url = params['url'];
     if (url is! String) throw const FormatException('Invalid WSS URL');
+    final requestEpoch = _gameConnectEpoch;
     final uri = await _approveGameOrigin(url, websocket: true);
+    if (requestEpoch != _gameConnectEpoch || !_gameNetworkAllowed()) {
+      throw StateError('WSS connection was cancelled before approval');
+    }
     return _gameNetwork.connect(uri);
   }
 
@@ -741,6 +747,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
       const {'connected': false, 'messages': <String>[], 'dropped': 0};
 
   bool _gameSocketClose() {
+    ++_gameConnectEpoch; // Also cancels requests awaiting a permission dialog.
     _gameNetwork.close();
     return true;
   }
