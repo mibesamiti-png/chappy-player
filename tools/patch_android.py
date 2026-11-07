@@ -177,7 +177,7 @@ for filename in ('NativeMiniAppDevices.kt', 'NativeVideoExport.kt',
                  'NativeMiniAppDocuments.kt', 'NativeVideoZipBackup.kt',
                  'NativeVideoZipRestore.kt', 'NativeMiniAppAssets.kt',
                  'NativeNetworkDiscovery.kt', 'NativeTrafficCounters.kt',
-                 'NativePcIdentity.kt'):
+                 'NativePcIdentity.kt', 'NativePcProof.kt'):
     source = Path('tools/android') / filename
     if not source.is_file():
         raise SystemExit(f'Missing native mini-app capability host: {filename}')
