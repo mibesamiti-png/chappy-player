@@ -288,15 +288,15 @@ class IdentityV3Tests(unittest.TestCase):
 
         state = self.session()
         legacy = server.PairingSession(invitation=INV, expires_at=self.expiry)
-        http = ThreadingHTTPServer(
+        httpd = ThreadingHTTPServer(
             ("127.0.0.1", 0), server.make_handler(legacy, state),
         )
-        worker = threading.Thread(target=http.serve_forever, daemon=True)
+        worker = threading.Thread(target=httpd.serve_forever, daemon=True)
         worker.start()
 
         def bad_post(body, extra_headers=()):
             conn = http.client.HTTPConnection(
-                "127.0.0.1", http.server_port, timeout=3,
+                "127.0.0.1", httpd.server_port, timeout=3,
             )
             try:
                 conn.putrequest("POST", "/v3/identity-begin")
@@ -337,7 +337,7 @@ class IdentityV3Tests(unittest.TestCase):
                 self.assertFalse(legacy.claimed)
 
                 request = urllib.request.Request(
-                    "http://127.0.0.1:" + str(http.server_port)
+                    "http://127.0.0.1:" + str(httpd.server_port)
                     + "/v3/identity-begin", data=valid_json,
                     headers={"Content-Type": "application/json"},
                 )
@@ -347,8 +347,8 @@ class IdentityV3Tests(unittest.TestCase):
                 approve.assert_called_once_with(PHONE_NONCE)
                 self.assertFalse(legacy.claimed)
         finally:
-            http.shutdown()
-            http.server_close()
+            httpd.shutdown()
+            httpd.server_close()
             worker.join(timeout=2)
 
     def test_requires_explicit_cli_flags_and_no_network_identity_side_effects(self):
