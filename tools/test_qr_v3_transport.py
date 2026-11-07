@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "examples" / "windows_companion"))
 from identity_proof import _sign_with_key, verify_identity_proof  # noqa: E402
 from proof_pairing_transport import (  # noqa: E402
     QrProofSession, make_qr_proof_handler,
-    pc_comparison_code, verified_android_fingerprint,
+    pc_comparison_code, strict_json_object, verified_android_fingerprint,
 )
 import companion  # noqa: E402
 import pairing_server as pairing  # noqa: E402
@@ -198,6 +198,47 @@ class ProofWireTests(unittest.TestCase):
         self.assertFalse(state.finished.is_set())
         state.cancel()
         self.assertTrue(state.finished.is_set())
+
+    def test_duplicate_json_and_unbounded_headers_fail_closed(self):
+        for raw in (
+            b'{"protocol":"pair-proof-v3","protocol":"pair-qr-v2"}',
+            b'{"proof":{"spki":"a","spki":"b"}}',
+            b'[]',
+        ):
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                strict_json_object(raw)
+        self.assertEqual(strict_json_object(b'{"x":1}'), {"x": 1})
+
+        state, pc, phone = create_session()
+        server = ThreadingHTTPServer(
+            ("127.0.0.1", 0), make_qr_proof_handler(state),
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            malformed = (
+                b'{"protocol":"pair-proof-v3",'
+                b'"protocol":"pair-proof-v3",'
+                b'"invitation":"' + INV.encode("ascii") + b'",'
+                b'"phone_nonce":"' + (b"c" * 64) + b'",'
+                b'"android_spki":"' + base64.b64encode(spki(phone)) + b'"}'
+            )
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{server.server_port}/v3/proof-begin",
+                data=malformed, headers={"Content-Type": "application/json"},
+            )
+            with self.assertRaises(urllib.error.HTTPError) as rejected:
+                urllib.request.urlopen(request, timeout=4)
+            self.assertEqual(rejected.exception.code, 403)
+            self.assertFalse(state.finished.is_set())
+            # Invalid duplicate fields do not consume the legitimate one-use QR.
+            answer = state.begin(begin_request(phone))
+            self.assertEqual(answer["status"], "challenge")
+            state.cancel()
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
 
     def test_identity_parser_and_code_vector(self):
         _, pc, phone = create_session()
