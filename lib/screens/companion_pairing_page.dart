@@ -140,9 +140,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                     title: const Text('PCの端末鍵を確認しました'),
                     content: Text(
                       'QRで指定したPCの署名を検証できました。\n'
-                      'PC公開鍵SHA-256:\n' +
-                      _invite!.pcIdentityFingerprint! +
-                      '\n\nこのスマホの秘密鍵で使い捨ての認証要求に'
+                      'PC公開鍵SHA-256:\n${_invite!.pcIdentityFingerprint!}\n\n'
+                      'このスマホの秘密鍵で使い捨ての認証要求に'
                       '署名してPCへ返しますか？'
                       '永続登録やPC操作の許可はまだ行われません。',
                     ),
