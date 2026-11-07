@@ -95,9 +95,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Chappy PC discovery beacon (visible, temporary, no control)"
     )
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--start", action="store_true",
         help="Explicitly advertise this PC on the current private LAN",
+    )
+    mode.add_argument(
+        "--identity-create", action="store_true",
+        help="Create one current-user DPAPI protected P-256 PC identity (NO pairing)",
+    )
+    mode.add_argument(
+        "--identity-status", action="store_true",
+        help="Display public PC identity fingerprint (never the private key)",
+    )
+    mode.add_argument(
+        "--identity-revoke", action="store_true",
+        help="Explicitly DELETE this PC's local identity after typed confirmation",
     )
     parser.add_argument(
         "--ip", help="Private IPv4 of this PC's selected Wi-Fi/LAN adapter",
@@ -163,6 +176,38 @@ def run_beacon(ip: str, minutes: int) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.identity_create or args.identity_status or args.identity_revoke:
+        if args.pair or args.qr or args.ip or args.minutes != DEFAULT_MINUTES:
+            print("Identity commands cannot be combined with network options",
+                  file=sys.stderr)
+            return 2
+        try:
+            from windows_identity import (
+                create_identity, identity_status, revoke_identity,
+            )
+            if args.identity_status:
+                public_id = identity_status()
+                print("PC identity fingerprint (SHA-256 public key): " +
+                      (public_id or "NOT CREATED"))
+                print("No phone is paired. No network service started.")
+            elif args.identity_create:
+                public_id = create_identity()
+                print("PC identity created (current Windows user DPAPI).")
+                print("Public SHA-256 fingerprint: " + public_id)
+                print("No phone is paired. No network service started.")
+            else:
+                print("WARNING: This revokes the local PC signing identity.")
+                print("Future authenticated pairing will require a new identity.")
+                answer = input("Type REVOKE to remove the PC identity: ").strip()
+                if answer != "REVOKE":
+                    print("No changes made.")
+                    return 2
+                removed = revoke_identity()
+                print("PC identity revoked." if removed else "No identity existed.")
+            return 0
+        except (OSError, RuntimeError, ValueError, FileExistsError) as exc:
+            print("PC identity operation failed: " + str(exc), file=sys.stderr)
+            return 1
     if not args.start:
         print("Not advertising. Use --start to opt in. See --help.")
         return 0
