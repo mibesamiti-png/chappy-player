@@ -25,11 +25,13 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from identity_pairing_v3 import (
-    IdentityPairingAttempt, comparison_code,
-    PROTOCOL as IDENTITY_PROTOCOL,
-)
+from typing import TYPE_CHECKING
 from windows_identity import identity_status
+
+if TYPE_CHECKING:
+    from identity_pairing_v3 import IdentityPairingAttempt
+
+IDENTITY_PROTOCOL = "pair-identity-v3"
 
 from companion import (
     MAX_MINUTES,
@@ -115,7 +117,11 @@ def create_ephemeral_certificate(ip: str) -> tuple[bytes, bytes, str]:
 
 
 def _ask_pc_user(nonce: str) -> bool:
-    code = comparison_code(nonce) if len(nonce) == 64 else confirmation_code(nonce)
+    if len(nonce) == 64:
+        from identity_pairing_v3 import comparison_code
+        code = comparison_code(nonce)
+    else:
+        code = confirmation_code(nonce)
     print()
     print("==== PHONE CONFIRMATION REQUEST ====")
     print("Code shown on phone: " + code)
@@ -378,6 +384,8 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
     pc_public_fingerprint = identity_status() if identity_mode else None
     if identity_mode and pc_public_fingerprint is None:
         raise ValueError("Create PC identity explicitly before v3 enrollment")
+    if identity_mode:
+        from identity_pairing_v3 import IdentityPairingAttempt
     pem, key, fingerprint = create_ephemeral_certificate(address)
 
     with tempfile.TemporaryDirectory(prefix="chappy-pair-session-") as folder:
