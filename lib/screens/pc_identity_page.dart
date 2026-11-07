@@ -1,0 +1,221 @@
+import 'package:chappy_player/core/pc_identity_client.dart';
+import 'package:flutter/material.dart';
+
+/// Host-only device identity management, NOT a paired-PC list.
+///
+/// Creating this key alone authorizes NOTHING on the LAN. The app still
+/// requires explicit, pinned-TLS QR mutual authentication in a later stage.
+class PcIdentityPage extends StatefulWidget {
+  final PcIdentityClient client;
+
+  const PcIdentityPage({
+    super.key,
+    this.client = const PcIdentityClient(),
+  });
+
+  @override
+  State<PcIdentityPage> createState() => _PcIdentityPageState();
+}
+
+class _PcIdentityPageState extends State<PcIdentityPage> {
+  PcIdentityStatus? _identity;
+  bool _busy = false;
+  String? _error;
+  int _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refresh();
+    });
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    if (_busy) return;
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final current = await widget.client.status();
+      if (!mounted || generation != _generation) return;
+      setState(() => _identity = current);
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _error = '端末キーを確認できません: $error');
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _create() async {
+    if (_busy || _identity?.created != false) return;
+    final consent = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('この端末の接続用キーを作成'),
+        content: const Text(
+          'Android KeyStoreに端末専用の秘密鍵を作ります。'
+          '秘密鍵は取り出せず、鍵を作るだけではPCとの接続や遠隔操作は許可されません。'
+          '今後ペアリングする前に双方の確認が別途必要です。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('端末キーを作成'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || consent != true || _busy) return;
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final created = await widget.client.create();
+      if (!mounted || generation != _generation) return;
+      setState(() => _identity = created);
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _error = '作成できませんでした: $error');
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _revoke() async {
+    if (_busy || _identity?.created != true) return;
+    final consent = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('この端末のキーを削除'),
+        content: const Text(
+          'この端末の秘密鍵をAndroid KeyStoreから削除します。'
+          '元の鍵は復元できません。将来ペアリング済みの場合は再登録が必要です。'
+          'PC側に保存された情報の削除は、後続機能で別途行う必要があります。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('削除しない'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('秘密鍵を削除'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || consent != true || _busy) return;
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final removed = await widget.client.revoke();
+      if (!mounted || generation != _generation) return;
+      if (!removed) {
+        throw StateError('秘密鍵が存在しません');
+      }
+      final next = await widget.client.status();
+      if (!mounted || generation != _generation) return;
+      setState(() => _identity = next);
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _error = '削除できませんでした: $error');
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = _identity;
+    return Scaffold(
+      appBar: AppBar(title: const Text('PC連携用の端末キー（準備）')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              '安全なPCペアリングのための鍵を準備します。',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              '現在は「端末キーの作成・確認・削除」だけです。'
+              'PCとの相互認証、接続先の登録、通信量監視、ファイル転送、'
+              '遠隔操作はまだできません。'
+              '鍵の公開指紋が表示されてもPCの本人確認が済んだ意味ではありません。',
+            ),
+            const SizedBox(height: 18),
+            Text(
+              status == null
+                  ? '状態を確認しています'
+                  : status.created ? 'Android端末キー：作成済み' : 'Android端末キー：未作成',
+              key: const Key('pc_identity_status'),
+            ),
+            if (status?.fingerprint != null) ...[
+              const SizedBox(height: 12),
+              const Text('公開鍵のSHA-256指紋（秘密鍵ではありません）'),
+              SelectableText(
+                status!.fingerprint!,
+                key: const Key('pc_identity_fingerprint'),
+              ),
+            ],
+            const SizedBox(height: 16),
+            if (_busy) const LinearProgressIndicator(),
+            if (_error != null)
+              SelectableText(
+                _error!,
+                key: const Key('pc_identity_error'),
+                style: const TextStyle(color: Colors.orangeAccent),
+              ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              key: const Key('pc_identity_create'),
+              onPressed: !_busy && status?.created == false ? _create : null,
+              icon: const Icon(Icons.key_outlined),
+              label: const Text('端末キーを作成'),
+            ),
+            OutlinedButton.icon(
+              key: const Key('pc_identity_revoke'),
+              onPressed: !_busy && status?.created == true ? _revoke : null,
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('この端末の秘密鍵を削除'),
+            ),
+            TextButton.icon(
+              key: const Key('pc_identity_refresh'),
+              onPressed: _busy ? null : _refresh,
+              icon: const Icon(Icons.refresh),
+              label: const Text('状態を更新'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
