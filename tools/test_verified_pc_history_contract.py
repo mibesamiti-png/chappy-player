@@ -68,6 +68,19 @@ for pattern in (
     "confirmationCode(nonce)",
 ):
     assert pattern in flutter, pattern
+# Android QR-v3 can only be submitted once per scan; no stale UI reuse.
+for token in (
+    "bool _qrConsumed = false",
+    "if (invite != null) _qrConsumed = true",
+    "generation != _generation || invite == null",
+    "_identityExchange.cancel();",
+    "if (_invite != null) _fingerprint.clear();",
+    "final generation = _generation;",
+    "if (!mounted || consent != true || generation != _generation",
+    "(_invite != null && _qrConsumed)",
+    "pair_qr_consumed",
+):
+    assert token in flutter, token
 assert "verified_pc_history_page.dart" in identity_page
 assert "この記録を削除" in history
 assert "verifiedPcForget" in client and "verifiedPcList" in client
