@@ -32,7 +32,7 @@ SAMPLES = (
      "device_lab", ("motion", "haptics")),
     ("local.chappy.file_lab", "Chappy File Lab", "0.2.2",
      "file_lab", ("files",)),
-    ("local.chappy.game_server_lab", "Chappy Game Server Lab", "0.1.0",
+    ("local.chappy.game_server_lab", "Chappy Game Server Lab", "0.1.1",
      "game_server_lab", ("network", "motion", "haptics")),
     ("local.chappy.touch_lab", "Chappy Touch Lab", "0.1.0",
      "touch_lab", ()),
