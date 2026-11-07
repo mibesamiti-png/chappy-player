@@ -155,6 +155,7 @@ const _bootScript = r'''
   let seq = 0;
   const pending = new Map();
   const timeoutMs = 12000;
+  const networkConnectTimeoutMs = 45000;
   window.__chappyResolve = function (msg) {
     const item = pending.get(msg.requestId);
     if (!item) return;
@@ -173,7 +174,7 @@ const _bootScript = r'''
                      method === 'video.delete' || method === 'video.export' ||
                       method === 'video.backupZip' || method === 'video.restoreZip' ||
                       method === 'files.importAsset' ||
-                      method === 'files.exportAsset' || method === 'files.exportCompressedZip' || method === 'network.request' || method === 'network.connect' ||
+                      method === 'files.exportAsset' || method === 'files.exportCompressedZip' || method === 'network.request' ||
                       method === 'files.deleteAsset' ||
                        method === 'files.pickText' || method === 'files.saveText' ||
                       method === 'motion.sample' || method === 'haptics.play')
@@ -181,7 +182,20 @@ const _bootScript = r'''
         pending.delete(requestId);
         reject(new Error('Chappy API timeout'));
       }, timeoutMs);
-      pending.set(requestId, {resolve, reject, timer});
+      // Network consent has a longer deadline, but must not hang forever.
+      // A timed-out request explicitly cancels any pending host connection.
+      const connectTimer = method === 'network.connect' ? setTimeout(() => {
+        pending.delete(requestId);
+        try {
+          window.ChappyHost.postMessage(JSON.stringify({
+            requestId: '', method: 'network.close', params: {}
+          }));
+        } catch (_) {}
+        reject(new Error('WSS connection timed out after 45 seconds'));
+      }, networkConnectTimeoutMs) : null;
+      pending.set(requestId, {
+        resolve, reject, timer: connectTimer === null ? timer : connectTimer
+      });
       window.ChappyHost.postMessage(JSON.stringify({requestId, method, params}));
     });
   }
