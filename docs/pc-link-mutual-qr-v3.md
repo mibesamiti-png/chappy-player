@@ -29,6 +29,12 @@
 - WindowsとAndroidの実機でQRの読み取り、ファイアウォール、PCとスマホの両側拒否、画面ロック、Wi-Fi切断、ゲストWi-Fi、複数PC・端末、時刻ずれ、Android KeyStoreの機種依存挙動を確認してから正式版を検討する。
 - v1/v2への自動ダウングレードなし。正式署名APK、Stable/Debugカタログ、更新JSON、既存ユーザーデータ、アプリのパッケージIDと署名は変更しない。
 
+## QR-v3 HTTP要求の追加検証（4B-3）
+
+Windows側の2段階認証で受け取るJSONは、オブジェクト内の同名キーの重複をネスト階層も含めて拒否。これにより、同じ protocol や phone_proof を複数指定して解釈を曖昧にするリクエストが、承認・署名前に拒否される。
+
+Content-Lengthの複数指定、過度に長い数値、Transfer-Encodingの混在、重複Content-Type、不完全なJSON本文も拒否する。期限内の正しい初回QR招待は、このような不正パースによって消費しない。元のv1/v2の受信・仕様には変更なし。
+
 ## テスト
 
 - Windows: python tools/test_identity_pairing_v3.py — 2段階の署名検証、再利用/期限/改ざん拒否、PCでの人手承認、隔離localhost HTTPテスト。
