@@ -5,9 +5,9 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
 import java.io.File
+import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
-import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -68,12 +68,22 @@ internal class NativeVerifiedPcHistory(
     private fun decrypt(): JSONObject? {
         if (!file.baseFile.exists()) return null
         val encrypted = file.openRead().use { input ->
-            // Never accept a huge or partially read encrypted document.
-            val data = input.readNBytes(MAX_BLOB + 1)
-            require(data.size in (NONCE_SIZE + 16)..MAX_BLOB) {
-                "Corrupt verified-PC history"
+            // Compatible with minSdk 24, bounded even for corrupt/cyclic input.
+            val output = ByteArrayOutputStream()
+            val chunk = ByteArray(1024)
+            while (true) {
+                val count = input.read(chunk)
+                if (count < 0) break
+                require(output.size() + count <= MAX_BLOB) {
+                    "Corrupt verified-PC history"
+                }
+                output.write(chunk, 0, count)
             }
-            data
+            output.toByteArray().also { data ->
+                require(data.size >= NONCE_SIZE + 16) {
+                    "Corrupt verified-PC history"
+                }
+            }
         }
         val key = secret(false)
             ?: throw IllegalStateException("History decryption key is missing")
@@ -121,7 +131,8 @@ internal class NativeVerifiedPcHistory(
         require(payload.size <= MAX_BLOB - NONCE_SIZE - 16)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         // AndroidKeyStore GCM supplies a fresh provider-generated IV.
-        cipher.init(Cipher.ENCRYPT_MODE, secret(true))
+        cipher.init(Cipher.ENCRYPT_MODE, secret(true)
+            ?: throw IllegalStateException("History encryption key unavailable"))
         val nonce = cipher.iv
         require(nonce.size == NONCE_SIZE)
         val encrypted = nonce + cipher.doFinal(payload)
