@@ -19,9 +19,9 @@ void main() {
     final second = CompanionIdentityClient.newNonce();
     expect(RegExp(r'^[0-9a-f]{64}$').hasMatch(first), isTrue);
     expect(first, isNot(second));
-    expect(CompanionIdentityClient.confirmationCode(nonce), '229DCA');
+    expect(CompanionIdentityClient.confirmationCode(nonce), 'C2F480');
     expect(
-      () => CompanionIdentityClient.confirmationCode('a' * 32),
+      () => CompanionIdentityClient.confirmationCode(List<String>.filled(32, 'a').join()),
       throwsFormatException,
     );
   });
@@ -32,7 +32,7 @@ void main() {
       {'algorithm': 'P-384-SHA384', 'spki': 'QUJD', 'signature': 'RUZH'},
       {'algorithm': 'P-256-SHA256', 'spki': '', 'signature': 'RUZH'},
       {...publicProof, 'private': 'SHOULD NEVER BE EXPORTED'},
-      {...publicProof, 'signature': '?' * 600},
+      {...publicProof, 'signature': List<String>.filled(600, '?').join()},
     ]) {
       expect(
         () => CompanionIdentityClient.parseProof(broken),
