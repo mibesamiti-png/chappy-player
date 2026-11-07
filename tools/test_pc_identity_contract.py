@@ -71,9 +71,9 @@ for token in (
     "def revoke_identity(",
 ):
     assert token in windows, token
-assert "CRYPTPROTECT_LOCAL_MACHINE" not in windows.split(
-    'def _dpapi('
-)[1], "Must be Windows-user scope, not machine-wide scope"
+assert windows.count("CRYPTPROTECT_LOCAL_MACHINE") == 1, (
+    "The only LOCAL_MACHINE mention must be the explicit prohibition in the docstring")
+assert "CRYPTPROTECT_UI_FORBIDDEN, ctypes.byref(output_blob)" in windows
 for forbidden in ("subprocess.", "socket.connect(", "requests.", "password =",
                   "BEGIN PRIVATE KEY", "print(raw)"):
     assert forbidden not in windows, forbidden
