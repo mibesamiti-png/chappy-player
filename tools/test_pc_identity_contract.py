@@ -1,7 +1,7 @@
 """NETLAB-03B-2 identity foundation trust-boundary regression.
 
 Static source checks supplement (but cannot replace) real Android Keystore
-tests on hardware and real Windows DPAPI CI. No network pairing yet.
+tests on hardware and real Windows DPAPI CI. No stored connection authority.
 """
 from pathlib import Path
 
@@ -52,9 +52,10 @@ for token in (
     "consent != true",
     "端末キーを作成",
     "秘密鍵を削除",
-    "PCとの相互認証",
+    "永続的なペアリング",
 ):
     assert token in screen, token
+assert "確認済みPCの記録を確認・削除" in screen
 assert "const PcIdentityPage()" in netlab
 assert "netlab_device_traffic" in netlab, "Keep existing phone metrics"
 
