@@ -26,12 +26,14 @@ source = read("lib/core/companion_identity_exchange.dart")
 assert "'NativeVerifiedPcHistory.kt'" in patch
 assert '"NativeVerifiedPcHistory.kt"' in manifest_test
 assert 'NativeVerifiedPcHistory(this, pcIdentity)' in activity
-for name in ("verifiedPcList", "verifiedPcRemember", "verifiedPcForget"):
+for name in ("verifiedPcList", "verifiedPcRemember", "verifiedPcForget",
+             "verifiedPcClear"):
     assert f'"{name}"' in activity
     assert name not in js_bridge, "No .chappy JavaScript history API"
 assert 'if (!micActivityVisible)' in activity
 assert 'networkDiscovery.pairingAllowed()' in activity
 assert 'verifiedPcHistory.clearAll()' in activity
+assert 'if (call.arguments != null)' in activity, "Reject fake clear arguments"
 for item in (
     'KeyStore.getInstance("AndroidKeyStore")',
     'KeyProperties.KEY_ALGORITHM_AES',
@@ -69,4 +71,8 @@ for pattern in (
 assert "verified_pc_history_page.dart" in identity_page
 assert "この記録を削除" in history
 assert "verifiedPcForget" in client and "verifiedPcList" in client
+assert "verifiedPcClear" in client and "clear() =>" in client
+assert "verified_pc_clear_all" in history
+assert "verified_pc_clear_confirm" in history
+assert "すべてのPC確認履歴を削除" in history
 print("Encrypted public-fingerprint history: explicit UI, private storage, no authorization")
