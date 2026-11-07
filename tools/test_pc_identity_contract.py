@@ -45,6 +45,37 @@ for name in ("pcIdentityStatus", "pcIdentityCreate", "pcIdentityRevoke"):
 assert "if (!micActivityVisible)" in host
 assert "NETLAB_NOT_FOREGROUND" in host
 
+# Destructive Android key deletion requires the exact key the user reviewed,
+# with host argument validation and an independent native precondition.
+for token in (
+    'fun revoke(expectedFingerprint: String)',
+    'currentFingerprint == expectedFingerprint',
+    'Regex("^[0-9a-f]{64}$").matches(expectedFingerprint)',
+):
+    assert token in android, token
+for token in (
+    'val args = call.arguments as? Map<*, *>',
+    'args.size == 1 && args["fingerprint"] is String',
+    'pcIdentity.revoke(expectedFingerprint)',
+    'if (revoked) verifiedPcHistory.clearAll()',
+):
+    assert token in host, token
+for token in (
+    'Future<bool> revoke(String expectedFingerprint)',
+    "'pcIdentityRevoke',",
+    "'fingerprint': expectedFingerprint",
+):
+    assert token in dart, token
+for token in (
+    "'pc_identity_revoke_suffix'",
+    "'pc_identity_revoke_confirm'",
+    'confirmationGeneration != _generation',
+    '_identity?.fingerprint != fingerprint',
+    'entered == suffix',
+    'widget.client.revoke(fingerprint)',
+):
+    assert token in screen, token
+
 for token in (
     "showDialog<bool>",
     "'pc_identity_create'",
