@@ -64,7 +64,7 @@ for pattern in (
     "if (_verified && _invite?.pcIdentityFingerprint != null)",
     "if (_busy || _savingHistory || _savedHistory || !_verified",
     "showDialog<bool>(",
-    "await _verifiedHistory.remember(fp)",
+    "await widget.historyClient.remember(fp)",
     "confirmationCode(nonce)",
 ):
     assert pattern in flutter, pattern
@@ -79,6 +79,20 @@ for token in (
     "if (!mounted || consent != true || generation != _generation",
     "(_invite != null && _qrConsumed)",
     "pair_qr_consumed",
+):
+    assert token in flutter, token
+# Known-PC key comparison is opt-in, informational and must fail
+# before any QR pairing request for mismatched or downgraded invitations.
+for token in (
+    "await widget.historyClient.list()",
+    "invite.pcIdentityFingerprint != _expectedPcFingerprint",
+    "invite?.pcIdentityFingerprint != _expectedPcFingerprint",
+    "pair_choose_known_pc",
+    "pair_expected_pc_fingerprint",
+    "pair_known_pc_matched",
+    "pair_clear_known_pc",
+    "void _clearKnownPc()",
+    "await widget.historyClient.remember(fp)",
 ):
     assert token in flutter, token
 assert "verified_pc_history_page.dart" in identity_page
