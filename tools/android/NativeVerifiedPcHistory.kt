@@ -66,7 +66,7 @@ internal class NativeVerifiedPcHistory(
     }
 
     private fun decrypt(): JSONObject? {
-        if (!file.baseFile.exists()) return null
+        if (!file.exists()) return null
         val encrypted = file.openRead().use { input ->
             // Compatible with minSdk 24, bounded even for corrupt/cyclic input.
             val output = ByteArrayOutputStream()
