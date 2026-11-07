@@ -5,6 +5,7 @@
 /// These values are diagnostics only and never authorize a connection.
 enum PcPairingStage {
   qr('STAGE-QR', 'QR・入力内容の確認'),
+  identity('STAGE-KEY', 'スマホ端末鍵の事前確認'),
   network('STAGE-NET', 'LAN・TLS接続とPC応答'),
   pcProof('STAGE-PC', 'PCの端末署名の検証'),
   phoneConsent('STAGE-PHONE', 'スマホ側の承認・署名'),
