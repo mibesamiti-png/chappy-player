@@ -191,4 +191,95 @@ void main() {
     expect(find.byKey(const Key('pair_copy_diagnostic')), findsOneWidget);
   });
 
+  testWidgets('pending LAN preflight displays a safe live progress stage',
+      (tester) async {
+    final gate = Completer<bool>();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'pairingAllowed') return gate.future;
+      throw StateError('Unexpected native operation');
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    await tester.pumpWidget(page((_) async => invitation()));
+    await scan(tester);
+    await tester.ensureVisible(find.byKey(const Key('pair_confirm')));
+    await tester.tap(find.byKey(const Key('pair_confirm')));
+    await tester.pump();
+    expect(find.textContaining('STAGE-QR'), findsOneWidget);
+    expect(find.byKey(const Key('pair_progress_stage')), findsOneWidget);
+    expect(find.byKey(const Key('pair_verified')), findsNothing);
+    gate.complete(false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pair_progress_stage')), findsNothing);
+    expect(find.textContaining('PAIR-STATE'), findsOneWidget);
+    expect(find.byKey(const Key('pair_qr_consumed')), findsOneWidget);
+  });
+
+  testWidgets('cancel clears live stage and rejects late preflight completion',
+      (tester) async {
+    final gate = Completer<bool>();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'pairingAllowed') return gate.future;
+      throw StateError('Unexpected native operation');
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    await tester.pumpWidget(page((_) async => invitation()));
+    await scan(tester);
+    await tester.ensureVisible(find.byKey(const Key('pair_confirm')));
+    await tester.tap(find.byKey(const Key('pair_confirm')));
+    await tester.pump();
+    expect(find.byKey(const Key('pair_progress_stage')), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('確認を中止'), 140,
+        scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('確認を中止'));
+    // The indeterminate progress animation never settles while busy.
+    await tester.pump();
+    await tester.tap(find.text('確認を中止'));
+    await tester.pump();
+    expect(find.byKey(const Key('pair_progress_stage')), findsNothing);
+    expect(find.textContaining('キャンセルしました'), findsOneWidget);
+    gate.complete(false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pair_progress_stage')), findsNothing);
+    expect(find.byKey(const Key('pair_verified')), findsNothing);
+    expect(find.textContaining('キャンセルしました'), findsOneWidget);
+    expect(find.byKey(const Key('pair_qr_mode')), findsNothing);
+  });
+
+  testWidgets('background during pending preflight clears stage and blocks stale result',
+      (tester) async {
+    final gate = Completer<bool>();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'pairingAllowed') return gate.future;
+      throw StateError('Unexpected native operation');
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    await tester.pumpWidget(page((_) async => invitation()));
+    await scan(tester);
+    await tester.ensureVisible(find.byKey(const Key('pair_confirm')));
+    await tester.tap(find.byKey(const Key('pair_confirm')));
+    await tester.pump();
+    expect(find.byKey(const Key('pair_progress_stage')), findsOneWidget);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(find.byKey(const Key('pair_progress_stage')), findsNothing);
+    gate.complete(false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pair_verified')), findsNothing);
+    expect(find.byKey(const Key('pair_qr_mode')), findsNothing);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+  });
+
 }
