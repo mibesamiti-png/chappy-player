@@ -1,6 +1,9 @@
 name: Build Android APK
 on:
   workflow_dispatch:
+  # QA-only branch: PR event builds the Debug APK for a single device test.
+  # Do NOT merge this workflow trigger to main.
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
