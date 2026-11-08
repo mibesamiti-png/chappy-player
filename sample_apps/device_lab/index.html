@@ -18,7 +18,8 @@ small{color:#92a8c5}
 #tiltStatus{min-height:20px;font-size:13px}
 </style></head><body>
 <header><h1>Chappy Device Lab</h1>
-<p>動きセンサーと振動のネイティブ実験室。初回のみ利用確認が表示されます。</p></header>
+<p>動きセンサーと振動のネイティブ実験室。初回のみ利用確認が表示されます。</p>
+<p id="deviceSummary" role="status" aria-live="polite">機能の対応状況：センサー未確認・振動未確認</p></header>
 <section><h2>端末の動きセンサー</h2>
 <button data-sensor="accelerometer">加速度 XYZ</button>
 <button data-sensor="gyroscope">ジャイロ XYZ</button>
@@ -45,42 +46,74 @@ small{color:#92a8c5}
   'use strict';
   const $=id=>document.getElementById(id);
   const capabilities=window.Chappy || {};
+  let sensorSupport=null, hapticSupport=null;
+  function updateSummary(){
+    $('deviceSummary').textContent='機能の対応状況：センサー '+
+      (sensorSupport===null?'未確認':sensorSupport+'種類対応')+
+      '・振動 '+(hapticSupport===null?'未確認':hapticSupport?'対応':'非対応');
+  }
+  function axes(values){
+    if(!Array.isArray(values)||values.length<3 ||
+       !values.slice(0,3).every(v=>typeof v==='number'&&Number.isFinite(v))){
+      return null;
+    }
+    return values;
+  }
   $('probeSensors').addEventListener('click',async()=>{
     try{
+      if(!capabilities.motion || typeof capabilities.motion.available!=='function')
+        throw new Error('unavailable');
       const available=await capabilities.motion.available();
+      if(!available || typeof available!=='object')throw new Error('invalid');
+      sensorSupport=Object.values(available).filter(v=>v===true).length;
+      updateSummary();
       $('sensorResult').textContent=Object.keys(available).map(k=>
         k+': '+(available[k]?'対応':'非対応')).join('\n');
-    }catch(e){$('sensorResult').textContent='対応状況の取得失敗: '+String(e.message||e);}
+    }catch(_){$('sensorResult').textContent='対応状況の取得失敗（権限と端末の対応を確認）';}
   });
   $('probeHaptics').addEventListener('click',async()=>{
     try{
+      if(!capabilities.haptics || typeof capabilities.haptics.available!=='function')
+        throw new Error('unavailable');
       const available=await capabilities.haptics.available();
+      hapticSupport=available===true;
+      updateSummary();
       $('hapticResult').textContent=available?'振動モーター搭載':'振動モーターなし／使用不可';
-    }catch(e){$('hapticResult').textContent='対応状況の取得失敗: '+String(e.message||e);}
+    }catch(_){$('hapticResult').textContent='対応状況の取得失敗（権限と端末の対応を確認）';}
   });
-  let tiltTimer=null,tiltReading=false;
+  let tiltTimer=null,tiltReading=false,tiltEpoch=0;
   function stopTilt(){
+    ++tiltEpoch;
     if(tiltTimer!==null){clearInterval(tiltTimer);tiltTimer=null;}
     $('tiltToggle').textContent='傾き操作を開始';
   }
   async function updateTilt(){
     if(tiltReading || (document.hidden===true)){if(document.hidden===true)stopTilt();return;}
     tiltReading=true;
+    const epoch=tiltEpoch;
     try{
       const result=await capabilities.motion.sample('gravity');
-      if(!result.available){$('tiltStatus').textContent='重力センサー非対応';stopTilt();return;}
-      const xyz=result.values||[0,0,0];
+      if(epoch!==tiltEpoch||tiltTimer===null||document.hidden===true)return;
+      if(!result || !result.available){$('tiltStatus').textContent='重力センサー非対応';stopTilt();return;}
+      const xyz=axes(result.values);
+      if(!xyz){$('tiltStatus').textContent='センサー値が不正です';stopTilt();return;}
       const x=Math.max(-90,Math.min(90,Number(xyz[0])*9));
       const y=Math.max(-55,Math.min(55,Number(xyz[1])*5.5));
       $('tiltDot').style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
       $('tiltStatus').textContent='傾き入力: X='+Number(xyz[0]).toFixed(2)+' / Y='+Number(xyz[1]).toFixed(2);
-    }catch(e){$('tiltStatus').textContent='取得失敗: '+String(e.message||e);stopTilt();}
+    }catch(_){
+      if(epoch===tiltEpoch && tiltTimer!==null){
+        $('tiltStatus').textContent='センサー取得に失敗（権限と端末状態を確認）';
+        stopTilt();
+      }
+    }
     finally{tiltReading=false;}
   }
   $('tiltToggle').addEventListener('click',()=>{
     if(tiltTimer!==null){stopTilt();return;}
     if(!capabilities.motion){$('tiltStatus').textContent='対応プレイヤーが必要';return;}
     $('tiltToggle').textContent='傾き操作を停止';
+    ++tiltEpoch;
     tiltTimer=setInterval(()=>{void updateTilt();},200);
     void updateTilt();
   });
@@ -95,15 +128,17 @@ small{color:#92a8c5}
       button.disabled=true;
       try{
         const sample=await capabilities.motion.sample(button.dataset.sensor);
-        if(!sample.available){
+        if(!sample || !sample.available){
           $('sensorResult').textContent=button.dataset.sensor+': この端末では非対応';
         }else{
-          const axis=sample.values || [];
-          $('sensorResult').textContent=button.dataset.sensor+'\n' +
-            ['X','Y','Z'].map((name,i)=>name+' = '+Number(axis[i]).toFixed(3)).join('\n')+
-            '\n精度: '+sample.accuracy;
+          const axis=axes(sample.values);
+          $('sensorResult').textContent=axis
+            ? button.dataset.sensor+'\n' +
+              ['X','Y','Z'].map((name,i)=>name+' = '+axis[i].toFixed(3)).join('\n')+
+              '\n精度: '+String(sample.accuracy)
+            : '取得失敗：センサー値が不正です';
         }
-      }catch(e){$('sensorResult').textContent='取得失敗: '+String(e.message||e);}
+      }catch(_){$('sensorResult').textContent='取得失敗（権限と端末状態を確認）';}
       finally{button.disabled=false;}
     });
   }
@@ -114,7 +149,7 @@ small{color:#92a8c5}
       try{
         const ok=await capabilities.haptics.play(button.dataset.haptic);
         $('hapticResult').textContent=ok?'振動を実行しました':'非対応または短時間の連続振動制限中です';
-      }catch(e){$('hapticResult').textContent='振動できません: '+String(e.message||e);}
+      }catch(_){$('hapticResult').textContent='振動できません（端末の対応と許可を確認）';}
       finally{button.disabled=false;}
     });
   }

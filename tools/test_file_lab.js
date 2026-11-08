@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
+const {TextEncoder} = require('node:util');
 const source = fs.readFileSync('sample_apps/file_lab/index.html','utf8');
 const match = source.match(/<script>([\s\S]*?)<\/script>/);
 assert(match, 'File Lab missing inline script');
@@ -81,7 +82,7 @@ const document={
   createElement:()=>makeNode()
 };
 vm.runInNewContext(match[1],{
-  window:{Chappy},document,String,Number,Array,Error,
+  window:{Chappy},document,String,Number,Array,Error,TextEncoder,
   setInterval:fakeSetInterval,clearInterval:fakeClearInterval
 });
 const settle=async()=>{for(let i=0;i<15;i++) await new Promise(done=>setImmediate(done))};
@@ -106,6 +107,40 @@ async function click(node){
   assert.equal(get('editor').value,'{"hello":true}');
   assert.match(get('status').textContent,/読み込みました/);
 
+  // Invalid names and oversized UTF-8 content must never call native save.
+  const nativeSaveCount=traces.filter(x=>Array.isArray(x)&&x[0]==='save').length;
+  const localStoreCount=traces.filter(x=>Array.isArray(x)&&x[0]==='store').length;
+  get('fileName').value='../not-allowed.txt';
+  await click(get('saveFile'));
+  assert.match(get('status').textContent,/ファイル名/);
+  assert.equal(traces.filter(x=>Array.isArray(x)&&x[0]==='save').length,nativeSaveCount);
+  get('fileName').value='chappy-note.txt';
+  get('editor').value='あ'.repeat(23000); // 69,000 UTF-8 bytes
+  await click(get('saveFile'));
+  await click(get('saveLocal'));
+  assert.match(get('status').textContent,/64KiB/);
+  assert.equal(traces.filter(x=>Array.isArray(x)&&x[0]==='save').length,nativeSaveCount);
+  assert.equal(traces.filter(x=>Array.isArray(x)&&x[0]==='store').length,localStoreCount);
+
+  // Stored drafts are untrusted data too. Invalid ones must not overwrite UI.
+  const savedDraft=stored;
+  get('editor').value='keep unchanged';
+  stored={fileName:'../private.txt',text:'unsafe'};
+  await click(get('loadLocal'));
+  assert.equal(get('editor').value,'keep unchanged');
+  assert.match(get('status').textContent,/不正/);
+  stored=savedDraft;
+  get('editor').value='{"hello":true}';
+  get('fileName').value='project.json';
+
+  // Raw host exception strings can contain paths or private identifiers.
+  const saveOriginal=Chappy.files.saveText;
+  Chappy.files.saveText=async()=>{throw new Error('secret=/private/path')};
+  await click(get('saveFile'));
+  assert.match(get('status').textContent,/操作に失敗/);
+  assert.ok(!get('status').textContent.includes('secret=/private/path'));
+  Chappy.files.saveText=saveOriginal;
+
   await click(get('importAsset'));
   assert.ok(traces.includes('import'));
   assert.match(get('status').textContent,/取り込み完了/);
@@ -122,11 +157,25 @@ async function click(node){
   slowExport=true;
   await click(list.children[0].children[2]);
   assert.equal(intervals.size,1,'Polling must run during pending export');
+  const listsBefore=traces.filter(x=>x==='list').length;
+  await click(get('listAssets'));
+  assert.equal(traces.filter(x=>x==='list').length,listsBefore,
+    'unrelated file operations must not overlap an active transfer');
   for(const callback of intervals.values())callback();
   await settle();
   assert.match(get('assetTransferLabel').textContent,/転送中：1.0 MiB \/ 4.0 MiB/);
   assert.equal(get('assetProgressBar').value,25);
   assert.equal(get('cancelAssetTransfer').disabled,false);
+  const normalStatus=Chappy.files.transferStatus;
+  Chappy.files.transferStatus=async()=>({
+    active:true,phase:'copying',bytesDone:9999999,totalBytes:100,
+    cancelable:true,cancelRequested:false,
+  });
+  for(const callback of intervals.values())callback();
+  await settle();
+  assert.equal(get('assetProgressBar').value,100,
+    'untrusted native progress must be clamped to 100 percent');
+  Chappy.files.transferStatus=normalStatus;
   await click(get('cancelAssetTransfer'));
   assert.equal(cancelCalls,1);
   assert.match(get('status').textContent,/書き出しをキャンセルしました/);
