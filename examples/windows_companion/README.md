@@ -25,6 +25,29 @@ py examples/windows_companion/companion.py --start --ip 192.168.1.20 --minutes 1
 
 Only RFC1918 private IPv4 addresses (10/8, 172.16/12 and 192.168/16) are accepted. An IP must also be **assigned to the current PC**; binding fails safely otherwise. Automatic IP selection uses the outgoing interface and may pick the wrong adapter on a VPN/multi-network PC — use `--ip` when that happens. No raw socket capture or PC control port is opened.
 
+## New: QR-v3 mutual identity launch (R4A preview)
+
+For the **current QR-v3 mutual-key proof**, do **not** use the older
+`Start-ChappyPairing.cmd` (that launches QR-v2). Extract the latest successful
+Windows Companion Preview ZIP and choose:
+
+1. `Start-ChappyIdentitySetup.cmd` only if you deliberately want to create
+   this Windows user's DPAPI-protected PC signing identity. Type `CREATE` when
+   prompted. Existing identities are not silently replaced.
+2. `Start-ChappyPairingV3.cmd` to check local prerequisites with
+   `--doctor`, show warnings, request your acknowledgement and start
+   `--start --pair --qr --identity-pair --minutes 10`.
+3. `Start-ChappyKnownPhoneV3.cmd` only if you want to manually select a
+   previously verified Android public fingerprint before starting QR-v3.
+   A matching fingerprint does not bypass fresh mutual proof or consent.
+
+`ChappyCompanion.exe --doctor` independently checks required modules, local
+PC identity availability and candidate private IPv4, **without opening a
+listening port, creating keys or printing secrets / IP / hostname**.
+A successful local check does **not** establish that Wi-Fi, Windows Firewall
+or Android pairing works. All PC and phone approvals remain mandatory.
+Details: [R4A offline preflight and QR-v3 guide](../../docs/pc-link-r4-offline-readiness.md).
+
 ## Phone discovery
 
 1. Connect Android and PC to the **same trusted private Wi-Fi/LAN**. Guest Wi-Fi, AP/client isolation and multicast filtering may prevent mDNS discovery.

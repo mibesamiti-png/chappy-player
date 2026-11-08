@@ -44,6 +44,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('PC Link shows opt-in QR-v3 Windows setup without network actions',
+      (tester) async {
+    await tester.pumpWidget(page((_) async => invitation()));
+    expect(find.textContaining('Start-ChappyPairingV3.cmd'), findsOneWidget);
+    expect(find.textContaining('Start-ChappyIdentitySetup.cmd'), findsOneWidget);
+    expect(find.textContaining('Start-ChappyKnownPhoneV3.cmd'), findsOneWidget);
+    expect(find.byKey(const Key('pair_verified')), findsNothing);
+  });
+
   testWidgets('QR-v3 is cleared and cannot be reused after backgrounding',
       (tester) async {
     await tester.pumpWidget(page((_) async => invitation()));

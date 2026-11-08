@@ -52,6 +52,8 @@ jobs:
         run: python3 tools/test_windows_companion.py
       - name: Windows pairing PC approval and TLS pin contract
         run: python3 tools/test_windows_pairing.py
+      - name: PC Link offline readiness and QR-v3 launcher safety
+        run: python3 tools/test_pc_link_readiness.py
       - name: PC identity isolation, no auto trust, native source contract
         run: python3 tools/test_pc_identity_contract.py
       - name: PC proof-only signing isolation and Kotlin parity contract

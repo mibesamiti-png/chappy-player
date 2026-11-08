@@ -98,6 +98,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
+        "--doctor", action="store_true",
+        help="Offline QR-v3 preflight: no listener, no key creation, no secrets",
+    )
+    mode.add_argument(
         "--start", action="store_true",
         help="Explicitly advertise this PC on the current private LAN",
     )
@@ -198,6 +202,15 @@ def run_beacon(ip: str, minutes: int) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.doctor:
+        if (args.pair or args.qr or args.identity_pair or
+                args.compare_known_phone or args.ip or
+                args.minutes != DEFAULT_MINUTES):
+            print("--doctor cannot be combined with network options",
+                  file=sys.stderr)
+            return 2
+        from pc_link_readiness import doctor
+        return 0 if doctor() else 1
     if (args.identity_create or args.identity_status or args.identity_revoke
             or args.verified_list or args.verified_forget is not None
             or args.verified_clear):
