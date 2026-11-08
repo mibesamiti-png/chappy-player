@@ -101,7 +101,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
       }
       showTraffic();
       if(!result.connected)stopPolling();
-    }catch(error){addLog('受信エラー: '+String(error.message||error));stopPolling();}
+    }catch(_){addLog('受信エラー [WSS-POLL]：通信状態を確認');stopPolling();}
     finally{busy=false;}
   }
   function timed(promise,ms,label){
@@ -115,7 +115,8 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
     button.disabled=true;
     try{await action();}catch(error){
       if(id==='connect'){stopPolling();status('接続失敗（通信ログを確認）');}
-      addLog('エラー: '+String(error.message||error));
+      // Host exceptions can include private URLs, paths or tokens.
+      addLog('操作失敗: '+id+'（接続設定と許可状態を確認）');
     }
     finally{button.disabled=false;}
   }
@@ -128,7 +129,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
       connecting=true;
       let expired=false;
       status('接続を確認中…（最大30秒）');
-      addLog('WSS接続を開始: '+url);
+      addLog('WSS接続を開始（URLはログに表示しません）');
       const pending=net.connect(url);
       try{
         const result=await timed(pending,30000,
@@ -141,7 +142,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
           connected=true;
           updateSendButtons();
           status('接続中');
-          addLog('接続成功: '+result.origin);
+          addLog('WSS接続成功（接続先はログに表示しません）');
           polling=setInterval(()=>{void poll();},450);
         }else{
           stopPolling();
@@ -152,7 +153,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
           expired=true;
           stopPolling();
           status('接続失敗（通信ログを確認）');
-          addLog('WSS接続失敗: '+String(error.message||error));
+          addLog('WSS接続失敗 [WSS-CONNECT]：許可・TLS・URL・通信環境を確認');
           // Never leave a failed session connected on the host.
           void net.close().catch(()=>{});
         }
