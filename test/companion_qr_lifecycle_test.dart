@@ -250,4 +250,33 @@ void main() {
     expect(find.byKey(const Key('pair_qr_mode')), findsNothing);
   });
 
+  testWidgets('background during pending preflight clears stage and blocks stale result',
+      (tester) async {
+    final gate = Completer<bool>();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'pairingAllowed') return gate.future;
+      throw StateError('Unexpected native operation');
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    await tester.pumpWidget(page((_) async => invitation()));
+    await scan(tester);
+    await tester.ensureVisible(find.byKey(const Key('pair_confirm')));
+    await tester.tap(find.byKey(const Key('pair_confirm')));
+    await tester.pump();
+    expect(find.byKey(const Key('pair_progress_stage')), findsOneWidget);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(find.byKey(const Key('pair_progress_stage')), findsNothing);
+    gate.complete(false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pair_verified')), findsNothing);
+    expect(find.byKey(const Key('pair_qr_mode')), findsNothing);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+  });
+
 }
