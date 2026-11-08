@@ -86,3 +86,11 @@ jobs:
         run: node tools/test_media_lab_diagnostics.js
       - name: Media Lab camera recording and private video library smoke test
         run: node tools/test_media_lab_video.js
+      - name: Chappy Recorder mini-app smoke test
+        run: node tools/test_chappy_recorder.js
+      - name: Device Lab motion and haptics smoke test
+        run: node tools/test_device_lab.js
+      - name: Game Server Lab HTTPS and WSS smoke test
+        run: node tools/test_game_server_lab.js
+      - name: File Lab picker and asset-vault smoke test
+        run: node tools/test_file_lab.js
