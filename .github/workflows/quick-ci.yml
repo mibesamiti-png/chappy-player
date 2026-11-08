@@ -16,6 +16,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Verify single-chat handoff metadata before expensive setup
+        run: python3 tools/test_project_handoff.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
