@@ -1,5 +1,7 @@
 # Chappy Player — 個人用Androidミニアプリプレイヤー
 
+> **開発再開の入口（2026-11-08）**: [現在地・引き継ぎ](docs/project/HANDOFF.md) / [機械可読 STATE](docs/project/STATE.json) / [次の開発ロードマップ](docs/project/ROADMAP.md) / [単一チャット高速開発 v2](docs/project/SINGLE_CHAT_DEVELOPMENT.md)。以下の過去記録にある「次にやること」は当時の履歴。現在地はこの4ファイルとGitHubの最新main/CIで再確認してください。
+
 **Android向け・自分専用の `.chappy` ミニアプリプレイヤー（試作コード）**
 
 最初に Flutter 製 APK を1回入れて、以後は `.chappy` (ZIP) ファイルをスマホで読み込む。

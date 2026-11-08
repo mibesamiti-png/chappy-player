@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "project": "Chappy Player",
+  "capturedDate": "2026-11-08",
+  "sourceMainAtCapture": "0171d30109db0bed2d1e299bc458fda67c82b228",
+  "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
+  "workingMode": "single-chat-fast-v2",
+  "focus": {
+    "id": "PC-LINK-R4B",
+    "name": "認証済みセッションの安全な基盤",
+    "status": "planned_not_started",
+    "entry": "docs/project/ROADMAP.md"
+  },
+  "lastCompletedBatch": {
+    "id": "PC-LINK-R4A",
+    "pr": 95,
+    "mergedCommit": "0171d30109db0bed2d1e299bc458fda67c82b228",
+    "sourceStatus": "merged",
+    "quickCi": {
+      "status": "success",
+      "run": 42443650137
+    },
+    "windowsCi": {
+      "status": "success",
+      "run": 42443650188
+    }
+  },
+  "observations": {
+    "debugAndroidColdLaunch": {
+      "status": "user_reported_pass",
+      "date": "2026-11-08",
+      "scope": "起動のみ（全面的な端末QAではない）"
+    },
+    "pcLinkTwoDevice": {
+      "status": "not_run",
+      "casesPassed": 0,
+      "casesTotal": 15,
+      "source": "docs/pc-link-two-device-qa-matrix.md"
+    },
+    "androidSource": {
+      "status": "implemented_preview",
+      "functions": [
+        "LAN機器発見",
+        "QR-v3ワンタイム相互署名",
+        "KeyStore端末鍵",
+        "検証済みPC鍵履歴",
+        "失敗段階・安全な診断"
+      ]
+    },
+    "windowsSource": {
+      "status": "implemented_preview",
+      "functions": [
+        "明示起動Companion EXE",
+        "mDNSサービス発見",
+        "QR-v3一時認証",
+        "Windows DPAPI端末鍵",
+        "検証済みスマホ履歴",
+        "R4A --doctor と専用ランチャー"
+      ]
+    },
+    "unimplemented": [
+      "永続的な再利用可能認証済みセッション",
+      "権限分離された読み取り専用PC状態API",
+      "PCファイル転送",
+      "PCリモート操作",
+      "自動再接続/遠隔失効"
+    ],
+    "publicMiniappCatalog": {
+      "stable": 2,
+      "debug": 8,
+      "debugLatest": {
+        "deviceLab": "0.2.1",
+        "fileLab": "0.2.3",
+        "gameServerLab": "0.1.2"
+      }
+    },
+    "stableRelease": {
+      "tag": "v0.3.0-b11",
+      "source": "https://github.com/mibesamiti-png/chappy-player-updates/releases/tag/v0.3.0-b11",
+      "status": "published_previous_not_changed"
+    }
+  },
+  "nextBatch": {
+    "id": "PC-LINK-R4B",
+    "targetTasks": 8,
+    "implementationScope": "オフラインで先行できるセッション設計・検証。認証成立だけでPC操作権を与えない。",
+    "tasks": [
+      {
+        "id": "PC-R4B-01",
+        "name": "期限・終了・キャンセルの状態機械",
+        "status": "todo"
+      },
+      {
+        "id": "PC-R4B-02",
+        "name": "相互認証成功と使用権限の独立モデル",
+        "status": "todo"
+      },
+      {
+        "id": "PC-R4B-03",
+        "name": "読み取り専用PC状態権限の明示承認仕様",
+        "status": "todo"
+      },
+      {
+        "id": "PC-R4B-04",
+        "name": "WindowsとDartのメッセージ・型・エラー契約共有",
+        "status": "todo"
+      },
+      {
+        "id": "PC-R4B-05",
+        "name": "有効期限・重複要求・切断・拒否のテスト",
+        "status": "todo"
+      },
+      {
+        "id": "PC-R4B-06",
+        "name": "隔離ループバックでのWindows/Dartプロトコル統合検証",
+        "status": "todo"
+      },
+      {
+        "id": "PC-R4B-07",
+        "name": "鍵・QR招待・LAN情報の秘匿とJS非公開回帰",
+        "status": "todo"
+      },
+      {
+        "id": "PC-R4B-08",
+        "name": "Windows/Android CIとドキュメント/引継ぎ更新",
+        "status": "todo"
+      }
+    ],
+    "stopBefore": [
+      "PCコマンド実行",
+      "無断ファイルアクセス",
+      "信頼済み永続接続の自動付与",
+      "Android/Windows実機PASS宣言",
+      "署名Stable公開"
+    ]
+  },
+  "policy": {
+    "branch": "main",
+    "oneChat": true,
+    "relatedTasksPerBatch": "5-10, adjust for risk",
+    "commitsPerBatchGoal": "1-3 (quality target, not hard limit)",
+    "pullRequestsPerBatchGoal": 1,
+    "requiredChecks": [
+      "Quick CI exact HEAD",
+      "Windows Companion Preview when Windows code changes",
+      "Full Debug APK on Android milestone"
+    ],
+    "stableRelease": "manual, separately approved; no automatic release",
+    "sourceOfTruth": "GitHub main code + current PR/CI + this snapshot. Notion is a human-readable mirror; stale notes never override code.",
+    "milestoneUpdate": "After successful merge, document verified main/CI/deviceQA and next tasks in STATE.json/HANDOFF.md and reflect in Notion. Do not pretend automatic Notion sync exists."
+  },
+  "references": {
+    "repository": "https://github.com/mibesamiti-png/chappy-player",
+    "pcLinkSpec": "docs/pc-link-mutual-qr-v3.md",
+    "qa": "docs/pc-link-two-device-qa-matrix.md",
+    "latestBatch": "docs/pc-link-r4-offline-readiness.md",
+    "ci": "docs/ci-quick-and-manual-debug.md",
+    "publicLibrary": "https://github.com/mibesamiti-png/chappy-apps",
+    "notion": "https://app.notion.com/p/410948b74937819d92efc11defb9a7c7"
+  }
+}
