@@ -66,19 +66,34 @@ async function click(id){const fn=get(id).callbacks.get('click');
 
 (async()=>{
   assert.equal(actions.length,0,'No automatic network or hardware calls');
+  assert.equal(get('send').disabled,true,'WSS send disabled before connection');
+  assert.equal(get('sendGravity').disabled,true);
+  assert.match(get('traffic').textContent,/送信 0件/);
+  assert.equal(get('httpState').textContent,'HTTPS未実行');
   await click('connect');
   assert.deepEqual(actions[0],['connect','wss://game.example.org/room']);
   assert.equal(intervals.size,1);
   assert.equal(timeouts.size,0,'Successful connection clears watchdog');
   assert.match(get('state').textContent,/接続中/);
+  assert.ok(!get('log').textContent.includes('wss://game.example.org/room'),
+    'connection URL must never be copied to visible logs');
+  assert.equal(get('send').disabled,false,'WSS send enabled only after connection');
   for(const fn of intervals.values())fn();
   await settle();
   assert.match(get('log').textContent,/welcome/);
+  assert.match(get('traffic').textContent,/受信 1件/);
+  inboundQueue=['next-message'];
+  Chappy.network.poll=async()=>({connected:true,messages:inboundQueue.splice(0),dropped:3});
+  for(const fn of intervals.values())fn();
+  await settle();
+  assert.match(get('traffic').textContent,/受信 2件/);
+  assert.match(get('traffic').textContent,/破棄 3件/);
   await click('send');
   assert.ok(actions.some(a=>a[0]==='send'&&a[1]==='{"type":"ping"}'));
   await click('sendGravity');
   assert.ok(actions.some(a=>a[0]==='sample'&&a[1]==='gravity'));
   assert.ok(actions.some(a=>a[0]==='send'&&a[1].includes('"gravity"')));
+  assert.match(get('traffic').textContent,/送信 2件/);
   await click('haptic');
   assert.ok(actions.some(a=>a[0]==='haptic'&&a[1]==='tick'));
   await click('fillGetExample');
@@ -88,6 +103,42 @@ async function click(id){const fn=get(id).callbacks.get('click');
   await click('post');
   assert.ok(actions.some(a=>a[0]==='request'&&a[2]==='POST'&&
     a[3]==='{"type":"http-post"}'),'HTTPS POST must NOT reuse WSS message field');
+  assert.match(get('httpState').textContent,/POST 成功/);
+  const requestCount=actions.filter(a=>a[0]==='request').length;
+  get('httpsBody').value='{not valid JSON';
+  await click('post');
+  assert.equal(actions.filter(a=>a[0]==='request').length,requestCount,
+    'invalid JSON must not reach the host bridge');
+  assert.match(get('httpState').textContent,/JSONオブジェクト/);
+  get('httpsBody').value='"not-an-object"';
+  await click('post');
+  assert.equal(actions.filter(a=>a[0]==='request').length,requestCount,
+    'scalar JSON must be rejected before network access');
+  get('httpsBody').value=JSON.stringify({large:'あ'.repeat(3000)});
+  await click('post');
+  assert.equal(actions.filter(a=>a[0]==='request').length,requestCount,
+    'UTF-8 payloads exceeding 8KiB must be rejected');
+  assert.match(get('httpState').textContent,/8KiB/);
+  get('httpsBody').value='{"type":"http-post"}';
+  let finishRequest;
+  const originalRequest=Chappy.network.request;
+  Chappy.network.request=()=>new Promise(resolve=>{finishRequest=resolve});
+  await click('post');
+  assert.match(get('httpState').textContent,/実行中/);
+  assert.equal(get('get').disabled,true);
+  await click('get');
+  assert.equal(actions.filter(a=>a[0]==='request').length,requestCount,
+    'second HTTPS operation must not overlap');
+  finishRequest({status:200,text:'{"ok":true}'});
+  await settle();
+  assert.equal(get('get').disabled,false);
+  assert.equal(get('post').disabled,false);
+  Chappy.network.request=async()=>{throw new Error('secret endpoint=private')};
+  await click('get');
+  assert.match(get('httpState').textContent,/失敗/);
+  assert.ok(!get('log').textContent.includes('secret endpoint=private'),
+    'HTTPS bridge exceptions are not copied to visible logs');
+  Chappy.network.request=originalRequest;
   assert.equal(get('message').value,'{"type":"ping"}');
   await click('fillPostExample');
   assert.equal(get('httpsUrl').value,'https://postman-echo.com/post');
@@ -100,13 +151,17 @@ async function click(id){const fn=get(id).callbacks.get('click');
   assert.equal(intervals.size,0,'Poller must stop when app hidden');
   assert.ok(actions.some(a=>a[0]==='close'));
   assert.match(get('state').textContent,/未接続/);
+  assert.equal(get('send').disabled,true);
+  assert.match(get('traffic').textContent,/送信 2件/);
 
   // A rejected TLS handshake, DNS failure or denied permission must NOT
   // strand the status label in "接続を確認中…" indefinitely.
   Chappy.network.connect=async()=>{throw new Error('TLS rejected')};
   await click('connect');
   assert.match(get('state').textContent,/接続失敗/);
-  assert.match(get('log').textContent,/TLS rejected/);
+  assert.match(get('log').textContent,/WSS-CONNECT/);
+  assert.ok(!get('log').textContent.includes('TLS rejected'),
+    'raw host exception messages must not appear in the log');
 
   // Reproduce an unresolved host bridge request, then fire the 30s watchdog.
   Chappy.network.connect=()=>new Promise(()=>{});
