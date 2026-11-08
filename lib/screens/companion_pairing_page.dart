@@ -2,6 +2,7 @@ import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:chappy_player/core/pc_pairing_failure.dart';
 import 'package:chappy_player/core/pc_pairing_stage.dart';
 import 'package:chappy_player/core/pc_pairing_diagnostic_report.dart';
+import 'package:chappy_player/core/pc_pairing_recovery_guidance.dart';
 import 'package:flutter/services.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
@@ -617,6 +618,14 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                 key: const Key('pair_error'),
                 style: const TextStyle(color: Colors.orangeAccent),
               ),
+              if (PcPairingRecoveryGuidance.fromMessage(_error!) case final hint?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '次に確認すること：$hint',
+                    key: const Key('pair_recovery_hint'),
+                  ),
+                ),
               if (PcPairingDiagnosticReport.fromMessage(_error!) case final report?)
                 TextButton.icon(
                   key: const Key('pair_copy_diagnostic'),
