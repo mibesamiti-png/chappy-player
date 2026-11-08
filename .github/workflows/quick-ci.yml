@@ -1,0 +1,88 @@
+name: Quick CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: quick-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android runner if absent
+        run: flutter create --platforms=android --org dev.chappy .
+      - name: Patch Android manifest for local app host
+        run: python3 tools/patch_android.py
+      - name: Android media permission manifest smoke test
+        run: python3 tools/test_android_media_manifest.py
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Unit tests
+        run: flutter test
+      - name: Native microphone bridge security smoke test
+        run: python3 tools/test_native_microphone_bridge.py
+      - name: Native camera video permission and private storage smoke test
+        run: python3 tools/test_native_video_contract.py
+      - name: Motion, haptics and private video export safety contracts
+        run: python3 tools/test_native_miniapp_capabilities.py
+      - name: Game server TLS/WSS policy and sandbox contracts
+        run: python3 tools/test_game_network_contract.py
+      - name: Example game server protocol and abuse guards
+        run: python3 tools/test_game_server_example.py
+      - name: Network Lab discovery scope and foreground consent contracts
+        run: python3 tools/test_network_lab_contract.py
+      - name: Windows Companion opt-in beacon source and scope regression
+        run: python3 tools/test_windows_companion.py
+      - name: Windows pairing PC approval and TLS pin contract
+        run: python3 tools/test_windows_pairing.py
+      - name: PC identity isolation, no auto trust, native source contract
+        run: python3 tools/test_pc_identity_contract.py
+      - name: PC proof-only signing isolation and Kotlin parity contract
+        run: python3 tools/test_pc_proof_contract.py
+      - name: Encrypted QR-v3 verified-PC history safety contract
+        run: python3 tools/test_verified_pc_history_contract.py
+      - name: Scoped Android SAF document import/export contract
+        run: python3 tools/test_native_documents_contract.py
+      - name: Native large binary asset vault boundary and checksum checks
+        run: python3 tools/test_native_asset_vault.py
+      - name: Optional lossless ZIP compression integrity and ratio fixtures
+        run: python3 tools/test_asset_zip_compression.py
+      - name: Private video ZIP batch backup integrity/safety contract
+        run: python3 tools/test_private_video_zip_backup.py
+      - name: Private ZIP restore strict validation and format fixtures
+        run: python3 tools/test_private_video_zip_restore.py
+      - name: JavaScript bridge smoke test
+        run: node tools/test_bootstrap.js
+      - name: Release signing helper smoke test
+        run: python3 tools/test_release_signing.py
+      - name: APK signer output parser smoke test
+        run: python3 tools/test_verify_signed_release.py
+      - name: HTML package and mini-app catalog smoke test
+        run: python3 tools/test_chappy_package_tools.py
+      - name: Update feed generator smoke test
+        run: python3 tools/test_update_feed.py
+      - name: Public APK feed publisher safety smoke test
+        run: python3 tools/test_publish_update_catalog.py
+      - name: Media Lab JavaScript syntax and feature smoke test
+        run: node tools/test_media_probe.js
+      - name: Media Lab copyable diagnostics behavior smoke test
+        run: node tools/test_media_lab_diagnostics.js
+      - name: Media Lab camera recording and private video library smoke test
+        run: node tools/test_media_lab_video.js
