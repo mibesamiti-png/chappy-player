@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('every stage has a unique stable code and fixed safe summary', () {
     expect(PcPairingStage.values.length, 6);
-    expect(PcPairingStage.values.map((stage) => stage.code).toSet().length, 5);
+    expect(PcPairingStage.values.map((stage) => stage.code).toSet().length, 6);
     for (final stage in PcPairingStage.values) {
       expect(stage.code, startsWith('STAGE-'));
       expect(stage.safeSummary, contains(stage.code));
