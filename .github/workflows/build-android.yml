@@ -1,6 +1,8 @@
 name: Build Android APK
 on:
   workflow_dispatch:
+  # One-off cold-start Android QA; NEVER MERGE this trigger.
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
