@@ -2,28 +2,29 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-08",
-  "sourceMainAtCapture": "0171d30109db0bed2d1e299bc458fda67c82b228",
+  "sourceMainAtCapture": "ad95401f86362c760139990241a7546984c809f6",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "PC-LINK-R4B",
-    "name": "認証済みセッションの安全な基盤",
+    "id": "PC-LINK-R4C",
+    "name": "証明済みQR-v3に結びついた認可と実データの読み取り専用PC状態",
     "status": "planned_not_started",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "PC-LINK-R4A",
-    "pr": 95,
-    "mergedCommit": "0171d30109db0bed2d1e299bc458fda67c82b228",
-    "sourceStatus": "merged",
+    "id": "PC-LINK-R4B",
+    "pr": 97,
+    "mergedCommit": "ad95401f86362c760139990241a7546984c809f6",
+    "sourceStatus": "merged_offline_contract_only",
     "quickCi": {
       "status": "success",
-      "run": 42443650137
+      "run": 42468375810
     },
     "windowsCi": {
       "status": "success",
-      "run": 42443650188
-    }
+      "run": 42468375793
+    },
+    "qualification": "本番通信・PC状態取得・PC操作は未実装。Python/Dartオフラインモデルと127.0.0.1模擬通信のみ完了"
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -44,7 +45,8 @@
         "QR-v3ワンタイム相互署名",
         "KeyStore端末鍵",
         "検証済みPC鍵履歴",
-        "失敗段階・安全な診断"
+        "失敗段階・安全な診断",
+        "R4Bオフラインセッション/権限モデル（実PC通信には未接続）"
       ]
     },
     "windowsSource": {
@@ -55,7 +57,8 @@
         "QR-v3一時認証",
         "Windows DPAPI端末鍵",
         "検証済みスマホ履歴",
-        "R4A --doctor と専用ランチャー"
+        "R4A --doctor と専用ランチャー",
+        "R4Bオフラインセッション/権限モデル（実PC通信には未接続）"
       ]
     },
     "unimplemented": [
@@ -81,48 +84,48 @@
     }
   },
   "nextBatch": {
-    "id": "PC-LINK-R4B",
+    "id": "PC-LINK-R4C",
     "targetTasks": 8,
-    "implementationScope": "オフラインで先行できるセッション設計・検証。認証成立だけでPC操作権を与えない。",
+    "implementationScope": "R4Bのオフラインモデルを本物の安全なQR-v3・TLSチャンネルへ接続する次段階。権限はデフォルトゼロ、双方明示同意。PC状態は読み取り専用・欠測を正しく扱う。",
     "tasks": [
       {
-        "id": "PC-R4B-01",
-        "name": "期限・終了・キャンセルの状態機械",
+        "id": "PC-R4C-01",
+        "name": "QR-v3の署名成功と実TLS接続を認可要求に安全に結び付け、テスト用真偽値とは分離",
         "status": "todo"
       },
       {
-        "id": "PC-R4B-02",
-        "name": "相互認証成功と使用権限の独立モデル",
+        "id": "PC-R4C-02",
+        "name": "接続ごとの短命セッションID/リプレイ・期限・切断失効の設計と実装",
         "status": "todo"
       },
       {
-        "id": "PC-R4B-03",
-        "name": "読み取り専用PC状態権限の明示承認仕様",
+        "id": "PC-R4C-03",
+        "name": "読み取り専用PC状態スコープへのWindows/Android別々の明示承認",
         "status": "todo"
       },
       {
-        "id": "PC-R4B-04",
-        "name": "WindowsとDartのメッセージ・型・エラー契約共有",
+        "id": "PC-R4C-04",
+        "name": "Windows側の真のPC状態情報を安全に収集（非対応/未測定区別、秘密情報除外）",
         "status": "todo"
       },
       {
-        "id": "PC-R4B-05",
-        "name": "有効期限・重複要求・切断・拒否のテスト",
+        "id": "PC-R4C-05",
+        "name": "Android側の信頼されたホストUIでPC状態・拒否・通信切断を可視化",
         "status": "todo"
       },
       {
-        "id": "PC-R4B-06",
-        "name": "隔離ループバックでのWindows/Dartプロトコル統合検証",
+        "id": "PC-R4C-06",
+        "name": "TLS・期限・二重要求・中断・鍵変更・不正署名の統合回帰",
         "status": "todo"
       },
       {
-        "id": "PC-R4B-07",
-        "name": "鍵・QR招待・LAN情報の秘匿とJS非公開回帰",
+        "id": "PC-R4C-07",
+        "name": "ホストのみがPC Linkを扱い、.chappy JS・公開カタログには権限を開放しない回帰",
         "status": "todo"
       },
       {
-        "id": "PC-R4B-08",
-        "name": "Windows/Android CIとドキュメント/引継ぎ更新",
+        "id": "PC-R4C-08",
+        "name": "Quick/Windows CI、必要に応じDebug APK生成と実機QA記録・引き継ぎ更新",
         "status": "todo"
       }
     ],
@@ -153,7 +156,7 @@
     "repository": "https://github.com/mibesamiti-png/chappy-player",
     "pcLinkSpec": "docs/pc-link-mutual-qr-v3.md",
     "qa": "docs/pc-link-two-device-qa-matrix.md",
-    "latestBatch": "docs/pc-link-r4-offline-readiness.md",
+    "latestBatch": "docs/pc-link-r4b-session-preview.md",
     "ci": "docs/ci-quick-and-manual-debug.md",
     "publicLibrary": "https://github.com/mibesamiti-png/chappy-apps",
     "notion": "https://app.notion.com/p/410948b74937819d92efc11defb9a7c7"
