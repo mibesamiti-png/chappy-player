@@ -176,13 +176,19 @@ void main() {
     expect(find.textContaining('PAIR-HOST'), findsOneWidget);
     expect(find.byKey(const Key('pair_recovery_hint')), findsOneWidget);
     expect(find.textContaining('STAGE-QR'), findsOneWidget);
-    expect(find.byKey(const Key('pair_copy_diagnostic')), findsOneWidget);
     expect(find.textContaining(sensitive), findsNothing);
     expect(find.byKey(const Key('pair_qr_consumed')), findsOneWidget);
     expect(tester.widget<FilledButton>(
       find.byKey(const Key('pair_confirm')),
     ).onPressed, isNull);
     expect(find.byKey(const Key('pair_verified')), findsNothing);
+    // The longer recovery hint can move the copy button below the viewport.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('pair_copy_diagnostic')),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byKey(const Key('pair_copy_diagnostic')), findsOneWidget);
   });
 
 }
