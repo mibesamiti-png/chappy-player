@@ -480,10 +480,13 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             Text('接続先: ${device.address}:${device.port}'),
             const SizedBox(height: 12),
             const Text(
-              'QR-v3の端末相互認証はPCで'
-              ' --start --pair --qr --identity-pair を起動。\n'
-              '旧QR-v2は --start --pair --qr を起動。\n'
-              '旧手入力モードの場合は --start --pair で起動してください。\n'
+              '最新のQR-v3相互認証はWindowsで'
+              ' Start-ChappyPairingV3.cmd を起動してください。\n'
+              'PCの端末鍵が未作成なら、先に'
+              ' Start-ChappyIdentitySetup.cmd で明示的に準備します。\n'
+              '以前確認したスマホ鍵を比較する場合は'
+              ' Start-ChappyKnownPhoneV3.cmd を使えます。\n'
+              '旧QR-v2のStart-ChappyPairing.cmdとは別モードです。\n'
               'PC画面に表示される証明書SHA-256指紋64文字を入力します。'
               'この指紋は毎回変わり、端末名だけでは本人確認できません。',
             ),
