@@ -29,6 +29,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
 <div class="row"><button id="connect">サーバーに接続</button>
 <button id="disconnect">切断</button></div>
 <p id="state" role="status">未接続</p>
+<p id="traffic" role="status" aria-live="polite">WSS送信 0件・受信 0件・破棄 0件</p>
 <small>接続先を許可した後、サーバーと通信します。30秒以上応答がない場合は失敗として表示します。</small>
 <label for="message">送信するテキスト／JSON（8KiBまで）</label>
 <textarea id="message" maxlength="8000">{"type":"ping"}</textarea>
@@ -48,6 +49,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
 <textarea id="httpsBody" maxlength="8000">{"type":"ping"}</textarea>
 <div class="row"><button id="get">GETで取得</button>
 <button id="post">POSTでJSON送信</button></div>
+<p id="httpState" role="status" aria-live="polite">HTTPS未実行</p>
 <small>GETは本文を送りません。POSTはこの欄のJSONを送信します。公開テスト先へ個人情報や秘密情報を送らないでください。</small>
 <small>リダイレクトは禁止。リクエストは8KiB、レスポンスは64KiB以下。平文HTTP/WSやローカルIPへの接続はこの段階では不可。</small>
 </section>
@@ -61,6 +63,15 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
   const $=id=>document.getElementById(id);
   const net=window.Chappy && window.Chappy.network;
   let connected=false, polling=null, busy=false, connecting=false, connectEpoch=0;
+  let sentCount=0, receivedCount=0, droppedCount=0, httpsBusy=false;
+  function showTraffic(){
+    $('traffic').textContent='WSS送信 '+sentCount+'件・受信 '+receivedCount+
+      '件・破棄 '+droppedCount+'件';
+  }
+  function updateSendButtons(){
+    $('send').disabled=!connected;
+    $('sendGravity').disabled=!connected;
+  }
   const lines=[];
   function addLog(line){
     lines.push(String(line).slice(0,1200));
@@ -71,6 +82,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
   function stopPolling(){
     if(polling!==null){clearInterval(polling);polling=null;}
     connected=false;
+    updateSendButtons();
     status('未接続');
   }
   async function poll(){
@@ -79,9 +91,15 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
     try{
       const result=await net.poll();
       for(const message of (result.messages||[])){
+        receivedCount++;
         addLog('受信: '+String(message).slice(0,800));
       }
-      if(Number(result.dropped)>0)status('接続中（古いメッセージ破棄 '+result.dropped+' 件）');
+      const newlyDropped=Number(result.dropped);
+      if(Number.isSafeInteger(newlyDropped) && newlyDropped>0){
+        droppedCount+=Math.min(newlyDropped,1000000);
+        status('接続中（古いメッセージ破棄 '+newlyDropped+' 件）');
+      }
+      showTraffic();
       if(!result.connected)stopPolling();
     }catch(error){addLog('受信エラー: '+String(error.message||error));stopPolling();}
     finally{busy=false;}
@@ -121,6 +139,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
         }
         if(result.connected){
           connected=true;
+          updateSendButtons();
           status('接続中');
           addLog('接続成功: '+result.origin);
           polling=setInterval(()=>{void poll();},450);
@@ -160,6 +179,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
       if(!net || !connected)throw new Error('サーバー未接続');
       const text=$('message').value;
       const sent=await net.send(text);
+      if(sent){sentCount++;showTraffic();}
       addLog(sent?'送信: '+text.slice(0,500):'送信失敗（未接続）');
     });
   });
@@ -172,6 +192,7 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
       if(!reading.available)throw new Error('重力センサー非対応');
       const message=JSON.stringify({type:'gravity',values:reading.values});
       const sent=await net.send(message);
+      if(sent){sentCount++;showTraffic();}
       addLog(sent?'重力入力を手動送信':'入力送信失敗');
     });
   });
@@ -185,13 +206,49 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
   });
   for(const method of ['get','post']){
     $(method).addEventListener('click',()=>{
+      if(httpsBusy)return;
       void operate(method,async()=>{
         if(!net)throw new Error('新しいChappy Playerが必要です');
         const body=method==='post' ? $('httpsBody').value:'';
-        const answer=await net.request($('httpsUrl').value.trim(),
-          method.toUpperCase(),body);
-        addLog('HTTPS '+method.toUpperCase()+' '+answer.status+
-          '：'+String(answer.text).slice(0,800));
+        if(method==='post'){
+          if(encodeURIComponent(body).replace(/%[0-9a-f]{2}/gi,'x').length>8192){
+            $('httpState').textContent='POST本文が8KiBを超えています';
+            return;
+          }
+          try{
+            const parsed=JSON.parse(body);
+            if(!parsed || typeof parsed!=='object' || Array.isArray(parsed)){
+              throw new Error('not-object');
+            }
+          }catch(_){
+            $('httpState').textContent='POST本文はJSONオブジェクト形式で入力してください';
+            return;
+          }
+        }
+        httpsBusy=true;
+        $('get').disabled=true;
+        $('post').disabled=true;
+        $('httpState').textContent='HTTPS '+method.toUpperCase()+' 実行中…';
+        try{
+          const answer=await timed(
+            net.request($('httpsUrl').value.trim(),method.toUpperCase(),body),
+            30000,'HTTPS timeout');
+          const code=Number(answer.status);
+          $('httpState').textContent=Number.isInteger(code)&&code>=200&&code<300
+            ? 'HTTPS '+method.toUpperCase()+' 成功 ('+code+')'
+            : 'HTTPS '+method.toUpperCase()+' 応答 ('+
+              (Number.isInteger(code)?code:'不明')+')';
+          addLog('HTTPS '+method.toUpperCase()+' '+answer.status+
+            '：'+String(answer.text).slice(0,800));
+        }catch(_){
+          $('httpState').textContent='HTTPS '+method.toUpperCase()+
+            ' 失敗（通信・許可・URLまたはタイムアウトを確認）';
+          addLog('HTTPS '+method.toUpperCase()+' 失敗（詳細は表示しません）');
+        }finally{
+          httpsBusy=false;
+          $('get').disabled=false;
+          $('post').disabled=false;
+        }
       });
     });
   }
@@ -209,6 +266,8 @@ background:#0b1423;padding:12px;border-radius:10px;min-height:75px;max-height:28
     addLog('WSSテストURLを入力しました（接続は未実行）');
   });
   $('clearLog').addEventListener('click',()=>{lines.length=0;$('log').textContent='';});
+  updateSendButtons();
+  showTraffic();
   if(typeof document.addEventListener==='function'){
     document.addEventListener('visibilitychange',()=>{
       if(document.hidden){
