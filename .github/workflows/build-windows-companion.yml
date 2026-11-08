@@ -64,6 +64,9 @@ jobs:
         run: |
           & ".\\dist\\ChappyCompanion.exe" --doctor
           if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 1) { throw "Unexpected doctor exit status" }
+          # A fresh runner has no PC identity, so an informative exit 1 is expected.
+          # Reset the PowerShell step exit code after checking the doctor result.
+          exit 0
       - name: Include explicit Windows QR-v3 and offline identity launchers
         shell: pwsh
         run: |
