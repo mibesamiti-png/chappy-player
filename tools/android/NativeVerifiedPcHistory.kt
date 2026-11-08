@@ -26,7 +26,13 @@ internal class NativeVerifiedPcHistory(
     context: Context,
     private val identity: NativePcIdentity
 ) {
-    private val file = AtomicFile(File(context.filesDir, "verified-pc-history-v1.aesgcm"))
+    // MainActivity constructs this helper before Activity.attach() has run.
+    // Touching context.filesDir in a field initializer crashes on cold launch:
+    // Activity's base Context is not available until after attachment.
+    // Delay private storage resolution until an explicit history operation.
+    private val file by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        AtomicFile(File(context.filesDir, "verified-pc-history-v1.aesgcm"))
+    }
     private val keyAlias = "dev.chappy.player.verified_pc_history.aesgcm.v1"
     private val fingerprintPattern = Regex("^[0-9a-f]{64}$")
 
