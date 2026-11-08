@@ -26,6 +26,14 @@ source = read("lib/core/companion_identity_exchange.dart")
 assert "'NativeVerifiedPcHistory.kt'" in patch
 assert '"NativeVerifiedPcHistory.kt"' in manifest_test
 assert 'NativeVerifiedPcHistory(this, pcIdentity)' in activity
+# Android constructs MainActivity fields before Activity.attach() provides the
+# base Context. Eager context.filesDir access here caused a cold-launch crash.
+# Resolve private paths only after an explicit history operation.
+assert 'private val file by lazy(LazyThreadSafetyMode.SYNCHRONIZED)' in native
+assert 'private val file = AtomicFile(' not in native
+assert native.index('private val file by lazy(') < native.index(
+    'AtomicFile(File(context.filesDir, "verified-pc-history-v1.aesgcm"))'
+)
 for name in ("verifiedPcList", "verifiedPcRemember", "verifiedPcForget",
              "verifiedPcClear"):
     assert f'"{name}"' in activity
