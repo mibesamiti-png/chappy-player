@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('every stage has a unique stable code and fixed safe summary', () {
-    expect(PcPairingStage.values.length, 5);
-    expect(PcPairingStage.values.map((stage) => stage.code).toSet().length, 5);
+    expect(PcPairingStage.values.length, 6);
+    expect(PcPairingStage.values.map((stage) => stage.code).toSet().length, 6);
     for (final stage in PcPairingStage.values) {
       expect(stage.code, startsWith('STAGE-'));
       expect(stage.safeSummary, contains(stage.code));
@@ -16,6 +16,7 @@ void main() {
 
   test('QR-v3 progression names remain distinct', () {
     expect(PcPairingStage.qr.code, 'STAGE-QR');
+    expect(PcPairingStage.identity.code, 'STAGE-KEY');
     expect(PcPairingStage.network.code, 'STAGE-NET');
     expect(PcPairingStage.pcProof.code, 'STAGE-PC');
     expect(PcPairingStage.phoneConsent.code, 'STAGE-PHONE');
