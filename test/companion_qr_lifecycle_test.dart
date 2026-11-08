@@ -174,6 +174,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('PAIR-HOST'), findsOneWidget);
+    expect(find.byKey(const Key('pair_recovery_hint')), findsOneWidget);
     expect(find.textContaining('STAGE-QR'), findsOneWidget);
     expect(find.byKey(const Key('pair_copy_diagnostic')), findsOneWidget);
     expect(find.textContaining(sensitive), findsNothing);
