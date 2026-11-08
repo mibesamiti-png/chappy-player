@@ -22,7 +22,7 @@ class FixtureHandler(BaseHTTPRequestHandler):
         pass  # No URLs, addresses, or request content in CI logs.
 
     def do_POST(self) -> None:
-        if self.path != "/fixture" or self.headers.get("Content-Type") != "application/json":
+        if (self.path != "/fixture" or self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json"):
             self.send_error(404)
             return
         try:

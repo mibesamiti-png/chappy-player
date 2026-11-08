@@ -143,7 +143,9 @@ void main() {
             port: port, path: '/fixture');
         final req = await client.postUrl(uri);
         req.headers.contentType = ContentType.json;
-        req.write(jsonEncode(fixture['request']));
+        final bodyBytes = utf8.encode(jsonEncode(fixture['request']));
+        req.contentLength = bodyBytes.length;
+        req.add(bodyBytes);
         final reply = await req.close().timeout(const Duration(seconds: 10));
         expect(reply.statusCode, HttpStatus.ok);
         final body = await utf8.decoder.bind(reply).join();
