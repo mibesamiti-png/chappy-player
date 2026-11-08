@@ -48,6 +48,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   bool _qrConsumed = false;
   String? _code;
   String? _error;
+  // Visible progress only; never persisted or used for authentication.
+  PcPairingStage? _progressStage;
   CompanionQrInvitation? _invite;
   int _generation = 0;
 
@@ -70,6 +72,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
           _verified = false;
           _savedHistory = false;
           _code = null;
+          _progressStage = null;
           _qrConsumed = false;
           _expectedPcFingerprint = null;
           // The short-lived, single-use QR cannot survive an app pause/lock.
@@ -281,6 +284,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _savedHistory = false;
       _error = null;
       _code = null;
+      _progressStage = PcPairingStage.qr;
     });
     try {
       CompanionPairingClient.validateTarget(
@@ -299,6 +303,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       if (!mounted || generation != _generation) return;
       final identityMode = invite?.pcIdentityFingerprint != null;
       stage = identityMode ? PcPairingStage.identity : PcPairingStage.network;
+      setState(() => _progressStage = stage);
       final nonce = identityMode
           ? CompanionIdentityClient.newNonce()
           : CompanionPairingClient.newNonce();
@@ -321,7 +326,12 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
               invitation: invite.invitation,
               qrExpires: invite.expiresUnix,
               phoneNonce: nonce,
-              onStage: (current) => stage = current,
+              onStage: (current) {
+                stage = current;
+                if (mounted && generation == _generation && _busy) {
+                  setState(() => _progressStage = current);
+                }
+              },
               approvePhoneProof: () async {
                 if (!mounted || generation != _generation ||
                     ModalRoute.of(context)?.isCurrent != true) {
@@ -366,12 +376,14 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       setState(() {
         _verified = approved;
         _busy = false;
+        _progressStage = null;
       });
     } catch (error) {
       if (!mounted || generation != _generation) return;
       setState(() {
         _busy = false;
         _verified = false;
+        _progressStage = null;
         _error = '${stage.safeSummary}。'
             '${PcPairingFailure.classify(error).safeMessage}';
       });
@@ -442,6 +454,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _verified = false;
       _savedHistory = false;
       _code = null;
+      _progressStage = null;
       // A cancelled QR challenge must never be re-used.
       if (_invite != null) _fingerprint.clear();
       _invite = null;
@@ -563,7 +576,13 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             if (_busy) ...[
               const SizedBox(height: 12),
               const LinearProgressIndicator(),
-              const Text('PC画面で以下のコードを確認し、YESと入力してください。'),
+              if (_progressStage != null)
+                Text(
+                  '確認中：${_progressStage!.label} [${_progressStage!.code}]',
+                  key: const Key('pair_progress_stage'),
+                ),
+              const Text('PC側の確認画面とコードを照合してください。'
+                  '端末署名の承認が必要な場合は別画面で確認します。'),
             ],
             if (_code != null) ...[
               const SizedBox(height: 12),
