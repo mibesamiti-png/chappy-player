@@ -239,7 +239,8 @@ void main() {
     await tester.scrollUntilVisible(find.text('確認を中止'), 140,
         scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(find.text('確認を中止'));
-    await tester.pumpAndSettle();
+    // The indeterminate progress animation never settles while busy.
+    await tester.pump();
     await tester.tap(find.text('確認を中止'));
     await tester.pump();
     expect(find.byKey(const Key('pair_progress_stage')), findsNothing);
