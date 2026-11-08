@@ -175,7 +175,9 @@ async function click(id){const fn=get(id).callbacks.get('click');
   pendingTimer.fn();
   await settle();
   assert.match(get('state').textContent,/接続失敗/);
-  assert.match(get('log').textContent,/30秒以内/);
+  assert.match(get('log').textContent,/WSS-CONNECT/);
+  assert.ok(!get('log').textContent.includes('30秒以内'),
+    'WSS timeout details stay out of the redacted connection log');
   assert.equal(timeouts.size,0,'WSS timeout timer must be cleaned up');
   await click('clearLog');
   assert.equal(get('log').textContent,'');
