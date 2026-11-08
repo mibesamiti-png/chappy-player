@@ -175,6 +175,7 @@ void main() {
 
     expect(find.textContaining('PAIR-HOST'), findsOneWidget);
     expect(find.textContaining('STAGE-QR'), findsOneWidget);
+    expect(find.byKey(const Key('pair_copy_diagnostic')), findsOneWidget);
     expect(find.textContaining(sensitive), findsNothing);
     expect(find.byKey(const Key('pair_qr_consumed')), findsOneWidget);
     expect(tester.widget<FilledButton>(

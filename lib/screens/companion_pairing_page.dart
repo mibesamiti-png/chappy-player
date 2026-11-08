@@ -1,6 +1,8 @@
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:chappy_player/core/pc_pairing_failure.dart';
 import 'package:chappy_player/core/pc_pairing_stage.dart';
+import 'package:chappy_player/core/pc_pairing_diagnostic_report.dart';
+import 'package:flutter/services.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/verified_pc_history_client.dart';
@@ -609,12 +611,26 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                   key: Key('pair_verified_pc_saved'),
                 ),
             ],
-            if (_error != null)
+            if (_error != null) ...[
               SelectableText(
                 _error!,
                 key: const Key('pair_error'),
                 style: const TextStyle(color: Colors.orangeAccent),
               ),
+              if (PcPairingDiagnosticReport.fromMessage(_error!) case final report?)
+                TextButton.icon(
+                  key: const Key('pair_copy_diagnostic'),
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('診断コードだけをコピー'),
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: report));
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('秘密情報を含まない診断コードをコピーしました')),
+                    );
+                  },
+                ),
+            ],
             const SizedBox(height: 20),
             const Text(
               '本人のPCだけに使用してください。'
