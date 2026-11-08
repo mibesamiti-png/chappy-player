@@ -12,6 +12,11 @@ on:
       - "tools/test_pc_proof.py"
       - "tools/test_mutual_proof_session.py"
       - "tools/test_identity_pairing_v3.py"
+      - "tools/test_pc_link_r4b.py"
+      - "tools/test_pc_link_r4b_boundary.py"
+      - "tools/pc_link_r4b_loopback_fixture.py"
+      - "docs/pc-link-session-preview-v1.json"
+      - "lib/core/pc_link_preview_session.dart"
       - "examples/windows_companion/identity_proof.py"
       - ".github/workflows/build-windows-companion.yml"
   workflow_dispatch:
@@ -37,6 +42,10 @@ jobs:
         run: python tools/test_windows_pairing.py
       - name: Test QR-v3 offline preflight and explicit launch scripts
         run: python tools/test_pc_link_readiness.py
+      - name: R4B offline-only consent session and JS isolation
+        run: |
+          python tools/test_pc_link_r4b.py
+          python tools/test_pc_link_r4b_boundary.py
       - name: Exercise real Windows current-user DPAPI P-256 identity lifecycle
         run: python tools/test_windows_identity.py
       - name: Verify P-256 signed challenge is context-bound and never auto-pairs

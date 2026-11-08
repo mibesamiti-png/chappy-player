@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "protocol": "pc-link-session-preview-v1",
+  "scope": "OFFLINE_CONTRACT_ONLY",
+  "maxLifetimeSeconds": 120,
+  "capability": "pc.status.read",
+  "phases": [
+    "new",
+    "verified",
+    "awaiting_consent",
+    "active",
+    "closed"
+  ],
+  "safeFailureCodes": [
+    "SESSION-DENIED",
+    "SESSION-EXPIRED",
+    "SESSION-REPLAY",
+    "SESSION-CLOSED",
+    "SESSION-FORMAT"
+  ],
+  "request": {
+    "protocol": "pc-link-session-preview-v1",
+    "kind": "status-request",
+    "sequence": 1,
+    "capability": "pc.status.read"
+  },
+  "response": {
+    "protocol": "pc-link-session-preview-v1",
+    "kind": "status-fixture",
+    "sequence": 1,
+    "capability": "pc.status.read",
+    "online": true
+  },
+  "note": "Fixture only; never a live PC endpoint, persistent pairing, or a permission token."
+}

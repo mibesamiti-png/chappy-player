@@ -18,6 +18,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify single-chat handoff metadata before expensive setup
         run: python3 tools/test_project_handoff.py
+      - name: R4B offline consent and strict protocol preflight
+        run: |
+          python3 tools/test_pc_link_r4b.py
+          python3 tools/test_pc_link_r4b_boundary.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
