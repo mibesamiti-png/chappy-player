@@ -22,6 +22,9 @@ get('wssUrl').value='wss://game.example.org/room';
 get('httpsUrl').value='https://game.example.org/status';
 get('message').value='{"type":"ping"}';
 get('httpsBody').value='{"type":"http-post"}';
+// The mock DOM does not parse initial HTML text content automatically.
+assert.match(html, /id="httpState"[^>]*>HTTPS未実行<\/p>/);
+get('httpState').textContent='HTTPS未実行';
 const events={};
 let hidden=false;
 const document={
@@ -172,7 +175,9 @@ async function click(id){const fn=get(id).callbacks.get('click');
   pendingTimer.fn();
   await settle();
   assert.match(get('state').textContent,/接続失敗/);
-  assert.match(get('log').textContent,/30秒以内/);
+  assert.match(get('log').textContent,/WSS-CONNECT/);
+  assert.ok(!get('log').textContent.includes('30秒以内'),
+    'WSS timeout details stay out of the redacted connection log');
   assert.equal(timeouts.size,0,'WSS timeout timer must be cleaned up');
   await click('clearLog');
   assert.equal(get('log').textContent,'');
