@@ -65,9 +65,13 @@ border:1px solid #486383;border-radius:8px;padding:8px}
   const storage=window.Chappy && window.Chappy.storage;
   function status(text){$('status').textContent=text;}
   function checkedDocument(name,text){
-    if(typeof name!=='string' || name.length<1 || name.length>100 ||
-       name!==name.trim() ||
-       !/^[^\\/\\\\\\x00-\\x1f:<>?"|*]+\\.(txt|json|csv|md)$/i.test(name)){
+    const validName=typeof name==='string' && name.length>=1 &&
+      name.length<=100 && name===name.trim() &&
+      ['txt','json','csv','md'].includes(name.split('.').pop().toLowerCase()) &&
+      !['/',String.fromCharCode(92),':','<','>','?','"','|','*']
+        .some(mark=>name.includes(mark)) &&
+      ![...name].some(ch=>ch.charCodeAt(0)<32);
+    if(!validName){
       status('保存できません：ファイル名はtxt/json/csv/mdで、パス記号を含めないでください');
       return false;
     }
