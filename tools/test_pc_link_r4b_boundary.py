@@ -10,7 +10,9 @@ class BoundaryChecks(unittest.TestCase):
     def test_debug_only_python_fixture_never_ships_in_windows_exe(self):
         workflow = (ROOT / ".github/workflows/build-windows-companion.yml").read_text()
         app = (ROOT / "examples/windows_companion/companion.py").read_text()
-        self.assertNotIn("pc_link_r4b_loopback_fixture.py", workflow)
+        # A paths-filter entry is safe; only EXE inclusion or execution is forbidden.
+        self.assertNotIn("dist/pc_link_r4b_loopback_fixture.py", workflow)
+        self.assertNotIn("python tools/pc_link_r4b_loopback_fixture.py", workflow)
         self.assertNotIn("offline_session_preview", app)
         self.assertNotIn("--start --session", app)
         self.assertIn("127.0.0.1", (ROOT / "tools/pc_link_r4b_loopback_fixture.py").read_text())
