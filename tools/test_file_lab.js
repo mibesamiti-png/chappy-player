@@ -166,6 +166,16 @@ async function click(node){
   assert.match(get('assetTransferLabel').textContent,/転送中：1.0 MiB \/ 4.0 MiB/);
   assert.equal(get('assetProgressBar').value,25);
   assert.equal(get('cancelAssetTransfer').disabled,false);
+  const normalStatus=Chappy.files.transferStatus;
+  Chappy.files.transferStatus=async()=>({
+    active:true,phase:'copying',bytesDone:9999999,totalBytes:100,
+    cancelable:true,cancelRequested:false,
+  });
+  for(const callback of intervals.values())callback();
+  await settle();
+  assert.equal(get('assetProgressBar').value,100,
+    'untrusted native progress must be clamped to 100 percent');
+  Chappy.files.transferStatus=normalStatus;
   await click(get('cancelAssetTransfer'));
   assert.equal(cancelCalls,1);
   assert.match(get('status').textContent,/書き出しをキャンセルしました/);
