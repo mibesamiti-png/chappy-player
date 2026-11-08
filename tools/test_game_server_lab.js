@@ -22,6 +22,9 @@ get('wssUrl').value='wss://game.example.org/room';
 get('httpsUrl').value='https://game.example.org/status';
 get('message').value='{"type":"ping"}';
 get('httpsBody').value='{"type":"http-post"}';
+// The mock DOM does not parse initial HTML text content automatically.
+assert.match(html, /id="httpState"[^>]*>HTTPS未実行<\/p>/);
+get('httpState').textContent='HTTPS未実行';
 const events={};
 let hidden=false;
 const document={
