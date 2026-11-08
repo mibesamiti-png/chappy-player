@@ -75,11 +75,19 @@ async function click(id){const fn=get(id).callbacks.get('click');
   assert.equal(intervals.size,1);
   assert.equal(timeouts.size,0,'Successful connection clears watchdog');
   assert.match(get('state').textContent,/接続中/);
+  assert.ok(!get('log').textContent.includes('wss://game.example.org/room'),
+    'connection URL must never be copied to visible logs');
   assert.equal(get('send').disabled,false,'WSS send enabled only after connection');
   for(const fn of intervals.values())fn();
   await settle();
   assert.match(get('log').textContent,/welcome/);
   assert.match(get('traffic').textContent,/受信 1件/);
+  inboundQueue=['next-message'];
+  Chappy.network.poll=async()=>({connected:true,messages:inboundQueue.splice(0),dropped:3});
+  for(const fn of intervals.values())fn();
+  await settle();
+  assert.match(get('traffic').textContent,/受信 2件/);
+  assert.match(get('traffic').textContent,/破棄 3件/);
   await click('send');
   assert.ok(actions.some(a=>a[0]==='send'&&a[1]==='{"type":"ping"}'));
   await click('sendGravity');
@@ -151,7 +159,9 @@ async function click(id){const fn=get(id).callbacks.get('click');
   Chappy.network.connect=async()=>{throw new Error('TLS rejected')};
   await click('connect');
   assert.match(get('state').textContent,/接続失敗/);
-  assert.match(get('log').textContent,/TLS rejected/);
+  assert.match(get('log').textContent,/WSS-CONNECT/);
+  assert.ok(!get('log').textContent.includes('TLS rejected'),
+    'raw host exception messages must not appear in the log');
 
   // Reproduce an unresolved host bridge request, then fire the 30s watchdog.
   Chappy.network.connect=()=>new Promise(()=>{});
