@@ -110,7 +110,7 @@ jobs:
             --source sample_apps/game_server_lab \
             --id local.chappy.game_server_lab \
             --name 'Chappy Game Server Lab' \
-            --version 0.1.1 \
+            --version 0.1.2 \
             --permission network --permission motion --permission haptics \
             --output chappy-game-server-lab.chappy
       - name: Upload Game Server Lab preview
@@ -142,7 +142,7 @@ jobs:
             --source sample_apps/device_lab \
             --id local.chappy.device_lab \
             --name 'Chappy Device Lab' \
-            --version 0.2.0 \
+            --version 0.2.1 \
             --permission motion --permission haptics \
             --output chappy-device-lab.chappy
       - name: Upload Chappy Device Lab
@@ -157,7 +157,7 @@ jobs:
             --source sample_apps/file_lab \
             --id local.chappy.file_lab \
             --name 'Chappy File Lab' \
-            --version 0.2.2 \
+            --version 0.2.3 \
             --permission files \
             --output chappy-file-lab.chappy
       - name: Upload Chappy File Lab
