@@ -28,6 +28,7 @@ elements.tiltStatus=node({});
 elements.tiltToggle=node({});
 elements.probeSensors=node({});
 elements.probeHaptics=node({});
+elements.deviceSummary=node({});
 const sensors=['accelerometer','gyroscope','magnetometer','gravity','linearAcceleration'].map(sensor=>{
  const e=node({sensor});return e;});
 const haptics=['tick','click','heavy'].map(haptic=>{
@@ -62,6 +63,7 @@ vm.runInNewContext(match[1],{
  setInterval:fakeSetInterval,clearInterval:fakeClearInterval
 },{timeout:2000});
 (async()=>{
+ assert.equal(calls.length,0,'Do not probe hardware before user gesture');
  for(const sensor of sensors)await sensor.click();
  for(const haptic of haptics)await haptic.click();
  assert.match(elements.sensorResult.textContent,/X = 1.200/);
@@ -70,6 +72,8 @@ vm.runInNewContext(match[1],{
  await elements.probeHaptics.click();
  assert.match(elements.sensorResult.textContent,/linearAcceleration: 非対応/);
  assert.match(elements.hapticResult.textContent,/振動モーター搭載/);
+ assert.match(elements.deviceSummary.textContent,/4種類対応/);
+ assert.match(elements.deviceSummary.textContent,/振動 対応/);
  await elements.tiltToggle.click();
  await new Promise(resolve=>setImmediate(resolve));
  assert.equal(intervalActive,true);
@@ -82,5 +86,34 @@ vm.runInNewContext(match[1],{
  assert.equal(calls[0][1],'accelerometer');
  assert.equal(calls[1][1],'gyroscope');
  assert.equal(calls[2][1],'magnetometer');
+ // A pending sample must not update the UI after the user stops tilt.
+ const originalSample=video.motion.sample;
+ let finishSample;
+ video.motion.sample=()=>new Promise(resolve=>{finishSample=resolve});
+ hidden=false;
+ const beforeTilt=elements.tiltDot.style.transform;
+ await elements.tiltToggle.click();
+ assert.equal(typeof finishSample,'function');
+ await elements.tiltToggle.click();
+ finishSample({available:true,values:[8,8,9.8],accuracy:3});
+ await new Promise(done=>setImmediate(done));
+ assert.equal(elements.tiltDot.style.transform,beforeTilt,
+   'late motion sample must not update after cancellation');
+ assert.equal(intervalActive,false);
+
+ // Reject non-finite sensor values, never display raw host exception text.
+ video.motion.sample=async()=>({available:true,values:[NaN,2,3],accuracy:1});
+ await sensors[0].click();
+ assert.match(elements.sensorResult.textContent,/不正/);
+ video.motion.sample=async()=>{throw new Error('private-path=secret-host-data')};
+ await sensors[0].click();
+ assert.match(elements.sensorResult.textContent,/取得失敗/);
+ assert.ok(!elements.sensorResult.textContent.includes('secret-host-data'));
+ await elements.tiltToggle.click();
+ await new Promise(done=>setImmediate(done));
+ assert.match(elements.tiltStatus.textContent,/取得に失敗/);
+ assert.ok(!elements.tiltStatus.textContent.includes('secret-host-data'));
+ assert.equal(intervalActive,false);
+ video.motion.sample=originalSample;
  console.log('Device Lab smoke test passed: five sensors, haptic probes, bounded tilt input and lifecycle cleanup');
 })().catch(e=>{console.error(e);process.exit(1)});
