@@ -624,7 +624,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                   label: const Text('診断コードだけをコピー'),
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: report));
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('秘密情報を含まない診断コードをコピーしました')),
                     );
