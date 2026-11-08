@@ -64,20 +64,37 @@ border:1px solid #486383;border-radius:8px;padding:8px}
   const files=window.Chappy && window.Chappy.files;
   const storage=window.Chappy && window.Chappy.storage;
   function status(text){$('status').textContent=text;}
-  async function operation(button, fn){
-    button.disabled=true;
-    try{await fn();}catch(error){status('エラー：'+String(error.message || error));}
-    finally{button.disabled=false;}
+  function checkedDocument(name,text){
+    if(typeof name!=='string' || name.length<1 || name.length>100 ||
+       name!==name.trim() ||
+       !/^[^\\/\\\\\\x00-\\x1f:<>?"|*]+\\.(txt|json|csv|md)$/i.test(name)){
+      status('保存できません：ファイル名はtxt/json/csv/mdで、パス記号を含めないでください');
+      return false;
+    }
+    if(typeof text!=='string' || new TextEncoder().encode(text).length>65536){
+      status('保存できません：テキスト本文はUTF-8で64KiB以下にしてください');
+      return false;
+    }
+    return true;
   }
   let transferBusy=false;
+  async function operation(button, fn){
+    if(button.disabled)return;
+    if(transferBusy){status('ファイル転送中です。完了または中断してから操作してください');return;}
+    button.disabled=true;
+    try{await fn();}catch(_){status('操作に失敗しました（権限・空き容量・入力内容を確認）');}
+    finally{button.disabled=false;}
+  }
   let transferPollToken=0;
   function formatBytes(bytes){
     return (Math.max(0,Number(bytes)||0)/1048576).toFixed(1)+' MiB';
   }
   function updateAssetProgress(info){
     if(!transferBusy || !info || !info.active)return;
-    const done=Number(info.bytesDone)||0;
-    const total=Number(info.totalBytes)||-1;
+    const rawDone=Number(info.bytesDone);
+    const rawTotal=Number(info.totalBytes);
+    const total=Number.isFinite(rawTotal)&&rawTotal>0?rawTotal:-1;
+    const done=Number.isFinite(rawDone)?Math.max(0,Math.min(rawDone,total>0?total:rawDone)):0;
     const phases={picker:'ファイル選択待ち',copying:'転送中',
       verifying:'保存データの照合中',finalizing:'保存を確定中'};
     const detail=total>0 ? formatBytes(done)+' / '+formatBytes(total) :
@@ -126,8 +143,8 @@ border:1px solid #486383;border-radius:8px;padding:8px}
         status('転送中のみキャンセルできます');
         button.disabled=false;
       }
-    }).catch(error=>{
-      status('キャンセル処理に失敗：'+String(error.message||error));
+    }).catch(_=>{
+      status('キャンセル処理に失敗しました（端末の状態を確認）');
       if(transferBusy)button.disabled=false;
     });
   });
@@ -233,6 +250,9 @@ border:1px solid #486383;border-radius:8px;padding:8px}
       if(result.status==='cancelled'){status('選択をキャンセルしました');return;}
       if(result.status!=='selected' || typeof result.text!=='string')
         throw new Error('ファイル内容を取得できませんでした');
+      if(new TextEncoder().encode(result.text).length>65536){
+        status('選択したテキストが64KiBを超えています');return;
+      }
       $('editor').value=result.text;
       $('fileName').value=result.fileName || 'document.txt';
       status('読み込み完了：'+$('fileName').value+'（'+result.sizeBytes+'バイト）');
@@ -241,6 +261,7 @@ border:1px solid #486383;border-radius:8px;padding:8px}
   $('saveFile').addEventListener('click',()=>{
     void operation($('saveFile'),async()=>{
       if(!files)throw new Error('対応するChappy Player本体が必要です');
+      if(!checkedDocument($('fileName').value,$('editor').value))return;
       const result=await files.saveText($('fileName').value,$('editor').value);
       status(result.status==='saved' ?
         'ファイル保存・照合完了：'+result.sizeBytes+'バイト' :
@@ -250,6 +271,7 @@ border:1px solid #486383;border-radius:8px;padding:8px}
   $('saveLocal').addEventListener('click',()=>{
     void operation($('saveLocal'),async()=>{
       if(!storage)throw new Error('アプリ内の保存機能が利用できません');
+      if(!checkedDocument($('fileName').value,$('editor').value))return;
       await storage.set('file_lab_draft',{
         fileName:$('fileName').value, text:$('editor').value});
       status('一時保存しました（このミニアプリ専用）');
@@ -262,7 +284,11 @@ border:1px solid #486383;border-radius:8px;padding:8px}
       if(!draft || typeof draft.text!=='string'){
         status('保存済みの内容がありません');return;
       }
-      $('fileName').value=draft.fileName || 'chappy-note.txt';
+      if(!checkedDocument(draft.fileName,draft.text)){
+        status('保存データは形式またはサイズが不正なため読み込めません');
+        return;
+      }
+      $('fileName').value=draft.fileName;
       $('editor').value=draft.text;
       status('アプリ内の一時保存を読み込みました');
     });
