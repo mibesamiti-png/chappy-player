@@ -47,6 +47,22 @@ void main() {
     }
   });
 
+  test('QR-v3 status capability is opt-in and cannot downgrade to v2', () {
+    final pc = List<String>.filled(64, 'c').join();
+    final modern = encoded.replaceFirst('://v2', '://v3') + '&pc=' + pc;
+    final parsed = CompanionQrInvitation.parse(modern + '&status=1', now: knownNow);
+    expect(parsed.statusOnce, isTrue);
+    expect(CompanionQrInvitation.parse(modern, now: knownNow).statusOnce, isFalse);
+    for (final malformed in <String>[
+      encoded + '&status=1',
+      modern + '&status=0',
+      modern + '&status=1&status=1',
+      modern + '&status=true',
+    ]) {
+      expect(() => CompanionQrInvitation.parse(malformed, now: knownNow),
+          throwsFormatException);
+    }
+  });
   test('expired and too-far invitations are rejected', () {
     expect(
       () => CompanionQrInvitation.parse(

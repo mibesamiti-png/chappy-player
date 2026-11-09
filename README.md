@@ -1,5 +1,7 @@
 # Chappy Player — 個人用Androidミニアプリプレイヤー
 
+> **PC Link R4C（2026-11-09）**: [QR-v3本人認証後の追加承認による、1回限りのPC状態取得](docs/pc-link-r4c-status-once.md) をDebug用ソースへ追加。PC/Android双方の別承認、読み取り専用のCPU/RAM/起動時間、期限・再利用防止。**2台実機QA未実施・Stable未公開**。
+
 > **PC Link R4B（2026-11-08）**: [オフラインの期限・双方同意・権限分離モデル](docs/pc-link-r4b-session-preview.md) をWindows/PythonとAndroid/Dartで実装・検証中。これは実PCへの接続権限や本番ステータスAPIの追加ではありません。
 
 > **開発再開の入口（2026-11-08）**: [現在地・引き継ぎ](docs/project/HANDOFF.md) / [機械可読 STATE](docs/project/STATE.json) / [次の開発ロードマップ](docs/project/ROADMAP.md) / [単一チャット高速開発 v2](docs/project/SINGLE_CHAT_DEVELOPMENT.md)。以下の過去記録にある「次にやること」は当時の履歴。現在地はこの4ファイルとGitHubの最新main/CIで再確認してください。
