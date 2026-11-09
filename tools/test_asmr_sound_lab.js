@@ -48,4 +48,37 @@ assert.ok(html.includes('nearBoost*entryBlend.external'),
   'preserved-stereo route must fade toward zero inside the ear');
 assert.ok(html.includes('insideIsolation/100'),
   'existing opposite-ear isolation must be retained');
-console.log('ASMR ear-entry equal-power/mono/side-isolation regression passed');
+// A single physical touch should not generate many taps from noisy boundary readings.
+const latchDeclaration=html.match(/function contactLatch\(wasTouching,strength,engage,release\)\s*\{[\s\S]*?\n\}/);
+assert.ok(latchDeclaration, 'contactLatch must be a pure, testable helper');
+const contactLatch=vm.runInNewContext('(' + latchDeclaration[0] + ')');
+assert.equal(contactLatch(false,0.15,0.20,0.07),false,'engage needs a definite touch');
+assert.equal(contactLatch(false,0.21,0.20,0.07),true,'touch engages at high threshold');
+assert.equal(contactLatch(true,0.11,0.20,0.07),true,'minor motion must not release');
+assert.equal(contactLatch(true,0.06,0.20,0.07),false,'withdrawal releases');
+assert.equal(contactLatch(false,NaN,0.20,0.07),false,'invalid strength fails closed');
+
+function countTouches(values,engage,release) {
+  let latched=false, count=0;
+  for (const value of values) {
+    const now=contactLatch(latched,value,engage,release);
+    if(now&&!latched)count++;
+    latched=now;
+  }
+  return {count,latched};
+}
+assert.equal(countTouches([0,.24,.16,.10,.13,.075,.15,.04,.24],.20,.07).count,2,
+  'ear/gel contact should count two actual touches, not jitter');
+assert.equal(countTouches([0,.31,.19,.11,.20,.10,.08,.33],.28,.09).count,2,
+  'bone event must reject small contact fluctuations');
+assert.equal(countTouches([.15,.18,.13,.19,.14],.20,.07).count,0,
+  'grazing below the threshold should not tap');
+assert.equal(countTouches([.29,.19,.12,.16],.28,.09).latched,true,
+  'sustained touch remains engaged');
+assert.ok(html.includes('contactLatch(ts.on,em.contact.gain,.20,.07)'),
+  'ear and gel touch events must use hysteresis');
+assert.ok(html.includes('contactLatch(bt.on,zone.touch,.28,.09)'),
+  'bone transient events must use hysteresis');
+assert.ok(html.includes('em.active&&em.gate>.03'),
+  'inactive sound source must not latch or play transients');
+console.log('ASMR ear-entry + contact hysteresis regression passed');
