@@ -83,6 +83,17 @@ class NativeNetworkDiscovery(private val activity: Activity) {
             !(Build.VERSION.SDK_INT >= 37 &&
               activity.applicationInfo.targetSdkVersion >= 37)
 
+    // NETLAB-04B requires active Wi-Fi, never a VPN or cellular route.
+    // Kept distinct from older QR-v3 pairing to avoid changing its contract.
+    fun trafficPairingAllowed(): Boolean {
+        if (!pairingAllowed()) return false
+        val network = connectivity.activeNetwork ?: return false
+        val caps = connectivity.getNetworkCapabilities(network) ?: return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
+            !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+            !caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+    }
+
     fun start(type: String): Map<String, Any?> {
         if (!foreground) throw IllegalStateException("Network Lab requires foreground")
         if (running || discovery != null) {
