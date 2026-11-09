@@ -1,5 +1,12 @@
 # Chappy Player — 次に実装するロードマップ
 
+## 2026-11-10：CAMREC-13 スマート録画R1完了（コード・Android APKビルド）／R2画面OFF録画へ
+
+**CAMREC-13-R1はソース・CI完了、実機録画QA未実施。** カメラのY平面差分で動き検知、3モード（通常/静止pause→動くとresume/静止でstop）、静止時間10〜300秒、感度0〜100。失敗時は通常録画継続。Chappy Player [PR #136](https://github.com/mibesamiti-png/chappy-player/pull/136)・[Quick 74/74](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721111102)・[Android 3 ABI 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721110750)。Chappy Apps [公開Debug PR #8](https://github.com/mibesamiti-png/chappy-apps/pull/8)でv0.1.4更新、[検証7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42722599197)、Stable 2／Debug 9。旧Android本体は通常録画だけ。**OSカメラ使用表示はそのまま。**
+
+**次は CAMREC-14-R2：物理画面OFF・他アプリ利用中も録画継続するForeground Service**。前面で本人が開始してからサービスへ移管し、常駐通知と停止ボタン、Android14以降の権限/FGS条件、CameraXライフサイクルを安全に変更する。R1のスマホ実機検証（実際の静止pauseと再開、停止ファイル確定、感度、画質、音声、容量不足）を優先。プリ録画とAI認識はR3/R4の候補。未実装の画面OFF録画を完成扱いにしない。元NETLAB-06B・Game R8は延期保存。`docs/camrec-13-smart-recording.md` が詳細設計書。
+
+
 ## 2026-11-10：Androidデバッグチェックリストのミニアプリ化・公開Debug登録
 
 **実装・CI確認完了（実機未検証）**。本人手動9項目の `Chappy QA Checklist v0.1.0` を `local.chappy.qa_checklist` として開発。[本体ソースPR #133](https://github.com/mibesamiti-png/chappy-player/pull/133) の[Quick CI 71/71](https://github.com/mibesamiti-png/chappy-player/actions/runs/42712257849)と、[公開Chappy Apps Debug追加PR #7](https://github.com/mibesamiti-png/chappy-apps/pull/7)の[カタログ整合性CI 7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42712891326)を確認。Stable 2・Debug 9本。手順は **Chappy Player → 公開ライブラリ → Debug → 更新 → Chappy QA Checklist → 追加**。9項目の実機QAは未実施0/9、通常のAndroidビルド/実機インストールとは別。独立ミニアプリの権限はゼロ、本人操作で結果をつける。今後の安全に公開できる新規ミニアプリは、原則Debugに先行登録する一方で、非公開/機密試作は勝手に公開しない。通常版とStableカタログへの自動追加はしない。NETLAB-06B新機能開発の再開はデバッグ後。
