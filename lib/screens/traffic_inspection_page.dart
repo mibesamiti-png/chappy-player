@@ -1,3 +1,4 @@
+// ignore_for_file: curly_braces_in_flow_control_structures
 import 'dart:typed_data';
 
 import 'package:chappy_player/core/pcap_inspector.dart';
