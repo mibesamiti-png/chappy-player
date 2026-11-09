@@ -1,4 +1,5 @@
 import 'package:chappy_player/core/companion_pairing_client.dart';
+import 'package:chappy_player/core/companion_qr_invitation.dart';
 import 'package:chappy_player/core/lan_discovery_client.dart';
 import 'package:chappy_player/screens/companion_pairing_page.dart';
 import 'package:flutter/material.dart';
@@ -111,4 +112,52 @@ void main() {
     const client = LanDiscoveryClient(channel: channel);
     expect(await client.pairingAllowed(), isFalse);
   });
+  testWidgets('NETLAB-04B traffic control stays hidden until actual QR-v3 verification',
+      (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => false);
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    final expires = DateTime.now().millisecondsSinceEpoch ~/ 1000 + 180;
+    await tester.pumpWidget(MaterialApp(
+      home: CompanionPairingPage(
+        service: service,
+        discoveryClient: const LanDiscoveryClient(channel: channel),
+        qrReader: (_) async => CompanionQrInvitation(
+          ip: service.address, port: service.port,
+          fingerprint: 'a' * 64, invitation: 'b' * 32,
+          expiresUnix: expires, pcIdentityFingerprint: 'c' * 64,
+          trafficOnce: true,
+        ),
+      ),
+    ));
+    expect(find.byKey(const Key('pair_traffic_once')), findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('pair_scan_qr')));
+    await tester.tap(find.byKey(const Key('pair_scan_qr')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pair_traffic_once')), findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('pair_confirm')));
+    await tester.tap(find.byKey(const Key('pair_confirm')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pair_verified')), findsNothing);
+    expect(find.byKey(const Key('pair_traffic_once')), findsNothing);
+  });
+
+  test('NETLAB-04B fails closed when the native Wi-Fi/VPN guard denies', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'trafficPairingAllowed') return false;
+      return true;
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    const client = LanDiscoveryClient(channel: channel);
+    expect(await client.pairingAllowed(), isTrue);
+    expect(await client.trafficPairingAllowed(), isFalse);
+  });
+
 }
