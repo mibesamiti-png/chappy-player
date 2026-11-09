@@ -1,6 +1,6 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-09。**R5A・R5Bともソースmain統合/CI成功。次はR6（計画段階）**。PC Link物理2台QAは0/15・未実施。
+更新: 2026-11-09。**R6Aはソース/Quick/Windows CI成功でmain統合。次R6Bは未着手**。PC Link物理2台QA 0/15・未実施。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
@@ -8,14 +8,34 @@
 | 2 | PC Link R4C | QR-v3署名/TLSピン＋双方別承認の1回限定PC状態取得（CPU/RAM/起動時間） | 本体ホスト画面＋Windows Companion。新規Debug Labなし | **ソース統合・CI成功、実機QA未実施** |
 | 3 | PC Link R5A | Windowsで選んだ1ファイルを4MiB・16KiB分割でAndroidへ、安全な承認とSHA-256後に保存 | 本体＋Companion、PC Transfer Lab新規（非公開Debug QA） | **ソース/CI成功・実機QA未実施** |
 | 3b | PC Link R5B | AndroidからPCへの本人選択ファイル送信・PC保存先選択・安全な一時ファイル処理 | 本体＋Companion、PC Transfer Lab拡張 | **ソース統合・Quick/Windows CI成功、実機QA未実施** |
-| 4（次） | PC Link R6 | 明示的承認を伴う限定リモート操作（まず音量・メディア操作、次に入力系を個別設計） | 本体＋Companion、**PC Control Lab 新規** | 未着手 |
+| 4（進行中） | PC Link R6 | R6A：音量上下/ミュート/再生一時停止を1回だけ署名＋双方追加承認 | 本体＋Companionに実装。PC Control LabはR6Bでprivate QA予定 | **R6Aソース/CI完了・実機未検証。R6B未着手** |
 | 5 | Network R7 | Browser/LAN診断、ブラウザUI、通信診断 | 本体API、**Browser Lab 新規**、Game Server Lab拡張 | 未着手 |
 | 6 | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張 | 未着手 |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
 
-## 【次】PC Link R6 — 独立承認の限定メディア操作（予定・未着手）
+## 【次】PC Link R6B（8タスク・未着手）
+
+R6Aは[PR #107](https://github.com/mibesamiti-png/chappy-player/pull/107)でmain統合済み。 [Quick CI #42603449636](https://github.com/mibesamiti-png/chappy-player/actions/runs/42603449636) と [Windows CI #42603450028](https://github.com/mibesamiti-png/chappy-player/actions/runs/42603450028) はPR最終HEADで成功。ただしWindows/Android物理2台でのメディア操作・Debug APK起動は**未検証 0/15**。私有PC Control Lab/フルAndroid Debug実機受入は未完了。
+
+1. Python/Dartの`pc.media.control`ハッシュ・P-256署名の共有検証ベクトル作成。
+2. localhostの隔離HTTPでQR-v3→PC CONTROL→Android独立署名→1操作を模擬実行する回帰。
+3. Android UIで4操作の1回限り制御・誤タップ/重複防止のテスト。
+4. 期限、拒否、バックグラウンド、ネットワーク切断/応答ロスト時の安全な終了・再利用拒否。
+5. Windowsの固定マルチメディアキー実行器の単回発行とエラー/非対応環境の扱いを検証。
+6. **非公開PC Control Lab** をJS権限ゼロのQAチェックリストとして追加。
+7. Android Debug APKのフルビルドを別途確認し、15件の既存2台QAとR6A媒体キー実機QAの記録を分ける。
+8. 最終HEAD Quick/Windows CIを通し、GitHub/Notionを更新。Stable署名配布/公開カタログは別承認。
+
+## 【R6A完了記録】1回限りのPCメディア操作（ソース/CI完了・実機未検証）
+
+- [PR #107](https://github.com/mibesamiti-png/chappy-player/pull/107)をmain d87b00e661ce に統合。Windows `Start-ChappyMediaOnceV3.cmd`/`--media-once`、Android本体Network Labに4操作ボタンと別承認を追加。新しい `media=1` QR-v3・操作に結び付く独立署名。
+- 期限90秒以内、同じQRにつき1回。Windows本人のCONTROLとAndroid前景同意を確認。任意キーボード/マウス・シェル・ファイル操作や自動再接続は不可。
+- CIはMock実行器による署名・拒否/リプレイ検査とFlutter解析/ユニット、Windows EXE/CMD成果物。実機で音量が変わったとはまだ宣言しない。[仕様](../pc-link-r6a-media-once.md)。
+
+---
+## 【履歴：R5B時点のR6計画】独立承認の限定メディア操作（当時未着手）
 
 R5A/R5Bのファイル権限やR4Cの状態取得権限とは分離した新しい一回限りの承認を追加する。最初の対象は音量・ミュート・再生/一時停止の最小ホワイトリストに限定。PCの任意コマンド、キーボード/マウス全般、永続制御、バックグラウンド接続は含めない。
 

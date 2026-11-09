@@ -2,29 +2,29 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-09",
-  "sourceMainAtCapture": "1ed1f7d2186148e4ba8fd2dcedb2cf909767ef1b",
+  "sourceMainAtCapture": "d87b00e661ce9ea83e17af37ad5898b0c155654c",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "PC-LINK-R6",
-    "name": "R6: 独立承認を必須とする限定PCメディア操作（実機QA前の安全な設計・実装）",
+    "id": "PC-LINK-R6B",
+    "name": "R6B: R6A限定メディア操作の追加回帰・実機受入準備とprivate PC Control Lab",
     "status": "planned_not_started",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "PC-LINK-R5B",
-    "pr": 103,
-    "mergedCommit": "1ed1f7d2186148e4ba8fd2dcedb2cf909767ef1b",
+    "id": "PC-LINK-R6A",
+    "pr": 107,
+    "mergedCommit": "d87b00e661ce9ea83e17af37ad5898b0c155654c",
     "sourceStatus": "merged_source_ci_passed_device_unverified",
     "quickCi": {
       "status": "success",
-      "run": 42599611400
+      "run": 42603449636
     },
     "windowsCi": {
       "status": "success",
-      "run": 42599611377
+      "run": 42603450028
     },
-    "qualification": "Android→Windowsの本人選択単一ファイル（最大4MiB）送信、QR-v3 P-256相互確認・Windows RECEIVE/Android別同意・pc.file.upload独立スコープ・16KiB順序付きチャンク・SHA-256・一時ファイル隔離/上書き拒否をmain統合。PR #103最終HEADのQuick/Windows CI成功。実機2台QA 0/15未実施。"
+    "qualification": "PC音量上下・ミュート切替・再生/一時停止の固定Windowsマルチメディアキーを、QR-v3本人認証＋Windows別CONTROL/Android前景別同意・操作に紐づくP-256署名・90秒以下の1回限定スコープ経由でソース統合。Flutter analyze/testとWindows署名/模擬媒体キー/EXE/ランチャーCIは最終PR HEADで成功。Windows↔Android実機動作・Debug APKインストール未確認。"
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -49,7 +49,8 @@
         "R4Bオフラインセッション/権限モデル（実PC通信には未接続）",
         "R4C QR-v3署名＋専用status=1のread-only状態取得・追加Android承認UI（コード/CI成功、実機未検証）",
         "R5A 本体Network LabでPCの1ファイル受信・別許可・進捗・SHA-256・OS Save As（コード/CI PASS、実機未確認）",
-        "R5B Android→Windowsの本人選択SAF単一ファイル・独立承認・進捗・16KiB転送（ソース/CI PASS、実機未検証）"
+        "R5B Android→Windowsの本人選択SAF単一ファイル・独立承認・進捗・16KiB転送（ソース/CI PASS、実機未検証）",
+        "R6A media=1 QR-v3で固定4操作を表示し、操作別PC署名検証とAndroid前景別承認後に1回送信（コード/CI成功・実機未検証）"
       ]
     },
     "windowsSource": {
@@ -64,7 +65,8 @@
         "R4Bオフラインセッション/権限モデル（実PC通信には未接続）",
         "R4C --status-once・STATUS別承認・実Windows CPU/RAM/uptime 1回取得（コード/CI成功、実機未検証）",
         "R5A --send-file-once 明示起動・SEND別許可・4MiB/16KiB限定送信（コード/CI PASS、実機未確認）",
-        "R5B --receive-file-once/Start-ChappyUploadOnceV3.cmd・RECEIVE別承認・新規保存先のみ/一時ファイル＋上書き防止ハードリンク（ソース/CI PASS、実機未検証）"
+        "R5B --receive-file-once/Start-ChappyUploadOnceV3.cmd・RECEIVE別承認・新規保存先のみ/一時ファイル＋上書き防止ハードリンク（ソース/CI PASS、実機未検証）",
+        "R6A --media-once/Start-ChappyMediaOnceV3.cmd、CONTROL別承認＋新署名＋4種Windowsメディアキー（CIはmock executorでPASS、実機媒体キーは未検証）"
       ]
     },
     "unimplemented": [
@@ -75,7 +77,9 @@
       "R5A 実機転送検証（未実施）",
       "大容量転送（4MiB超）・途中再開・フォルダ同期・複数同時転送",
       "PC Link R5B のAndroid↔Windows物理QA（0/15、未実施）",
-      "PC Link R6 独立承認つき限定メディア操作（未着手）"
+      "R6Aの実Windows/AndroidのQR・TLS・メディアキー挙動（物理PC Link QA 0/15、未実施）",
+      "R6Bのクロス言語E2E fixture・PC Control Lab非公開QA・Android Debugフルビルド/2台受入",
+      "複数コマンド継続セッション・任意のPCキーボード/マウス操作（R6Aに含まれない）"
     ],
     "publicMiniappCatalog": {
       "stable": 2,
@@ -158,51 +162,75 @@
       },
       "windowsArtifactRun": 42599611377,
       "noPublicCatalogOrSignedStable": true
+    },
+    "pcMediaOnce": {
+      "sourceStatus": "merged_ci_passed_device_unverified",
+      "protocol": "pc-media-once-v1",
+      "scope": "pc.media.control",
+      "commands": [
+        "volume_up",
+        "volume_down",
+        "toggle_mute",
+        "play_pause"
+      ],
+      "windowsLauncher": "Start-ChappyMediaOnceV3.cmd",
+      "mode": "one key per freshly signed QR-v3 session",
+      "consent": "PC YES identity + new PC CONTROL (exact key) + Android identity proof + new Android media consent",
+      "nonce": "P-256 challenge command-bound domain CHAPPY-PC-MEDIA-CONTROL-V1",
+      "lifetime": "max 90 seconds after PC extra approval, never past QR expiry",
+      "maxCommandsPerSession": 1,
+      "quickCiRun": 42603449636,
+      "windowsCiRun": 42603450028,
+      "windowsArtifactRun": 42603450028,
+      "realTwoDeviceQa": "not_run",
+      "debugAndroidInstalled": "unverified",
+      "noJsPrivilegedApi": true,
+      "noPublicMiniappOrSignedStable": true
     }
   },
   "nextBatch": {
-    "id": "PC-LINK-R6",
+    "id": "PC-LINK-R6B",
     "targetTasks": 8,
-    "implementationScope": "R4C/R5A/R5Bの認証・権限とは独立した明示的なPCメディア操作の承認設計。最初は音量/ミュート/再生一時停止のみを限定し、コマンド実行・任意入力・永続権限を禁止。実機15項目QAは別ゲート。",
+    "implementationScope": "R6Aの固定4操作について共有署名テストベクトル・実HTTP結合テスト・前景キャンセル/エラー・私有PC Control Lab QAを拡充する。実機2台QAはPC/Androidユーザーによる別判定であり、CI成功は実機PASSにならない。",
     "tasks": [
       {
-        "id": "PC-R6-01",
-        "name": "既存QR-v3と分離した pc.media.control 署名権限・期限/再使用防止の設計",
+        "id": "PC-R6B-01",
+        "name": "Python/Dartの操作別scopeハッシュ共有ベクトルと不一致/署名混同回帰",
         "status": "todo"
       },
       {
-        "id": "PC-R6-02",
-        "name": "Windowsの手動起動/明示同意と許可するメディア操作一覧を固定",
+        "id": "PC-R6B-02",
+        "name": "隔離localhost HTTPのQR-v3認証/CONTROL/Android署名1回限り統合テスト",
         "status": "todo"
       },
       {
-        "id": "PC-R6-03",
-        "name": "Androidホスト画面で操作別の前景承認/キャンセルと短命許可",
+        "id": "PC-R6B-03",
+        "name": "4操作の誤タップ・トグル二重実行防止・画面変更時の状態テスト",
         "status": "todo"
       },
       {
-        "id": "PC-R6-04",
-        "name": "音量・ミュート・再生/一時停止の最小ホワイトリストと拒否デフォルト",
+        "id": "PC-R6B-04",
+        "name": "キャンセル・期限切れ・切断・アプリ背景化・応答ロストの明示的QA",
         "status": "todo"
       },
       {
-        "id": "PC-R6-05",
-        "name": "P-256署名・TLSピン・スコープ・リプレイ・異常パラメータ検証",
+        "id": "PC-R6B-05",
+        "name": "Windowsの媒体キー実行器の固定キー/単回発行・エラー扱いテスト",
         "status": "todo"
       },
       {
-        "id": "PC-R6-06",
-        "name": "切断・期限・背景化時の権限破棄、誤操作防止と診断ログ秘匿",
+        "id": "PC-R6B-06",
+        "name": "private PC Control Lab (無権限JS) の手動QAチェックリスト作成",
         "status": "todo"
       },
       {
-        "id": "PC-R6-07",
-        "name": "Windows/Androidの単体/隔離通信テストと.chappy JS非公開契約",
+        "id": "PC-R6B-07",
+        "name": "フルAndroid Debug APKビルド、物理2台QA 15件と媒体キー検査表の準備",
         "status": "todo"
       },
       {
-        "id": "PC-R6-08",
-        "name": "Quick CI/Windows CI/Debug APKと物理15ケースQAを区別し、GitHub/Notionへ記録",
+        "id": "PC-R6B-08",
+        "name": "最終HEAD Quick/Windows CI、source/実機/Stableを分離してGitHub/Notion記録",
         "status": "todo"
       }
     ],
@@ -234,7 +262,7 @@
     "repository": "https://github.com/mibesamiti-png/chappy-player",
     "pcLinkSpec": "docs/pc-link-mutual-qr-v3.md",
     "qa": "docs/pc-link-two-device-qa-matrix.md",
-    "latestBatch": "docs/pc-link-r5b-upload-once.md",
+    "latestBatch": "docs/pc-link-r6a-media-once.md",
     "ci": "docs/ci-quick-and-manual-debug.md",
     "publicLibrary": "https://github.com/mibesamiti-png/chappy-apps",
     "notion": "https://app.notion.com/p/410948b74937819d92efc11defb9a7c7"
