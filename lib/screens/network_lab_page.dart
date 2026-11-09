@@ -5,6 +5,7 @@ import 'package:chappy_player/screens/companion_pairing_page.dart';
 import 'package:chappy_player/screens/browser_page.dart';
 import 'package:chappy_player/screens/network_diagnostic_page.dart';
 import 'package:chappy_player/screens/device_traffic_page.dart';
+import 'package:chappy_player/screens/remote_traffic_import_page.dart';
 import 'package:chappy_player/screens/pc_identity_page.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:flutter/material.dart';
@@ -247,6 +248,18 @@ class _NetworkLabPageState extends State<NetworkLabPage>
               },
               icon: const Icon(Icons.monitor_heart_outlined),
               label: const Text('このスマホの通信量を測定'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('netlab_remote_traffic_import'),
+              onPressed: () {
+                _cancelScan(clearResults: true);
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const RemoteTrafficImportPage(),
+                ));
+              },
+              icon: const Icon(Icons.file_open_outlined),
+              label: const Text('ほかの端末の通信レポートを読み込む'),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
