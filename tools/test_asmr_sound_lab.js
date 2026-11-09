@@ -81,4 +81,48 @@ assert.ok(html.includes('contactLatch(bt.on,zone.touch,.28,.09)'),
   'bone transient events must use hysteresis');
 assert.ok(html.includes('em.active&&em.gate>.03'),
   'inactive sound source must not latch or play transients');
-console.log('ASMR ear-entry + contact hysteresis regression passed');
+// Two independently controlled low-noise layers must remain bounded and safe.
+const rumbleDecl=html.match(/function bodyRumbleTargets\(closure,near,rim,sealBoost,bassBoost,bodyGain,insideGain\)\s*\{[\s\S]*?\n\}/);
+assert.ok(rumbleDecl,'the ear-only rumble target helper must be present');
+const clampUnit=(n,lo,hi)=>Math.min(hi,Math.max(lo,n));
+const lerpUnit=(a,b,t)=>a+(b-a)*t;
+const stepUnit=x=>{const t=clampUnit(x,0,1);return t*t*(3-2*t);};
+const rumble=vm.runInNewContext('(' + rumbleDecl[0] + ')',
+  {clamp:clampUnit,lerp:lerpUnit,smoothstep:stepUnit});
+const off=rumble(1,1,1,1,1,0,1);
+almost(off.airy,0,'off surface noise');
+almost(off.deep,0,'off deep noise');
+const unsealed=rumble(0,1,1,1,1,1,1);
+assert.ok(unsealed.airy>0,'nearby soft noise remains');
+almost(unsealed.deep,0,'deep rumble must not appear outside canal');
+const sealed=rumble(1,1,1,1,1,1,1);
+assert.ok(sealed.airy>unsealed.airy,'sealing increases the body-noise texture');
+assert.ok(sealed.deep>0,'full seal should have deep brown texture');
+assert.ok(sealed.airy<=.26 && sealed.deep<=.125,'gain caps must prevent excessive layering');
+assert.ok(sealed.cutoff<unsealed.cutoff,'full seal should shift airy noise to lower frequencies');
+let lastAiry=0,lastDeep=0;
+for(let k=0;k<=100;k++){
+  const value=rumble(k/100,0,0,.66,.62,.84,.88);
+  assert.ok(Number.isFinite(value.airy)&&Number.isFinite(value.deep)&&Number.isFinite(value.cutoff));
+  assert.ok(value.airy>=0&&value.airy<=.26);
+  assert.ok(value.deep>=0&&value.deep<=.125);
+  assert.ok(value.cutoff>=320&&value.cutoff<=9200);
+  assert.ok(value.airy+1e-9>=lastAiry,'airy ramp must be monotonic');
+  assert.ok(value.deep+1e-9>=lastDeep,'deep rumble must be monotonic');
+  lastAiry=value.airy;lastDeep=value.deep;
+}
+const invalid=rumble(Infinity,NaN,-12,Infinity,NaN,Infinity,NaN);
+assert.ok(Number.isFinite(invalid.airy) && Number.isFinite(invalid.deep));
+almost(invalid.airy,0,'nonfinite invalid controls fail closed');
+almost(invalid.deep,0,'nonfinite deep controls fail closed');
+assert.ok(html.includes('bassGain.gain.value=0; // both layers start silent'),
+  'deep noise must be silent on AudioContext startup');
+assert.ok(html.includes("bassHigh.type='highpass';bassHigh.frequency.value=48"),
+  'rumble must discard infrasonic content');
+assert.ok(html.includes('node.bassGain.gain.setTargetAtTime(target.deep'),
+  'deep rumble gain must be smoothed, not hard-switched');
+assert.ok(html.includes('node.lastAiry=target.airy;node.lastDeep=target.deep;'),
+  'each ear requires independent attack/release state');
+assert.ok(html.includes('this.limiter.connect(this.safety)'),
+  'existing output peak limiter and soft-clipping safety route must remain');
+console.log('ASMR ear-entry + contact + bounded dual-layer rumble regressions passed');
