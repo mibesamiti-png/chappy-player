@@ -370,8 +370,49 @@ class CompanionIdentityExchange {
           ready['pc_nonce'] != rawPcNonce ||
           ready['expires'] != expires ||
           ready['ticket'] is! String ||
-          !_hex32.hasMatch(ready['ticket'] as String) &&
-              !RegExp(r'^[0-9a-f]{32}
+          !RegExp(r'^[0-9a-f]{32}$').hasMatch(ready['ticket'] as String) ||
+          ready['file'] is! Map ||
+          !offer.matches(PcFileOffer.parse(ready['file'] as Map))) {
+        throw const FormatException('PCファイル転送の開始情報が不正です');
+      }
+      final ticket = ready['ticket'] as String;
+      final bytes = BytesBuilder(copy: false);
+      var offset = 0;
+      onProgress?.call(0, offer.sizeBytes);
+      while (offset < offer.sizeBytes) {
+        _ensureActive();
+        if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expires) {
+          throw const FormatException('ファイル転送中に期限が切れました');
+        }
+        final answer = await _post(
+          ip: ip, port: port, tlsPin: tlsFingerprint,
+          path: '/v3/file-chunk',
+          json: <String, Object>{
+            'protocol': protocol, 'ticket': ticket, 'offset': offset,
+          },
+          maxResponseBytes: 25000,
+          maxPayloadBytes: 23000,
+        );
+        _ensureActive();
+        final chunk = parsePcFileChunk(
+          response: answer, expectedOffset: offset, fileSize: offer.sizeBytes,
+        );
+        bytes.add(chunk);
+        offset += chunk.length;
+        onProgress?.call(offset, offer.sizeBytes);
+      }
+      final received = Uint8List.fromList(bytes.takeBytes());
+      verifyPcReceivedFile(offer, received);
+      return PcReceivedFile(offer: offer, bytes: received);
+    } finally {
+      _socket?.destroy();
+      _socket = null;
+      _busy = false;
+    }
+  }
+
+  static Future<List<int>> _readBounded(
+      SecureSocket socket, {int maxBytes = 2048}) async {
     final bytes = <int>[];
     await for (final chunk in socket) {
       if (bytes.length + chunk.length > maxBytes) {
@@ -443,132 +484,6 @@ class CompanionIdentityExchange {
       final length = int.tryParse(lengthLines.single.split(':').last.trim());
       final payload = response.substring(cut + 4);
       if (length == null || length < 1 || length > maxPayloadBytes ||
-          utf8.encode(payload).length != length) {
-        throw const FormatException('PC応答長が一致しません');
-      }
-      final decoded = jsonDecode(payload);
-      if (decoded is! Map<String, dynamic>) {
-        throw const FormatException('PC応答がJSONオブジェクトではありません');
-      }
-      return decoded;
-    } finally {
-      socket?.destroy();
-      if (identical(_socket, socket)) _socket = null;
-    }
-  }
-}
-).hasMatch(ready['ticket'] as String) ||
-          ready['file'] is! Map ||
-          !offer.matches(PcFileOffer.parse(ready['file'] as Map))) {
-        throw const FormatException('PCファイル転送の開始情報が不正です');
-      }
-      final ticket = ready['ticket'] as String;
-      final bytes = BytesBuilder(copy: false);
-      var offset = 0;
-      onProgress?.call(0, offer.sizeBytes);
-      while (offset < offer.sizeBytes) {
-        _ensureActive();
-        if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expires) {
-          throw const FormatException('ファイル転送中に期限が切れました');
-        }
-        final answer = await _post(
-          ip: ip, port: port, tlsPin: tlsFingerprint,
-          path: '/v3/file-chunk',
-          json: <String, Object>{
-            'protocol': protocol, 'ticket': ticket, 'offset': offset,
-          },
-          maxResponseBytes: 25000,
-          maxPayloadBytes: 23000,
-        );
-        _ensureActive();
-        final chunk = parsePcFileChunk(
-          response: answer, expectedOffset: offset, fileSize: offer.sizeBytes,
-        );
-        bytes.add(chunk);
-        offset += chunk.length;
-        onProgress?.call(offset, offer.sizeBytes);
-      }
-      final received = Uint8List.fromList(bytes.takeBytes());
-      verifyPcReceivedFile(offer, received);
-      return PcReceivedFile(offer: offer, bytes: received);
-    } finally {
-      _socket?.destroy();
-      _socket = null;
-      _busy = false;
-    }
-  }
-
-  static Future<List<int>> _readBounded(
-      SecureSocket socket, {int maxBytes = 2048}) async {
-    final bytes = <int>[];
-    await for (final chunk in socket) {
-      if (bytes.length + chunk.length > 2048) {
-        throw const FormatException('PC応答が大きすぎます');
-      }
-      bytes.addAll(chunk);
-    }
-    return bytes;
-  }
-
-  Future<Map<String, dynamic>> _post({
-    required String ip,
-    required int port,
-    required String tlsPin,
-    required String path,
-    required Map<String, Object> json,
-  }) async {
-    _ensureActive();
-    if (_socket != null) throw StateError('同時接続は許可されません');
-    SecureSocket? socket;
-    try {
-      socket = await SecureSocket.connect(
-        ip, port, timeout: const Duration(seconds: 6),
-        onBadCertificate: (cert) =>
-            sha256.convert(cert.der).toString() == tlsPin,
-      );
-      _socket = socket;
-      _ensureActive();
-      final cert = socket.peerCertificate;
-      if (cert == null || sha256.convert(cert.der).toString() != tlsPin) {
-        throw const HandshakeException('PCのTLS証明書がQRと一致しません');
-      }
-      final body = utf8.encode(jsonEncode(json));
-      if (body.length > 2048) {
-        throw const FormatException('端末認証リクエストが大きすぎます');
-      }
-      final header = 'POST $path HTTP/1.1\r\n'
-          'Host: $ip:$port\r\n'
-          'Content-Type: application/json\r\n'
-          'Cache-Control: no-store\r\n'
-          'Connection: close\r\n'
-          'Content-Length: ${body.length}\r\n\r\n';
-      socket.add(utf8.encode(header));
-      socket.add(body);
-      await socket.flush();
-      // Absolute wall-clock deadline, not a per-chunk inactivity timeout.
-      final bytes = await _readBounded(socket)
-          .timeout(const Duration(seconds: 35));
-      _ensureActive();
-      final response = utf8.decode(bytes);
-      final cut = response.indexOf('\r\n\r\n');
-      if (cut < 0 || cut > 1024) {
-        throw const FormatException('PCのHTTPS応答が不正です');
-      }
-      final headerLines = response.substring(0, cut).split('\r\n');
-      final statusLine = headerLines.first;
-      if (statusLine != 'HTTP/1.0 200 OK' &&
-          statusLine != 'HTTP/1.1 200 OK') {
-        throw StateError('PC側で拒否・期限切れになった可能性があります');
-      }
-      final lengthLines = headerLines.skip(1)
-          .where((line) => line.toLowerCase().startsWith('content-length:'))
-          .toList();
-      if (lengthLines.length != 1) {
-        throw const FormatException('PC応答サイズが不正です');
-      }
-      final length = int.tryParse(lengthLines.single.split(':').last.trim());
-      final payload = response.substring(cut + 4);
-      if (length == null || length < 1 || length > 1024 ||
           utf8.encode(payload).length != length) {
         throw const FormatException('PC応答長が一致しません');
       }
