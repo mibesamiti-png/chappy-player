@@ -25,6 +25,10 @@ py examples/windows_companion/companion.py --start --ip 192.168.1.20 --minutes 1
 
 Only RFC1918 private IPv4 addresses (10/8, 172.16/12 and 192.168/16) are accepted. An IP must also be **assigned to the current PC**; binding fails safely otherwise. Automatic IP selection uses the outgoing interface and may pick the wrong adapter on a VPN/multi-network PC — use `--ip` when that happens. No raw socket capture or PC control port is opened.
 
+## R5A PC→Android one-file receive preview
+
+Use the opt-in `Start-ChappyFileOnceV3.cmd` script to select ONE existing 1-byte-to-4MiB regular local file BEFORE the PC starts a listener. With a fresh QR-v3 proof, PC must type `SEND` and Android must separately consent, verify SHA-256, and choose the save destination via the native picker. No PC directory listing, arbitrary path requests, remote control or automatic sync. This is a **Debug preview**; Windows↔Android physical test is pending. [Details](../../docs/pc-link-r5a-file-receive.md).
+
 ## R4C opt-in real PC status preview
 
 Use `Start-ChappyStatusOnceV3.cmd` only if you want a **single** read-only PC status inspection after a real QR-v3 mutual proof. PC must approve identity with YES, then independently type STATUS after Android requests the PC status. Android must separately consent again. CPU count, memory totals, uptime only; no file, remote control, traffic contents or persistent pairing. See [R4C notes](../../docs/pc-link-r4c-status-once.md). Actual physical Windows↔Android QA is still outstanding.

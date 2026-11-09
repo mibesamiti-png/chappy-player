@@ -1,5 +1,7 @@
 # Chappy Player — 個人用Androidミニアプリプレイヤー
 
+> **PC Link R5A（2026-11-09）**: [PCで選択した1ファイルをAndroidへ転送する限定プレビュー](docs/pc-link-r5a-file-receive.md)。QR-v3／双方追加承認／4MiB上限／SHA-256チェック、Android標準保存画面、Debug PC Transfer Labを実装。**実機QA未実施、Android→PCの逆方向と再開・正式公開は未実装。**
+
 > **PC Link R4C（2026-11-09）**: [QR-v3本人認証後の追加承認による、1回限りのPC状態取得](docs/pc-link-r4c-status-once.md) をDebug用ソースへ追加。PC/Android双方の別承認、読み取り専用のCPU/RAM/起動時間、期限・再利用防止。**2台実機QA未実施・Stable未公開**。
 
 > **PC Link R4B（2026-11-08）**: [オフラインの期限・双方同意・権限分離モデル](docs/pc-link-r4b-session-preview.md) をWindows/PythonとAndroid/Dartで実装・検証中。これは実PCへの接続権限や本番ステータスAPIの追加ではありません。

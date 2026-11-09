@@ -17,5 +17,8 @@ opening the listener; the complete path is not sent. Android must verify SHA-256
 before offering a native Save As dialog. A full rollback/resume and the reverse
 Android-to-PC direction are R5B work, not part of this R5A preview.
 
+Source paths: `examples/windows_companion/file_send_once.py`, `pairing_server.py`, `companion.py`, Android `lib/core/pc_file_receive.dart`, `companion_identity_exchange.dart`, `lib/screens/companion_pairing_page.dart`, and private `sample_apps/pc_transfer_lab/index.html` (manual QA guide, **not a privileged PC control mini-app**).
+
 Physical Android↔Windows QA remains unperformed until tested; no signed Stable
-release or public catalog publication.
+release or public catalog publication. The 4MiB limit and no-resume behavior are
+R5A-specific. Android→Windows owner-selected upload and larger streaming follow in R5B.
