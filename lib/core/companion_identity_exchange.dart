@@ -7,6 +7,7 @@ import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:chappy_player/core/pc_pairing_stage.dart';
 import 'package:chappy_player/core/pc_status_once.dart';
 import 'package:chappy_player/core/pc_file_receive.dart';
+import 'package:chappy_player/core/pc_file_upload.dart';
 import 'package:crypto/crypto.dart';
 
 /// Explicit, one-shot QR-v3 proof exchange. No trusted peer is saved.
@@ -405,6 +406,269 @@ class CompanionIdentityExchange {
       verifyPcReceivedFile(offer, received);
       return PcReceivedFile(offer: offer, bytes: received);
     } finally {
+      _socket?.destroy();
+      _socket = null;
+      _busy = false;
+    }
+  }
+
+  /// R5B Android -> Windows: a NEW scope, owner-chosen PC destination, and
+  /// separate PC RECEIVE and foreground Android consents. This method MUST
+  /// only be called after QR-v3 mutual device proof on the trusted host page.
+  Future<void> uploadPcFileOnce({
+    required String ip,
+    required int port,
+    required String tlsFingerprint,
+    required String pcFingerprint,
+    required String invitation,
+    required int qrExpires,
+    required PcUploadFile file,
+    required Future<bool> Function(PcUploadFile file) approvePhoneUpload,
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    if (_busy || _cancelled) {
+      throw StateError('新しいQR-v3認証が必要です');
+    }
+    CompanionPairingClient.validateTarget(ip, port, tlsFingerprint);
+    if (!_hex64.hasMatch(pcFingerprint) || !_hex32.hasMatch(invitation)) {
+      throw const FormatException('送信先PCのQR情報が不正です');
+    }
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if (qrExpires <= now || qrExpires - now > 600) {
+      throw const FormatException('送信用QRが期限切れです');
+    }
+    _busy = true;
+    String? activeTicket;
+    try {
+      final status = await identity.status();
+      _ensureActive();
+      if (!status.created || status.fingerprint == null ||
+          !_hex64.hasMatch(status.fingerprint!)) {
+        throw StateError('スマホのKeyStore署名鍵がありません');
+      }
+      final phoneFp = status.fingerprint!;
+      final phoneNonce = CompanionIdentityClient.newNonce();
+      final challenge = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/upload-begin',
+        json: <String, Object>{
+          'protocol': PcUploadFile.protocol,
+          'invitation': invitation,
+          'phone_fp': phoneFp,
+          'phone_nonce': phoneNonce,
+          'file_name': file.fileName,
+          'size_bytes': file.bytes.length,
+          'sha256': file.digest,
+        },
+      );
+      _ensureActive();
+      if (challenge.length != 6 ||
+          challenge['protocol'] != PcUploadFile.protocol ||
+          challenge['status'] != 'challenge' ||
+          challenge['pc_nonce'] is! String ||
+          !_hex64.hasMatch(challenge['pc_nonce'] as String) ||
+          challenge['expires'] is! int ||
+          challenge['pc_proof'] is! Map ||
+          challenge['file'] is! Map) {
+        throw const FormatException('Windowsの送信承認応答が不正です');
+      }
+      final offered = PcFileOffer.parse(challenge['file'] as Map);
+      if (offered.fileName != file.fileName ||
+          offered.sizeBytes != file.bytes.length ||
+          offered.sha256Hex != file.digest) {
+        throw const FormatException('PCが別ファイルを要求しました');
+      }
+      final rawPcNonce = challenge['pc_nonce'] as String;
+      final expiry = challenge['expires'] as int;
+      final current = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      if (expiry <= current || expiry > qrExpires || expiry - current > 240) {
+        throw const FormatException('PC送信承認の期限が不正です');
+      }
+      final pcVerified = await identity.verifyPcProof(
+        proof: CompanionIdentityClient.parseProof(
+          challenge['pc_proof'] as Map<dynamic, dynamic>,
+        ),
+        pcFingerprint: pcFingerprint,
+        invitation: invitation,
+        tlsFingerprint: tlsFingerprint,
+        phoneFingerprint: phoneFp,
+        phoneNonce: pcUploadScopedNonce(phoneNonce),
+        expiresUnix: expiry,
+      );
+      _ensureActive();
+      if (!pcVerified) {
+        throw StateError('Windowsの送信専用署名が一致しません');
+      }
+      if (!await approvePhoneUpload(file)) {
+        throw StateError('Androidでファイル送信を拒否しました');
+      }
+      _ensureActive();
+      if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expiry) {
+        throw const FormatException('送信の追加承認が期限切れです');
+      }
+      final phoneProof = await identity.signPhoneProof(
+        invitation: invitation, tlsFingerprint: tlsFingerprint,
+        pcFingerprint: pcFingerprint,
+        pcNonce: pcUploadScopedNonce(rawPcNonce), expiresUnix: expiry,
+      );
+      _ensureActive();
+      final ready = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/upload-finish',
+        json: <String, Object>{
+          'protocol': PcUploadFile.protocol, 'invitation': invitation,
+          'phone_fp': phoneFp, 'phone_proof': phoneProof,
+        },
+      );
+      _ensureActive();
+      if (ready.length != 5 ||
+          ready['protocol'] != PcUploadFile.protocol ||
+          ready['status'] != 'ready' ||
+          ready['pc_nonce'] != rawPcNonce ||
+          ready['expires'] != expiry ||
+          ready['ticket'] is! String ||
+          !RegExp(r'^[0-9a-f]{32}
+      SecureSocket socket, {int maxBytes = 2048}) async {
+    final bytes = <int>[];
+    await for (final chunk in socket) {
+      if (bytes.length + chunk.length > maxBytes) {
+        throw const FormatException('PC応答が大きすぎます');
+      }
+      bytes.addAll(chunk);
+    }
+    return bytes;
+  }
+
+  Future<Map<String, dynamic>> _post({
+    required String ip,
+    required int port,
+    required String tlsPin,
+    required String path,
+    required Map<String, Object> json,
+    int maxResponseBytes = 2048,
+    int maxPayloadBytes = 1024,
+    int maxRequestBytes = 2048,
+  }) async {
+    _ensureActive();
+    if (_socket != null) throw StateError('同時接続は許可されません');
+    SecureSocket? socket;
+    try {
+      socket = await SecureSocket.connect(
+        ip, port, timeout: const Duration(seconds: 6),
+        onBadCertificate: (cert) =>
+            sha256.convert(cert.der).toString() == tlsPin,
+      );
+      _socket = socket;
+      _ensureActive();
+      final cert = socket.peerCertificate;
+      if (cert == null || sha256.convert(cert.der).toString() != tlsPin) {
+        throw const HandshakeException('PCのTLS証明書がQRと一致しません');
+      }
+      final body = utf8.encode(jsonEncode(json));
+      if (body.length > maxRequestBytes) {
+        throw const FormatException('PCへのリクエストが大きすぎます');
+      }
+      final header = 'POST $path HTTP/1.1\r\n'
+          'Host: $ip:$port\r\n'
+          'Content-Type: application/json\r\n'
+          'Cache-Control: no-store\r\n'
+          'Connection: close\r\n'
+          'Content-Length: ${body.length}\r\n\r\n';
+      socket.add(utf8.encode(header));
+      socket.add(body);
+      await socket.flush();
+      // Absolute wall-clock deadline, not a per-chunk inactivity timeout.
+      final bytes = await _readBounded(socket, maxBytes: maxResponseBytes)
+          .timeout(const Duration(seconds: 35));
+      _ensureActive();
+      final response = utf8.decode(bytes);
+      final cut = response.indexOf('\r\n\r\n');
+      if (cut < 0 || cut > 1024) {
+        throw const FormatException('PCのHTTPS応答が不正です');
+      }
+      final headerLines = response.substring(0, cut).split('\r\n');
+      final statusLine = headerLines.first;
+      if (statusLine != 'HTTP/1.0 200 OK' &&
+          statusLine != 'HTTP/1.1 200 OK') {
+        throw StateError('PC側で拒否・期限切れになった可能性があります');
+      }
+      final lengthLines = headerLines.skip(1)
+          .where((line) => line.toLowerCase().startsWith('content-length:'))
+          .toList();
+      if (lengthLines.length != 1) {
+        throw const FormatException('PC応答サイズが不正です');
+      }
+      final length = int.tryParse(lengthLines.single.split(':').last.trim());
+      final payload = response.substring(cut + 4);
+      if (length == null || length < 1 || length > maxPayloadBytes ||
+          utf8.encode(payload).length != length) {
+        throw const FormatException('PC応答長が一致しません');
+      }
+      final decoded = jsonDecode(payload);
+      if (decoded is! Map<String, dynamic>) {
+        throw const FormatException('PC応答がJSONオブジェクトではありません');
+      }
+      return decoded;
+    } finally {
+      socket?.destroy();
+      if (identical(_socket, socket)) _socket = null;
+    }
+  }
+}
+).hasMatch(ready['ticket'] as String)) {
+        throw const FormatException('Windowsの送信開始情報が不正です');
+      }
+      activeTicket = ready['ticket'] as String;
+      var offset = 0;
+      onProgress?.call(0, file.bytes.length);
+      while (offset < file.bytes.length) {
+        _ensureActive();
+        if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expiry) {
+          throw const FormatException('送信中に期限切れになりました');
+        }
+        final end = offset + PcFileOffer.chunkBytes > file.bytes.length
+            ? file.bytes.length : offset + PcFileOffer.chunkBytes;
+        final chunk = Uint8List.sublistView(file.bytes, offset, end);
+        final ack = await _post(
+          ip: ip, port: port, tlsPin: tlsFingerprint,
+          path: '/v3/upload-chunk',
+          json: <String, Object>{
+            'protocol': PcUploadFile.protocol,
+            'ticket': activeTicket,
+            'offset': offset,
+            'data': base64Encode(chunk),
+          },
+          maxRequestBytes: 25000,
+        );
+        _ensureActive();
+        validatePcUploadAck(
+          ack, expectedOffset: offset, fileLength: file.bytes.length,
+        );
+        offset = end;
+        onProgress?.call(offset, file.bytes.length);
+      }
+      final result = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/upload-commit',
+        json: <String, Object>{
+          'protocol': PcUploadFile.protocol,
+          'ticket': activeTicket,
+          'size_bytes': file.bytes.length,
+          'sha256': file.digest,
+        },
+      );
+      _ensureActive();
+      if (result.length != 4 ||
+          result['protocol'] != PcUploadFile.protocol ||
+          result['status'] != 'saved' ||
+          result['size_bytes'] != file.bytes.length ||
+          result['sha256'] != file.digest) {
+        throw const FormatException('Windowsの保存完了証明が不正です');
+      }
+      activeTicket = null;
+    } finally {
+      // If a chunk timed out, the owner can stop the server, and its memory
+      // buffer is zeroed. The cancellable one-time ticket is never persisted.
       _socket?.destroy();
       _socket = null;
       _busy = false;
