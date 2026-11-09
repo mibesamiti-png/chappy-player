@@ -1,0 +1,26 @@
+{
+  "format": "chappy.netlab-04b-traffic-v1",
+  "domain": "CHAPPY-PC-TRAFFIC-READ-V1",
+  "cases": [
+    {
+      "nonce": "0000000000000000000000000000000000000000000000000000000000000000",
+      "seconds": 5,
+      "sha256": "a7e64aa6f4a8b4d09915f2a961e73f04bd96218f36553ef80ba06837907e5e48"
+    },
+    {
+      "nonce": "1111111111111111111111111111111111111111111111111111111111111111",
+      "seconds": 10,
+      "sha256": "efe46cfc223804b9fe26d15e1238aa19f4b9c6fb4b240256b54b970cd2e7d545"
+    },
+    {
+      "nonce": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "seconds": 30,
+      "sha256": "3b834447200f0f8fdb14165ec4f9cee540890e470f21748cb9a35bd850a3e665"
+    },
+    {
+      "nonce": "abababababababababababababababababababababababababababababababab",
+      "seconds": 10,
+      "sha256": "49c3f8eb7e4bba8d2e49680b545458a2a18451e806a5cd450e55dd0c255b8523"
+    }
+  ]
+}
