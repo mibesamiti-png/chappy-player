@@ -38,7 +38,7 @@ void main() {
       '$base&traffic=1&status=1',
       '$base&traffic=1&file=1',
       '$base&traffic=1&media=1',
-      base.replaceFirst('://v3', '://v2') + '&traffic=1',
+      '${base.replaceFirst('://v3', '://v2')}&traffic=1',
     ]) {
       expect(() => CompanionQrInvitation.parse(bad, now: now),
           throwsFormatException);
