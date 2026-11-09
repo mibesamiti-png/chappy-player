@@ -16,6 +16,7 @@ class CompanionQrInvitation {
   final bool statusOnce;
   final bool fileOnce;
   final bool uploadOnce;
+  final bool mediaOnce;
 
   const CompanionQrInvitation({
     required this.ip,
@@ -27,6 +28,7 @@ class CompanionQrInvitation {
     this.statusOnce = false,
     this.fileOnce = false,
     this.uploadOnce = false,
+    this.mediaOnce = false,
   });
 
   static CompanionQrInvitation parse(
@@ -55,15 +57,19 @@ class CompanionQrInvitation {
     final statusPresent = isV3 && parameters.containsKey('status');
     final filePresent = isV3 && parameters.containsKey('file');
     final uploadPresent = isV3 && parameters.containsKey('upload');
+    final mediaPresent = isV3 && parameters.containsKey('media');
     if (statusPresent) expected.add('status');
     if (filePresent) expected.add('file');
     if (uploadPresent) expected.add('upload');
+    if (mediaPresent) expected.add('media');
     if (parameters.keys.toSet().difference(expected).isNotEmpty ||
         expected.difference(parameters.keys.toSet()).isNotEmpty ||
         parameters.values.any((items) => items.length != 1) ||
         (statusPresent && parameters['status']!.single != '1') ||
         (filePresent && parameters['file']!.single != '1') ||
         (uploadPresent && parameters['upload']!.single != '1') ||
+        (mediaPresent && parameters['media']!.single != '1') ||
+        (mediaPresent && (statusPresent || filePresent || uploadPresent)) ||
         (statusPresent && filePresent) ||
         (uploadPresent && (statusPresent || filePresent))) {
       throw const FormatException('QR項目が不足・重複しています');
@@ -106,6 +112,7 @@ class CompanionQrInvitation {
       statusOnce: statusPresent,
       fileOnce: filePresent,
       uploadOnce: uploadPresent,
+      mediaOnce: mediaPresent,
     );
   }
 }

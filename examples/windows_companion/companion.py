@@ -149,6 +149,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Opt in to one separately approved read-only PC status after QR-v3",
     )
     parser.add_argument(
+        "--media-once", action="store_true",
+        help="One separately consented multimedia key over signed QR-v3",
+    )
+    parser.add_argument(
         "--receive-file-once", action="store_true",
         help="One Android file to an explicit NEW PC destination via fresh QR-v3",
     )
@@ -216,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.doctor:
         if (args.pair or args.qr or args.identity_pair or
-                args.compare_known_phone or args.status_once or args.send_file_once or args.receive_file_once or args.ip or
+                args.compare_known_phone or args.status_once or args.send_file_once or args.receive_file_once or args.media_once or args.ip or
                 args.minutes != DEFAULT_MINUTES):
             print("--doctor cannot be combined with network options",
                   file=sys.stderr)
@@ -226,7 +230,7 @@ def main(argv: list[str] | None = None) -> int:
     if (args.identity_create or args.identity_status or args.identity_revoke
             or args.verified_list or args.verified_forget is not None
             or args.verified_clear):
-        if (args.pair or args.qr or args.identity_pair or args.compare_known_phone or args.status_once or args.send_file_once or args.receive_file_once or args.ip
+        if (args.pair or args.qr or args.identity_pair or args.compare_known_phone or args.status_once or args.send_file_once or args.receive_file_once or args.media_once or args.ip
                 or args.minutes != DEFAULT_MINUTES):
             print("Identity commands cannot be combined with network options",
                   file=sys.stderr)
@@ -307,6 +311,12 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, RuntimeError, ValueError, FileExistsError) as exc:
             print("PC identity operation failed: " + str(exc), file=sys.stderr)
             return 1
+    if args.media_once and not (args.start and args.pair and args.qr and args.identity_pair):
+        print("--media-once requires --start --pair --qr --identity-pair", file=sys.stderr)
+        return 2
+    if args.media_once and (args.status_once or args.send_file_once or args.receive_file_once):
+        print("Media/status/file modes need separate QR sessions", file=sys.stderr)
+        return 2
     if args.compare_known_phone and not (
         args.start and args.pair and args.qr and args.identity_pair
     ):
@@ -372,6 +382,8 @@ def main(argv: list[str] | None = None) -> int:
                 options["file_once"] = True
             if args.receive_file_once:
                 options["upload_once"] = True
+            if args.media_once:
+                options["media_once"] = True
             run_pairing(address, args.minutes, **options)
         else:
             run_beacon(address, args.minutes)
