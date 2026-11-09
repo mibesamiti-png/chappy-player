@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:chappy_player/core/lan_discovery_client.dart';
 import 'package:chappy_player/screens/companion_pairing_page.dart';
+import 'package:chappy_player/screens/browser_page.dart';
+import 'package:chappy_player/screens/network_diagnostic_page.dart';
 import 'package:chappy_player/screens/device_traffic_page.dart';
 import 'package:chappy_player/screens/pc_identity_page.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
@@ -199,6 +201,30 @@ class _NetworkLabPageState extends State<NetworkLabPage>
               'すべてのWi-Fi端末を列挙する機能ではありません。',
             ),
             const SizedBox(height: 16),
+            OutlinedButton.icon(
+              key: const Key('netlab_browser'),
+              onPressed: () {
+                _cancelScan(clearResults: true);
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const BrowserPage(),
+                ));
+              },
+              icon: const Icon(Icons.public),
+              label: const Text('ブラウザ（公開HTTPSサイト専用）'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('netlab_diagnostic'),
+              onPressed: () {
+                _cancelScan(clearResults: true);
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const NetworkDiagnosticPage(),
+                ));
+              },
+              icon: const Icon(Icons.network_check),
+              label: const Text('ネットワーク接続診断（手動）'),
+            ),
+            const SizedBox(height: 12),
             OutlinedButton.icon(
               key: const Key('netlab_pc_identity'),
               onPressed: () {

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Browser Lab — R7 private QA only</title>
+<style>
+:root{color-scheme:dark;font:15px/1.55 system-ui,sans-serif;background:#0b1525;color:#eaf3ff}
+*{box-sizing:border-box}body{max-width:770px;margin:auto;padding:20px 15px 52px}
+h1{font-size:26px;margin:4px 0 10px}h2{font-size:18px;margin:0 0 12px}
+p,li{color:#c1cce0}section{border:1px solid #42536f;border-radius:15px;padding:18px;margin:17px 0;background:#16253d}
+.warn{border-left:4px solid #ffca6b;background:#332b21;padding:12px;border-radius:8px}
+label.check{display:flex;gap:12px;align-items:flex-start;border-top:1px solid #364968;padding:10px 0}
+input[type=checkbox]{width:21px;height:21px;flex:none;accent-color:#70bcff;margin-top:4px}
+progress{width:100%;height:18px}textarea{width:100%;min-height:170px;color:white;background:#111c31;border:1px solid #688bb5;padding:12px}
+button{border:1px solid #7ab4e5;background:#315582;color:white;font:inherit;padding:10px 13px;border-radius:9px;margin:5px}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid #aad6fe;outline-offset:2px}
+code{color:#9edbff}.hint{font-size:12px;color:#a5b5ca}
+</style></head><body>
+<div class="hint">Private R7 Debug QA • No native bridge • No permissions</div>
+<h1>Browser Lab</h1>
+<div class="warn"><b>このミニアプリにブラウザ実行・LAN診断・ネットワーク権限はありません。</b>
+PCの操作、WebView/Cookie管理、通信診断はChappy Player本体の画面から本人が明示的に実行してください。チェックは自己記録です。</div>
+<section><h2>本体ブラウザの確認手順</h2><ol>
+<li>最新Debug版でホームの地球アイコンかNetwork Labから「ブラウザ」を開く。</li>
+<li>最初にJavaScriptがOFF、カメラ/マイクのサイト要求が拒否されることを確認する。</li>
+<li>公開HTTPSのアドレスだけ移動できることを確認。HTTP、localhost、LAN内IP、file、intent、data、javascript等は拒否されること。</li>
+<li>戻る/進む/更新を確認。信頼できるサイトだけJSを手動ONにし、アプリ背景化でOFFに戻ること。</li>
+<li>CookieとキャッシュはAndroidの他のWebViewにも共有される可能性がある。削除時の警告を確認してから実行する。</li>
+</ol></section>
+<section><h2>本体ネットワーク診断の確認手順</h2><ol>
+<li>Network Lab→「ネットワーク接続診断」を開く。画面表示時点で外部通信が始まらないこと。</li>
+<li>「診断を開始」押下後の別承認画面で、example.comへのDNS/HTTPS HEADの説明を確認する。</li>
+<li>同意後だけネットワーク接続数・DNS結果・HTTP応答を確認。端末IP、URLの履歴、機器リストは記録しない。</li>
+<li>拒否、オフライン、Wi-Fi切断、背景化で通信を中断・結果を破棄し、勝手に再実行しないこと。</li>
+<li>既存Game Server Labの通信権限・接続同意は変更しない。本LabからWSS/API操作や端末診断を呼び出さない。</li>
+</ol></section>
+<section><h2>実機チェック（手動、12件）</h2><div id="checks">
+<label class="check"><input type="checkbox" data-r7="open">本体ホーム/Network LabからBrowserを開けた</label>
+<label class="check"><input type="checkbox" data-r7="public_https">公開HTTPSサイトを読み込めた</label>
+<label class="check"><input type="checkbox" data-r7="reject_schemes">HTTP/危険スキーム/localhost/LAN内IPを拒否</label>
+<label class="check"><input type="checkbox" data-r7="navigation">戻る/進む/更新が動く</label>
+<label class="check"><input type="checkbox" data-r7="js_off">初期JavaScript OFF、手動ON、背景化でOFF</label>
+<label class="check"><input type="checkbox" data-r7="media_reject">カメラ/マイクのWebView権限を拒否</label>
+<label class="check"><input type="checkbox" data-r7="clear_warning">Cookie共有・ログアウト警告と手動削除</label>
+<label class="check"><input type="checkbox" data-r7="diag_idle">診断画面を開いただけでは外部通信なし</label>
+<label class="check"><input type="checkbox" data-r7="diag_approved">別承認後だけDNS/HTTPS/件数の結果</label>
+<label class="check"><input type="checkbox" data-r7="diag_cancel">拒否・中止・背景化で停止し再開しない</label>
+<label class="check"><input type="checkbox" data-r7="diag_offline">オフラインで失敗を明示、秘密情報は非表示</label>
+<label class="check"><input type="checkbox" data-r7="bridge">.chappy JSからWebView/端末診断・PC鍵を操作不可</label>
+</div>
+<progress id="progress" max="12" value="0"></progress>
+<p id="progressText" role="status" aria-live="polite">手動QA 0/12（実機未実施）</p>
+<button id="report" type="button">匿名レポートを作成</button>
+<button id="reset" type="button">リセット</button>
+<label for="output">コピー用テキスト：実機で観察したものだけチェックする</label>
+<textarea id="output" readonly placeholder="まだ結果はありません"></textarea>
+</section>
+<p class="hint">これは独立したR7 12ケースの観察記録。R6 PC Link実機15+13件は別管理で未実施。公開カタログ/署名Stableには含めません。</p>
+<script>
+(() => {
+  'use strict';
+  const checks = Array.from(document.querySelectorAll('[data-r7]'));
+  const meter = document.getElementById('progress');
+  const text = document.getElementById('progressText');
+  const output = document.getElementById('output');
+  const update = () => {
+    const count = checks.filter(item => item.checked).length;
+    meter.value = count;
+    text.textContent = '手動QA ' + count + '/' + checks.length + '（実機の自己申告）';
+  };
+  checks.forEach(item => item.addEventListener('change', update));
+  document.getElementById('report').addEventListener('click', () => {
+    output.value = 'Browser Lab R7 手動QA（自動テスト結果ではない）\n' +
+      checks.map(item => (item.checked ? '[x] ' : '[ ] ') +
+        item.getAttribute('data-r7')).join('\n') +
+      '\n実機/ブラウザでの観察を別途記録。端末識別子・IP・Cookie・秘密鍵は含めない。';
+  });
+  document.getElementById('reset').addEventListener('click', () => {
+    checks.forEach(item => { item.checked = false; });
+    output.value = '';
+    update();
+  });
+  update();
+})();
+</script></body></html>

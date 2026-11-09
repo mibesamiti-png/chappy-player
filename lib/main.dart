@@ -11,6 +11,7 @@ import 'package:chappy_player/screens/app_runner_page.dart';
 import 'package:chappy_player/screens/chappy_catalog_page.dart';
 import 'package:chappy_player/screens/logs_page.dart';
 import 'package:chappy_player/screens/network_lab_page.dart';
+import 'package:chappy_player/screens/browser_page.dart';
 import 'package:chappy_player/screens/player_update_page.dart';
 import 'package:chappy_player/screens/self_check_page.dart';
 import 'package:file_picker/file_picker.dart';
@@ -449,6 +450,15 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 8),
         Text('アプリ ${apps.length} 個', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 22),
+        Card(child: ListTile(
+          key: const Key('home_browser_r7'),
+          leading: const Icon(Icons.public),
+          title: const Text('ブラウザ（R7プレビュー）'),
+          subtitle: const Text('公開HTTPS専用・JavaScript初期OFF'),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const BrowserPage()),
+          ),
+        )),
         if (apps.isEmpty) Card(child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 32),
           child: Column(children: [
