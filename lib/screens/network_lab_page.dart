@@ -9,6 +9,7 @@ import 'package:chappy_player/screens/remote_traffic_import_page.dart';
 import 'package:chappy_player/screens/router_connection_lab_page.dart';
 import 'package:chappy_player/screens/buffalo_inventory_page.dart';
 import 'package:chappy_player/screens/router_auto_identify_page.dart';
+import 'package:chappy_player/screens/traffic_inspection_page.dart';
 import 'package:chappy_player/screens/pc_identity_page.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:flutter/material.dart';
@@ -365,6 +366,18 @@ class _NetworkLabPageState extends State<NetworkLabPage>
               },
               icon: const Icon(Icons.file_open_outlined),
               label: const Text('ほかの端末の通信レポートを読み込む'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('netlab_traffic_inspection'),
+              onPressed: () {
+                _cancelScan(clearResults: true);
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const TrafficInspectionPage(),
+                ));
+              },
+              icon: const Icon(Icons.manage_search_outlined),
+              label: const Text('通信先・平文内容をPCAPから解析（本人許可）'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(

@@ -36,6 +36,8 @@ jobs:
         run: python3 tools/test_buffalo_inventory_boundary.py
       - name: NETLAB-05C router gateway and UPnP candidate scope safety boundary
         run: python3 tools/test_router_identity_boundary.py
+      - name: NETLAB-06A offline PCAP inspection, consent and no-capture boundary
+        run: python3 tools/test_pcap_inspection_boundary.py
       - name: R7 host browser URL/security and private Browser Lab preflight
         run: |
           python3 tools/test_network_r7_boundary.py
