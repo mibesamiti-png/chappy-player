@@ -8,6 +8,7 @@ import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/pc_status_once.dart';
 import 'package:chappy_player/core/pc_file_upload.dart';
+import 'package:chappy_player/core/pc_media_once.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:chappy_player/core/verified_pc_history_client.dart';
 import 'package:chappy_player/core/companion_qr_invitation.dart';
@@ -49,6 +50,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   bool _verified = false;
   bool _statusAttempted = false;
   PcStatusOnceMetrics? _statusMetrics;
+  bool _mediaAttempted = false;
+  String? _mediaMessage;
   bool _fileAttempted = false;
   bool _fileSaving = false;
   double _fileProgress = 0;
@@ -86,6 +89,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
           _verified = false;
           _statusMetrics = null;
           _statusAttempted = false;
+          _mediaAttempted = false;
+          _mediaMessage = null;
           _fileAttempted = false;
           _fileProgress = 0;
           _fileMessage = null;
@@ -277,6 +282,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _uploadMessage = null;
       _statusMetrics = null;
       _statusAttempted = false;
+      _mediaAttempted = false;
+      _mediaMessage = null;
       _fileAttempted = false;
       _fileProgress = 0;
       _fileMessage = null;
@@ -313,6 +320,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _verified = false;
       _statusMetrics = null;
       _statusAttempted = false;
+      _mediaAttempted = false;
+      _mediaMessage = null;
       _fileAttempted = false;
       _fileProgress = 0;
       _fileMessage = null;
@@ -487,6 +496,77 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       setState(() => _error = 'PC状態を取得できませんでした [STATUS-ONCE]。'
           '別承認の拒否・署名違い・期限切れ・切断を確認して、'
           '新しいQRを発行してください。');
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _executeMediaOnce(String command) async {
+    final invite = _invite;
+    if (_busy || _savingHistory || !_verified || _mediaAttempted ||
+        invite == null || !invite.mediaOnce ||
+        invite.pcIdentityFingerprint == null ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _mediaAttempted = true; // Consume before awaiting; no QR reuse.
+      _mediaMessage = null;
+      _error = null;
+    });
+    try {
+      await _identityExchange.executePcMediaOnce(
+        ip: widget.service.address,
+        port: widget.service.port,
+        tlsFingerprint: invite.fingerprint,
+        pcFingerprint: invite.pcIdentityFingerprint!,
+        invitation: invite.invitation,
+        qrExpires: invite.expiresUnix,
+        command: command,
+        approvePhoneMedia: (exactCommand) async {
+          if (!mounted || generation != _generation ||
+              ModalRoute.of(context)?.isCurrent != true) {
+            return false;
+          }
+          final approved = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('PCのメディア操作を1回だけ許可しますか？'),
+              content: Text(
+                'PC側で本人確認と別のCONTROL承認を行い、'
+                '操作を限定したPC署名を検証しました。\n\n'
+                '操作: ' + PcMediaOnce.label(exactCommand) +
+                '\n\nこの1キーだけ実行します。任意のキー入力、'
+                'ファイルアクセスや継続的なPC制御は許可しません。',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('拒否する'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('この1回だけ実行'),
+                ),
+              ],
+            ),
+          );
+          return approved == true && mounted && generation == _generation;
+        },
+      );
+      if (!mounted || generation != _generation) return;
+      setState(() => _mediaMessage =
+          PcMediaOnce.label(command) + '：PC側から実行応答を受信しました。');
+    } catch (_) {
+      if (mounted && generation == _generation) {
+        setState(() => _error = 'PCメディア操作に失敗しました [MEDIA-ONCE]。'
+            'PC側で新しいQRを表示して承認と期限を再確認してください。');
+      }
     } finally {
       if (mounted && generation == _generation) {
         setState(() => _busy = false);
@@ -747,6 +827,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _verified = false;
       _statusMetrics = null;
       _statusAttempted = false;
+      _mediaAttempted = false;
+      _mediaMessage = null;
       _fileAttempted = false;
       _fileSaving = false;
       _fileProgress = 0;
@@ -917,6 +999,20 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                   ),
                 ),
               ),
+            if (_verified && _invite?.mediaOnce == true) ...[
+              const SizedBox(height: 8),
+              const Text('新しいQRで1つだけ実行できます。PCとスマホでそれぞれ追加承認が必要です。'),
+              for (final command in PcMediaOnce.commands)
+                OutlinedButton.icon(
+                  key: Key('pair_media_$command'),
+                  onPressed: _busy || _mediaAttempted
+                      ? null : () => _executeMediaOnce(command),
+                  icon: const Icon(Icons.music_note_outlined),
+                  label: Text('PCの' + PcMediaOnce.label(command)),
+                ),
+              if (_mediaMessage != null)
+                Text(_mediaMessage!, key: const Key('pair_media_result')),
+            ],
             if (_verified && _invite?.uploadOnce == true) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(
