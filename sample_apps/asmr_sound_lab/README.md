@@ -18,12 +18,20 @@ python3 tools/pack_html_chappy.py \
   --source sample_apps/asmr_sound_lab \
   --id local.chappy.asmr \
   --name "ASMR Sound Lab" \
-  --version 1.4.2 \
-  --output /tmp/asmr-contact-preview-v1.4.2.chappy
+  --version 1.4.3 \
+  --output /tmp/asmr-rumble-preview-v1.4.3.chappy
 python3 tools/test_chappy_package_tools.py
 ```
 
 The packager adds a `manifest.json` with `entry: index.html`, `permissions: []` and the same ID. It may produce different ZIP bytes because archive timestamps/manifest encoding differ; the embedded source is preserved. **Do not publish a rebuilt package as the existing Stable 1.4.0 version.** For a change, bump the version, verify it, publish to a reviewed Debug channel first, test on an actual Android device, then separately approve Stable promotion. Do not publish an APK for a mini-app-only edit.
+
+## v1.4.3 candidate — bounded two-layer seal rumble (not published)
+
+- **ASMR-RUMBLE-01:** keep the earlier airy filtered-white-noise ear layer, and add a separately filtered, lower-frequency brown-noise layer (48 Hz high-pass, 180 Hz low-pass). Both are generated offline and routed to their own ear only.
+- The new low layer fades in **only as that ear closes**; it remains silent in the open-ear state even if the source is close to the head. Both gains start at zero, and remain bounded by pure `bodyRumbleTargets()`: airy <= 0.26, deep <= 0.125. Body-noise OFF forces both to zero.
+- Attack and release use independent smoothed Web Audio gain targets. Existing limiter/soft clipper, ear-exclusive routing, saved `preset-v14`, A/B input behavior, and head/face vibration remain unchanged.
+- `node tools/test_asmr_sound_lab.js` checks the open/closed, OFF, monotonic, nonfinite-control, route-guard and gain-limit cases. Quick CI produces the **unpublished 1.4.3 `.chappy` preview** for manual device listening checks.
+- This is an **acoustic approximation** for headphones, not literal bone-conduction stimulation. A numeric gain limit cannot guarantee safe subjective loudness; start at low Android system volume. Android WebView/real headphone QA is pending.
 
 ## v1.4.2 candidate — contact-edge hysteresis (not published)
 
