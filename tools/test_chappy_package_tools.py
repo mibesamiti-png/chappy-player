@@ -123,16 +123,16 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
         raise AssertionError("Overwriting package was allowed")
 
 
-    # The production ASMR v1.4.0 source is now tracked in this repo.
+    # Current ASMR 1.4.1 source is tracked independently of published Stable 1.4.0.
     # Verify packaging, app identity, permission boundary and inline JS syntax.
     asmr_source = Path(__file__).resolve().parent.parent / "sample_apps/asmr_sound_lab"
-    asmr_preview = root / "asmr-reconstructed-v1.4.0.chappy"
+    asmr_preview = root / "asmr-ear-entry-preview-v1.4.1.chappy"
     package_html(asmr_source, asmr_preview, "local.chappy.asmr",
-                 "ASMR Sound Lab", "1.4.0")
+                 "ASMR Sound Lab", "1.4.1")
     with zipfile.ZipFile(asmr_preview) as archive:
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["id"] == "local.chappy.asmr"
-        assert manifest["version"] == "1.4.0"
+        assert manifest["version"] == "1.4.1"
         assert manifest["permissions"] == []
         assert set(archive.namelist()) == {"manifest.json", "index.html", "README.md"}
         html_bytes = archive.read("index.html")
@@ -145,5 +145,6 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
         js_path = root / "asmr-source-inline.js"
         js_path.write_bytes(script.group(1))
         subprocess.run(["node", "--check", str(js_path)], check=True)
+        subprocess.run(["node", str(Path(__file__).with_name("test_asmr_sound_lab.js"))], check=True)
 
 print("HTML-to-Chappy + Stable/Debug catalog generator smoke tests passed")
