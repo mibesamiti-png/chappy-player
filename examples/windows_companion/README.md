@@ -33,6 +33,10 @@ Use the opt-in `Start-ChappyFileOnceV3.cmd` script to select ONE existing 1-byte
 
 Use `Start-ChappyUploadOnceV3.cmd`: Windows owner selects a NEW local full destination path before starting the listener, then shares a fresh QR-v3 with Android's Network Lab. Windows requires normal QR-v3 YES **plus separate RECEIVE**. Android picks a file with a matching basename, validates a new upload-only P-256 signature, and separately consents. Strict 4 MiB limit, SHA-256, no overwrite, no shell, no directory listing or trust persistence. This remains **source/CI only**; two-device QA outstanding. See [R5B notes](../../docs/pc-link-r5b-upload-once.md).
 
+## NETLAB-04B owner-PC signed traffic read (Debug preview)
+
+Use `Start-ChappyTrafficReadOnceV3.cmd` for an explicitly approved **one-time, 10-second** report of this Windows PC's aggregate RX/TX counters over signed QR-v3 and pinned TLS. Windows requires separate `YES` then `TRAFFIC`; Android requires two independent on-screen confirmations. Every read needs a fresh QR. No other device/payload capture, file export, mini-app JS permission, persistent listener, or Stable release. The underlying counters include all interfaces, so they are **not** Wi-Fi-only. Physical Windows↔Android QA is still pending. [Protocol and boundaries](../../docs/netlab-04b-consented-traffic-once.md).
+
 ## R4C opt-in real PC status preview
 
 Use `Start-ChappyStatusOnceV3.cmd` only if you want a **single** read-only PC status inspection after a real QR-v3 mutual proof. PC must approve identity with YES, then independently type STATUS after Android requests the PC status. Android must separately consent again. CPU count, memory totals, uptime only; no file, remote control, traffic contents or persistent pairing. See [R4C notes](../../docs/pc-link-r4c-status-once.md). Actual physical Windows↔Android QA is still outstanding.
