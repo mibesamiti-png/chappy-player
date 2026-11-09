@@ -2,7 +2,6 @@ import 'package:chappy_player/core/lan_discovery_client.dart';
 import 'package:chappy_player/core/openwrt_router_client.dart';
 import 'package:chappy_player/core/router_connection_snapshot.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 /// Explicit, one-action OpenWrt read-only connection inspector.
 /// Router authentication is native Flutter host ONLY, never .chappy JS.
