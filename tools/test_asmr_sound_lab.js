@@ -167,4 +167,64 @@ assert.ok(html.includes('v.skinBus') && html.includes('v.boneMerge.connect(this.
 assert.ok(html.includes('id="skinSurface"') && html.includes('skinSurface:65'),
   'skin intensity slider and default must exist');
 assert.ok(html.includes("preset-v14"),'saved settings key must not change');
-console.log('ASMR ear-entry, bone, rumble and skin-surface regression passed');
+// SURF-04: both stroke bands should be stronger on scalp, responsive to slow touch,
+// silent when stationary/airborne/inside the ear, and independently controllable.
+const strokeDecl=html.match(/function scalpStrokeTargets\(mode,zone,gate,speed,strength,texture,surface,boost\)\s*\{[\s\S]*?\n\}/);
+assert.ok(strokeDecl,'scalpStrokeTargets must be a pure testable function');
+const stroke=vm.runInNewContext('(' + strokeDecl[0] + ')',
+  {clamp:clampUnit,smoothstep:stepUnit});
+const scalpZone={id:'scalp',touch:1,isCanal:false,settings:{hardness:.42},side:-1};
+const cheekZone={id:'cheek_L',touch:1,isCanal:false,settings:{hardness:.48},side:0};
+const canalZone={id:'earCanal_L',touch:1,isCanal:true,settings:{hardness:.38},side:0};
+const slowScalp=stroke('ear',scalpZone,1,17,.7,.6,.65,.88);
+const slowCheek=stroke('ear',cheekZone,1,17,.7,.6,.65,.88);
+assert.ok(slowScalp.hair>0&&slowScalp.drag>0,'slow scalp stroking should be audible');
+assert.ok(slowScalp.hair>slowCheek.hair,'scalp hair texture exceeds cheek');
+assert.ok(slowScalp.hairHz>slowCheek.hairHz,'scalp strands are brighter than cheek');
+assert.ok(slowScalp.dragHz<slowCheek.dragHz,'scalp drag is warmer/softer than cheek');
+const fastScalp=stroke('ear',scalpZone,1,55,.7,.6,.65,.88);
+assert.ok(fastScalp.hair>slowScalp.hair&&fastScalp.drag>slowScalp.drag,
+  'faster rubbing should raise grain and drag without hard switching');
+for(const [zone,g,surf,boost,mode,speed] of [
+ [scalpZone,0,1,1,'ear',80],[scalpZone,1,0,1,'ear',80],
+ [scalpZone,1,1,0,'ear',80],[scalpZone,1,1,1,'ear',0],
+ [canalZone,1,1,1,'ear',80],[scalpZone,1,1,1,'bee',80],
+ [scalpZone,1,1,1,'heart',80],
+]){
+ const x=stroke(mode,zone,g,speed,.8,.7,surf,boost);
+ almost(x.hair,0,'stroke must be silent unless contact+movement+enabled');
+ almost(x.drag,0,'drag must be silent unless contact+movement+enabled');
+}
+let prevHair=0,prevDrag=0;
+for(let i=0;i<=100;i++){
+ const x=stroke('ear',scalpZone,1,i,.7,.6,1,1);
+ assert.ok(Number.isFinite(x.hair)&&Number.isFinite(x.drag));
+ assert.ok(x.hair>=0&&x.hair<=.22,'hair must be bounded');
+ assert.ok(x.drag>=0&&x.drag<=.14,'drag must be bounded');
+ assert.ok(x.hairHz>=650&&x.hairHz<=5200);
+ assert.ok(x.dragHz>=160&&x.dragHz<=700);
+ assert.ok(x.hair>=prevHair-1e-9&&x.drag>=prevDrag-1e-9,'stroke response should be monotonic');
+ prevHair=x.hair;prevDrag=x.drag;
+}
+const invalidStroke=stroke('ear',scalpZone,NaN,NaN,NaN,NaN,NaN,NaN);
+almost(invalidStroke.hair,0,'invalid input must silence hair');
+almost(invalidStroke.drag,0,'invalid input must silence drag');
+assert.ok(html.includes("v.strokeHairGain.gain.value=0"),
+  'hair sound must be silent at startup');
+assert.ok(html.includes("v.strokeDragGain.gain.value=0"),
+  'skin drag must be silent at startup');
+assert.ok(html.includes("v.strokeDragHigh.frequency.value=65"),
+  'drag should filter out subsonic rumble');
+assert.ok(html.includes("v.strokeHairGain.gain.setTargetAtTime(stroke.hair"),
+  'hair must enter smoothly');
+assert.ok(html.includes("v.strokeDragGain.gain.setTargetAtTime(stroke.drag"),
+  'drag must enter smoothly');
+assert.ok(html.includes("v.strokeHairGain.connect(v.skinBus)")&&
+  html.includes("v.strokeDragGain.connect(v.skinBus)"),
+  'additional textures should remain on the skin bus, not the bone/canal bus');
+assert.ok(html.includes("strokeBoost:88")&&html.includes('id="strokeBoost"'),
+  'default stroke control should be present');
+assert.ok(html.includes("'skinSurface','strokeBoost','boneStrength'"),
+  'stroke control must participate in save/restore and UI label updates');
+assert.ok(html.includes("preset-v14"),'Chappy storage key must remain compatible');
+console.log('ASMR ear-entry, bone, rumble, skin surface and scalp stroke regression passed');
