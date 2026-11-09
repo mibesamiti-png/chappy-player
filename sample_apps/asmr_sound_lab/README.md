@@ -1,0 +1,44 @@
+# ASMR Sound Lab — Chappy Player mini-app source
+
+This directory holds the **editable source** of the existing `local.chappy.asmr` Chappy Player mini-app.
+
+## Origin and deployment boundary
+
+- Baseline: **ASMR Sound Lab 1.4.0**, recovered unchanged from the public Stable `.chappy` payload on 2026-11-09.
+- Published package: [chappy-apps/stable/asmr-sound-lab.chappy](https://github.com/mibesamiti-png/chappy-apps/blob/main/stable/asmr-sound-lab.chappy).
+- Published catalog SHA-256 (of the ZIP): `89c09a9c7c61c7e9bb6912516eb1b0bbc5303c0f5d212ab07ca10419f4ba545f`; package 130,390 bytes; extracted `index.html` 129,990 UTF-8 bytes.
+- This source import **does not release or replace** the Stable package, installed APK, or any saved app data. The package is already public; do not add personal audio, device logs, keys, or private samples.
+
+## Build a Chappy mini-app package (not a standalone HTML release)
+
+From the `chappy-player` repository root:
+
+```sh
+python3 tools/pack_html_chappy.py \
+  --source sample_apps/asmr_sound_lab \
+  --id local.chappy.asmr \
+  --name "ASMR Sound Lab" \
+  --version 1.4.0 \
+  --output /tmp/asmr-source-check-v1.4.0.chappy
+python3 tools/test_chappy_package_tools.py
+```
+
+The packager adds a `manifest.json` with `entry: index.html`, `permissions: []` and the same ID. It may produce different ZIP bytes because archive timestamps/manifest encoding differ; the embedded source is preserved. **Do not publish a rebuilt package as the existing Stable 1.4.0 version.** For a change, bump the version, verify it, publish to a reviewed Debug channel first, test on an actual Android device, then separately approve Stable promotion. Do not publish an APK for a mini-app-only edit.
+
+## Existing implementation / verification boundary
+
+- Implemented in this baseline: eight synthesised sound types, independently movable A/B sources, dual touch, head and ear geometry, contact vs. self-producing sounds, depth-related seal/bass effects, bone/tissue-inspired contact route, audio samples, presets, and Chappy storage integration.
+- **Partially modeled:** head diffraction/HRTF approximation, perceptual loudness normalization, binaural sample routing, realistic surface/water physics, and performance limits.
+- **Not included:** measured HRTF convolution; bundled third-party CC0 recordings; WAV/FLAC export.
+- **Device verification pending:** Android WebView stereo spatial quality, two-finger response, audio clicks and safe peak level on different headphones, sample import/export, settings persistence after force-close.
+
+Feature IDs remain from the earlier ASMR spec: `BONE-01..06`, `SPAT-06`, `SAMPLE-04..05`, `QA-02/04`. “Implemented” describes the source, **not** verified Android listening quality.
+
+## Next mini-app iteration
+
+1. **ASMR-QA-01:** test actual Chappy Player WebView audio start/stop, two-source stereo, two pointers, settings persistence, and return-from-background; record results without private logs.
+2. **ASMR-AUD-01:** measure clipping and clicks for boosted internal bass/seal while keeping output level safe.
+3. **ASMR-SPAT-01:** improve ear-entry transition, bone-contact mix, and head/face touch event hysteresis; compare with effects toggled.
+4. **ASMR-SAMPLE-01:** test approved locally selected sound files before considering any redistributed CC0 sample set.
+
+Keep this directory as the source of truth for future mini-app edits; the Chappy Player host and PC Link workstreams are separate.
