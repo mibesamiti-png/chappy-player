@@ -1,6 +1,6 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-09。**R6A・R6Bをソースmain統合、R6BはQuick/Windows/Debug APK CI成功。次はNetwork R7（未着手）**。PC Link実機共通QA 0/15、媒体キーQA 0/13は未実施。
+更新: 2026-11-10。**Network R7はソースmain統合・Quick/Android Debug CI成功。次はGame R8（未着手）**。R7実機0/12、PC Link 0/15+0/13未実施。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
@@ -9,13 +9,32 @@
 | 3 | PC Link R5A | Windowsで選んだ1ファイルを4MiB・16KiB分割でAndroidへ、安全な承認とSHA-256後に保存 | 本体＋Companion、PC Transfer Lab新規（非公開Debug QA） | **ソース/CI成功・実機QA未実施** |
 | 3b | PC Link R5B | AndroidからPCへの本人選択ファイル送信・PC保存先選択・安全な一時ファイル処理 | 本体＋Companion、PC Transfer Lab拡張 | **ソース統合・Quick/Windows CI成功、実機QA未実施** |
 | 4（開発段階完了） | PC Link R6 | R6A：限定メディア操作、R6B：署名/HTTP/Win32モック検証と実機QAキット | 本体＋Companion、**private PC Control Lab 0.1.0**、Debug APK 3 ABI | **R6Bソース/3 CI成功・実機QAは0/15＋0/13** |
-| 5（次） | Network R7 | Browser/LAN診断、ブラウザUI、通信診断 | 本体API、**Browser Lab 新規**、Game Server Lab連携 | 計画・未着手 |
-| 6 | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張 | 未着手 |
+| 5（開発段階完了） | Network R7 | 公開HTTPSホストブラウザ、1回だけ承認DNS/HTTPS診断 | Android本体、**private Browser Lab 0.1.0**、Debug APK 3 ABI | **ソース/Quick/Android CI成功、実機0/12未実施** |
+| 6（次） | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張・private Game Room Lab候補 | 計画・未着手 |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
 
-## 【次】Network R7 — Androidブラウザ・LAN診断（8タスク、未着手）
+## 【次】Game R8 — ルーム同期と本人参加型通信（8タスク・未着手）
+
+1. 既存Game Server Lab/mini-appネットワークAPIとWSSサーバー例の監査。
+2. 明示的に選択した接続先への一時セッション開始/終了。
+3. ルームID・最小プレイヤー識別子・参加/退室イベント設計。
+4. メッセージ順序・サイズ/頻度/同時接続の上限と重複再送処理。
+5. ユーザー操作のPing/遅延・タイムアウト・可視の切断。
+6. private Game Room Labによる手動QA、バックグラウンド自動接続はしない。
+7. オフライン・拒否・同時要求・背景化のFlutter/JS/サーバーテスト。
+8. 最終HEAD Quick CI/Debug APKと実機QA/Stable公開を別管理しGitHub/Notion更新。
+
+## 【R7完了記録】本体Browser/接続診断（ソース・CIのみ）
+
+- [R7 PR #116](https://github.com/mibesamiti-png/chappy-player/pull/116)をmain d5865dba6955に統合。[Quick CI #42658869004](https://github.com/mibesamiti-png/chappy-player/actions/runs/42658869004)全63成功・[Android Debug #42658868997](https://github.com/mibesamiti-png/chappy-player/actions/runs/42658868997)全17成功。ARM64/ARM32/x86-64 APK・private Browser Lab `.chappy` 成果物あり。
+- JSデフォルトOFF、HTTPS URL/遷移の制限、ページ権限拒否、明示的なCookie削除確認。診断は本人同意後のexample.com固定DNS+HTTPS HEADだけ。ミニアプリJSへのブラウザ/診断特権なし。
+- **実機ブラウザ/診断0/12未実施**。WebView Cookie共有とサブリソース・DNS rebindingの制限が残る。PC Link 0/15+0/13、Stable公開/カタログも変更なし。[仕様](../network-r7-browser-diagnostics.md)。
+
+---
+
+## 【履歴：R6B時点】Network R7の計画（当時未着手）
 
 R6A/R6Bのプレビューはソース/CIまで統合。PC Linkの物理QAはNETLAB-03B **0/15**、媒体操作 **0/13**で全て未実施のまま。新しいR7はこれらの実機PASS判定を変更しない。HTTPSとアプリ権限境界を優先し、ユーザーの明示操作に限定したブラウザ・LAN診断を作る。
 
