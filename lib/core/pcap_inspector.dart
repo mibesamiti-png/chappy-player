@@ -1,3 +1,4 @@
+// ignore_for_file: curly_braces_in_flow_control_structures
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -131,8 +132,10 @@ class PcapInspector {
     if(p+20>end || b[p]>>4!=4)return null;
     final h=(b[p]&15)*4;
     if(h<20 || p+h>end)return null;
-    final ipEnd=(p+_u16(b,p+2,false)).clamp(p+h,end);
-    if (_u16(b,p+6,false)&0x1fff!=0) return null;
+    final totalLength=_u16(b,p+2,false);
+    if(totalLength<h)return null;
+    final ipEnd=(p+totalLength).clamp(p+h,end).toInt();
+    if ((_u16(b,p+6,false) & 0x1fff) != 0) return null;
     final src=_ip(b,p+12),dst=_ip(b,p+16);
     final proto=b[p+9];
     if(proto!=6 && proto!=17)return null;
@@ -163,7 +166,7 @@ class PcapInspector {
           'TLS ClientHello / SNI（自己申告のホスト）';
         encrypted=true;
       }else{
-        final limit=(q+2048).clamp(q,ipEnd);
+        final limit=(q+2048).clamp(q,ipEnd).toInt();
         final payload=latin1.decode(b.sublist(q,limit));
         final match=RegExp(
           r'^(GET|POST|PUT|HEAD|DELETE|PATCH|OPTIONS) ([^\r\n ]{1,512}) HTTP/1\.[01]\r\n',
