@@ -1,6 +1,6 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-10。**NETLAB-06A（許可を得たPCAPの宛先IP/port・DNS名・TLS SNI候補・平文HTTP内容解析）ソースmain統合。Quick CI 68/68・Android Debug 17/17・3ABI Debug APK成功。あくまでオフライン手動取込であり、BUFFALOから他端末の通信先/暗号化本文をライブ自動取得するものではない。実機未検証。次NETLAB-06Bで本人PC/端末側の許可付きライブメタデータと機種別公式APIを検証。** 05B残件とGame R8の8タスクを保持、Stable未更新。
+更新: 2026-11-10。**NETLAB-06Aのデバッグ優先に切替。PR #131でDNS応答・IPv4分割・表示省略判定を修正し合成パケット回帰検証を拡充。Quick CI 68/68・Android Debug 17/17成功、3ABI Debug APK生成。実Android実機QAは0/9（未実施）。NETLAB-06B機能追加はスマホ検証結果が来るまで一時停止。** BUFFALOの型番と他端末のライブ通信先は未確認、Stable変更なし。Game R8延期8タスク維持。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
@@ -17,12 +17,22 @@
 | 5e（開発段階完了） | NETLAB-05C | 端末側でWi-FiのデフォルトゲートウェイIPを取得し、UPnPから任意のメーカー/型番候補を受け取る（見つからなければIPのみ） | Android本体Router Auto Identify | **ソース/Quick67/Android Debug17成功、実機BUFFALO未検証、型番は自己申告の候補** |
 | 5f（開発段階完了） | NETLAB-06A | 許可済みPCAPファイルを手動読み取り、IPv4宛先/port・DNS問い合わせ・TLS SNI候補・平文HTTP method/path/Hostおよび本文冒頭（初期OFF）を表示 | Android本体Traffic Inspection Lab | **ソース/Quick68/Android Debug17成功、3ABI APK。PCAPNG/IPv6/HTTPS本文復号/ライブ監視は非対応、実機QAなし** |
 | 5g（次） | NETLAB-06B | BUFFALOモデル/公式APIの現物確認と、本人PC・本人許可済み端末の通信先メタデータ単発ライブ表示の設計/検証 | Android host / Windows Companion（必要時） | **未着手。モデルと実機QAが必要。無断パケット傍受・MITMしない** |
+| 5g（今はここ） | NETLAB-06A Debug QA | DNS応答/分割片/省略表示修正＋DNS/TLS/VLAN/Fuzz回帰＋Android 9項目実機QA | Flutter Android Network Lab | **Quick68/Android17/3ABI APK成功、物理QA 0/9・未実施。機能追加を一時停止** |
 | 6（その後） | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張・private Game Room Lab候補 | 計画・未着手（延期、廃止しない） |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
 
-## 【最新】NETLAB-06A — 許可済みPCAPから通信先・DNS/TLS/平文HTTPをオフラインで解析
+## 【最優先】デバッグ段階：NETLAB-06A-QA（ソース回帰修正完了・実機QA待ち）
+
+- [PR #131](https://github.com/mibesamiti-png/chappy-player/pull/131)をmain `f5c69477eea37d3fd6f3d810368922332bdbf45e`に統合。最終HEAD `b7a8e1830907257f7016e36380b2934d3903e9cd` で [Quick #42708245092](https://github.com/mibesamiti-png/chappy-player/actions/runs/42708245092) **68/68**、[Android Debug #42708245065](https://github.com/mibesamiti-png/chappy-player/actions/runs/42708245065) **17/17**成功、3ABI APKあり。
+- **修正**：DNS回答を問い合わせと誤表示しない／IPv4 MFフラグ付き断片を完全パケットと誤認しない／未対応パケットだけでは160件省略警告を出さない。合成DNS応答・VLAN・TLS ClientHello SNI・固定seed350パケットの境界回帰検証を追加。
+- **次工程**：[Android実機9項目QA](../qa/NETLAB_DEBUG_2026-11-10.md)。物理端末QAは**0/9・全項目未実施**。Debug APK署名差により安定版が上書きできない場合は既存アプリを安易に削除しない。本人管理ネットワークでルーター自動識別・BUFFALO手動端末一覧・合成PCAP解析・背景化後データ消去を確認する。
+- 他端末のライブ通信先/HTTPS本文を自動取得する機能は未実装。NETLAB-06Bの8タスクは廃止せず実機QA結果が出るまで**一時停止**。Game R8、ASMR、Stable/公開カタログは維持。
+
+---
+
+## 【履歴：デバッグ開始前】NETLAB-06A — 許可済みPCAPから通信先・DNS/TLS/平文HTTPをオフラインで解析
 
 - [実装PR #129](https://github.com/mibesamiti-png/chappy-player/pull/129) をmain `3efe4caa0536c5dedec5a51dd7add364efd93b5e`へ統合済み。最終実装HEAD `f5c2ce5a04bcacd6e96319f355311d07605d31ef`の[Quick #42702059765](https://github.com/mibesamiti-png/chappy-player/actions/runs/42702059765) **68/68**と[Android Debug #42702059838](https://github.com/mibesamiti-png/chappy-player/actions/runs/42702059838) **17/17**成功、ARM64/ARM32/x86-64 APK成果物あり。
 - **Android本体Network Lab →「通信先・平文内容をPCAPから解析（本人許可）」**で、明示同意を得た本人/対象端末許諾済みclassic PCAPをファイルピッカーから手動読込。2MiB/2500パケット/最大160表示、Raw IPv4とEthernetを解析。送信元/宛先IP:ポート・TCP/UDP・DNS問い合わせ名・TLS SNI候補・HTTPのメソッド/クエリを除いたパス/Host、初期OFFの本人明示ONで平文HTTP text/plain/JSONの本文冒頭120文字を表示。機微ワード含む本文は表示抑止（完全な個人情報除去は保証できない）。

@@ -1,8 +1,20 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
-更新: 2026-11-10。NETLAB-06A（本人が選択したPCAPの通信先・DNS/TLS/平文HTTP解析）実装ソースmainスナップショット 3efe4caa0536c5dedec5a51dd7add364efd93b5e。BUFFALOルーターの他端末ライブ取得は未実装で、実機QA未実施。再開時は必ず最新main・PR・CIを再取得。
+更新: 2026-11-10。NETLAB-06Aデバッグ回帰と実機9項目QAキットの実装mainスナップショット f5c69477eea37d3fd6f3d810368922332bdbf45e。Quick68/Android17は成功、実機QAは0/9。NETLAB-06B新機能は一時停止してデバッグ優先。再開時は必ず最新main・PR・CIを再取得。
 
-## 【最新】NETLAB-06A 許可を得たPCAPの通信先・内容解析｜ソース/Quick68/Android17 CI統合・実機未検証｜2026-11-10
+## 【最新：デバッグ優先】Chappy Player Network Lab 実機QAキット＋解析品質修正｜2026-11-10
+
+- ユーザーが「ここまでの機能追加はいったん止めてChappy Playerをデバッグ」と指示したため、**NETLAB-06Bの新機能は一時停止し、機能回帰・Debug APK・スマホ実機テストを優先**。
+- **コード改善PR #131**（https://github.com/mibesamiti-png/chappy-player/pull/131）をmain `f5c69477eea37d3fd6f3d810368922332bdbf45e` に統合。実装最終HEAD `b7a8e1830907257f7016e36380b2934d3903e9cd` の [Quick CI #42708245092](https://github.com/mibesamiti-png/chappy-player/actions/runs/42708245092) **68/68**、[Android Debug #42708245065](https://github.com/mibesamiti-png/chappy-player/actions/runs/42708245065) **17/17**成功。ARM64/ARM32/x86-64のDebug APKと互換性レポート成果物あり。
+- **確認・修正した内容**：PCAPパーサでDNS**応答**を問い合わせと誤表示しない／IPv4のMFフラグを含む分割片は完全なHTTP/TLSとして扱わない／未対応パケットが160件を超えただけでは表示省略の警告を出さない。合成パケットのDNS・VLAN・TLS SNI・形式異常に加えて350件のシード固定ランダムパケットを回帰検証。新しいルーター取得権限や常時通信監視は追加していない。
+- **実AndroidのQAは0/9・未実施**。手順は [NETLAB DEBUG 9項目](../qa/NETLAB_DEBUG_2026-11-10.md)。起動/セルフチェック/Network Lab/BUFFALO手動端末一覧/ルーター型番候補/PCAP選択・平文ON/OFF/不正PCAP/背景化・結果破棄をスマホで確認してもらう。ChatGPT内で**完全合成の6パケットPCAP＋不正2種入りZIP**を生成した（GitHub公開CIへの個人PCAP持ち込みはなし）。
+- **安定版を勝手に消さない**：Debug署名と現在のインストール済みAPKの署名が異なる場合、上書きインストールできない。削除はデータ消失リスクがあるので、別テスト端末またはバックアップ確保後に確認。Debug APKの生成成功は実機インストール成功と異なる。
+- **未実装・未検証**：実BUFFALOのUPnP応答/型番認証、BUFFALOルーターの他端末通信先のライブ監視、暗号化HTTPS本文の解析、実AndroidでのPCAP画面確認。既存Game R8延期8タスク・ASMR・OpenWrt・PC Link・署名Stable・公開カタログは維持。
+- 本デバッグ回のGitHub正本：[STATE](STATE.json) / [ROADMAP](ROADMAP.md) / [実機QA手順](../qa/NETLAB_DEBUG_2026-11-10.md)。Notionは状況ミラー。
+
+---
+
+## 【履歴：デバッグ回より前】NETLAB-06A 許可を得たPCAPの通信先・内容解析｜ソース/Quick68/Android17 CI統合・実機未検証｜2026-11-10
 
 - ユーザー希望：「他の接続端末がどこにアクセスしているか、通信内容も分かるように」。BUFFALO型番/ファーム未確認で管理API経由の他端末ライブ監視は実装できないため、**本人管理・利用許諾済みのキャプチャファイルに限るオフライン解析**を先行。**所有者に知られず他端末の通信を取る機能ではない**。暗号化HTTPS/QUIC本文は復号できない。
 - [実装PR #129](https://github.com/mibesamiti-png/chappy-player/pull/129) をmain `3efe4caa0536c5dedec5a51dd7add364efd93b5e`へ統合。最終実装HEAD `f5c2ce5a04bcacd6e96319f355311d07605d31ef`の[Quick CI #42702059765](https://github.com/mibesamiti-png/chappy-player/actions/runs/42702059765) **68/68**、[Android Debug #42702059838](https://github.com/mibesamiti-png/chappy-player/actions/runs/42702059838) **17/17**成功。ARM64/ARM32/x86-64 Debug APKと互換性レポートあり。Windows側変更なし。
