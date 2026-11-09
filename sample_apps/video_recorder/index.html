@@ -34,6 +34,9 @@ button:disabled{opacity:.48;cursor:not-allowed}
 label.field{display:grid;gap:8px;font-size:13px;color:#b7c5db}
 select{width:100%;padding:12px;background:#0e1728;color:#eef5ff;border:1px solid #3b4d6b;border-radius:11px}
 input[type="checkbox"]{accent-color:#78b8ff;width:17px;height:17px}
+input[type="range"]{width:100%;accent-color:#78b8ff}
+#motionSettings[hidden]{display:none}
+#motionFeedback{font-size:12px;color:#9ccbee}
 .audio-line{display:flex;align-items:center;gap:9px;font-size:13px;padding-top:15px;color:#dae7fc}
 button.primary{display:block;width:100%;background:#467fbd;border-color:#78b7f9;font-size:17px;font-weight:700;min-height:64px;border-radius:15px}
 button.primary:disabled{background:#263654}
@@ -87,6 +90,35 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
 </section>
 
 <section class="card">
+  <h2>スマート録画（動き検知・容量節約）</h2>
+  <label class="field">録画モード
+    <select id="motionMode">
+      <option value="normal">通常録画（常に保存）</option>
+      <option value="pause">静止中は保存を一時停止・動いたら再開</option>
+      <option value="stop">静止状態が続いたら録画を終了</option>
+    </select>
+  </label>
+  <div id="motionSettings" hidden>
+    <div class="field-grid" style="margin-top:12px">
+      <label class="field">静止と判定する時間
+        <select id="motionIdle">
+          <option value="10">10秒</option>
+          <option value="30">30秒</option>
+          <option value="60" selected>1分</option>
+          <option value="120">2分</option>
+          <option value="300">5分</option>
+        </select>
+      </label>
+      <label class="field">動き検知の感度：<output id="motionSensitivityValue">40%</output>
+        <input id="motionSensitivity" type="range" min="0" max="100" step="10" value="40">
+      </label>
+    </div>
+    <p class="hint">明るさの一様な変化を補正して映像の変化を検知します。誤検知や見逃しの可能性があります。静止中も再検知のためカメラはONのままです。</p>
+  </div>
+  <p id="motionHostHint" class="hint">対応するChappy Player Debug本体で利用できます。既存本体でも通常録画は使えます。</p>
+  <p id="motionFeedback" aria-live="polite"></p>
+</section>
+<section class="card">
   <button id="recordDark" class="primary" type="button">● 暗転モードで録画</button>
   <div class="status-row"><span class="dot" id="recordDot" aria-hidden="true"></span><span id="captureStatus" role="status">停止中</span><span id="timer">00:00</span></div>
   <button id="recordStop" class="secondary" type="button" disabled>録画を停止する</button>
@@ -125,7 +157,10 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   let timer = null;
   let lastSavedName = '';
   let libraryExpanded = false;
-  const controlIds = ['lensBack', 'lensFront', 'videoQuality', 'videoStorage', 'videoAudio'];
+  let motionSupported = false;
+  let motionErrorShown = false;
+  const controlIds = ['lensBack', 'lensFront', 'videoQuality', 'videoStorage', 'videoAudio',
+    'motionMode', 'motionIdle', 'motionSensitivity'];
   const setText = (id, value) => { $(id).textContent = value; };
   const notify = (message, isError) => {
     setText('message', message);
@@ -141,10 +176,20 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   function updateControls() {
     const busy = recording || starting || stopping;
     controlIds.forEach(id => { $(id).disabled = busy; });
-    $('recordDark').disabled = busy || !video;
+    $('recordDark').disabled = busy || !video ||
+      ($('motionMode').value !== 'normal' && !motionSupported);
     $('recordStop').disabled = !recording || stopping || !video;
     $('recordDot').className = recording || stopping ? 'dot active' : 'dot';
     $('hostStatus').textContent = video ? 'カメラ対応' : '本体の更新が必要';
+  }
+  function updateMotionOptions() {
+    const mode = $('motionMode').value;
+    $('motionSettings').hidden = mode === 'normal';
+    setText('motionSensitivityValue', $('motionSensitivity').value + '%');
+    setText('motionHostHint', motionSupported ?
+      '動き検知に対応したプレイヤーです。録画中のカメラ使用表示は消えません。' :
+      'スマート録画には対応する新しいChappy Player Debug本体が必要です。通常録画は引き続き使えます。');
+    updateControls();
   }
   function setLens(next) {
     if (recording || starting || stopping || !['front','back'].includes(next)) return;
@@ -268,20 +313,36 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     const state = info && typeof info.state === 'string' ? info.state : 'idle';
     recording = state !== 'idle';
     stopping = state === 'stopping';
+    if (info && typeof info.motionMode === 'string') motionSupported = true;
+    updateMotionOptions();
+    const motionState = info && info.motionStatus || 'off';
+    if (motionState === 'error' && !motionErrorShown) {
+      motionErrorShown = true;
+      notify('動き検知が失敗したため、安全のため録画保存を継続します。必要なら手動で停止してください。', true);
+    }
+    if (motionState === 'paused') {
+      setText('motionFeedback', '変化なし：動画保存を一時停止中（カメラは監視継続）');
+    } else if (info && info.motionMode !== 'normal' && motionSupported && state !== 'idle') {
+      setText('motionFeedback', '動きの変化量 ' + Number(info.motionScore || 0) + '%｜' +
+        (motionState === 'movement' || motionState === 'recording' ? '動き検出' :
+          motionState === 'error' ? '検知エラー' : '静止判定中'));
+    } else setText('motionFeedback','');
     const millis = Number(info && info.elapsedMs || 0);
     const seconds = Math.floor(Math.max(0, millis) / 1000);
     setText('timer', String(Math.floor(seconds / 60)).padStart(2, '0') + ':' +
       String(seconds % 60).padStart(2, '0'));
     setText('captureStatus', state === 'idle' ? '停止中' :
       state === 'stopping' ? '保存処理中…' :
-      state === 'initializing' || state === 'starting' ? 'カメラ準備中…' : '録画中');
+      state === 'initializing' || state === 'starting' ? 'カメラ準備中…' :
+      motionState === 'paused' ? '静止中：録画一時停止' : '録画中');
     updateControls();
     if (state === 'idle') {
       if (info && info.error) {
         notify('動画保存エラー：' + String(info.error), true);
       } else if (info && info.fileName && info.fileName !== lastSavedName) {
         lastSavedName = info.fileName;
-        notify('録画保存完了：' + info.fileName);
+        notify((info.motionAutoStopped ? '動きなしで自動停止・保存しました：' : '録画保存完了：') +
+          info.fileName);
         void refreshCapacity();
         if (libraryExpanded) void refreshLibrary();
       }
@@ -305,12 +366,21 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   async function startDarkRecording() {
     if (!video || recording || starting || stopping) return;
     starting = true; updateControls();
+    motionErrorShown = false;
     setText('captureStatus', 'Androidカメラの許可待ち…');
     notify('');
     try {
+      const mode = $('motionMode').value;
+      if (mode !== 'normal' && !motionSupported) {
+        throw new Error('スマート録画には更新されたChappy Player Debug本体が必要です');
+      }
       const options = {
         lens, quality: $('videoQuality').value,
-        storage: $('videoStorage').value, audio: $('videoAudio').checked
+        storage: $('videoStorage').value, audio: $('videoAudio').checked,
+        motion: {
+          mode, idleSeconds: Number($('motionIdle').value),
+          sensitivity: Number($('motionSensitivity').value)
+        }
       };
       const response = await video.start(options);
       if (!response || !['starting','recording'].includes(response.state)) {
@@ -337,6 +407,8 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     finally { stopping = false; updateControls(); }
   }
 
+  $('motionMode').addEventListener('change', updateMotionOptions);
+  $('motionSensitivity').addEventListener('input', updateMotionOptions);
   $('lensBack').addEventListener('click', () => setLens('back'));
   $('lensFront').addEventListener('click', () => setLens('front'));
   $('refreshCapacity').addEventListener('click', () => { void refreshCapacity(); });
@@ -419,7 +491,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     if (timer !== null) clearInterval(timer);
     if (recording && video) void video.stop().catch(() => {});
   });
-  updateControls();
+  updateMotionOptions();
   void refreshCapacity();
   if (video) void pollStatus();
   else notify('録画・容量取得に対応した新しいChappy Player Debug APKが必要です。', true);
