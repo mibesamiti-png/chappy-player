@@ -176,7 +176,8 @@ print('Installed foreground-only native video recorder (private by default)')
 for filename in ('NativeMiniAppDevices.kt', 'NativeVideoExport.kt',
                  'NativeMiniAppDocuments.kt', 'NativeVideoZipBackup.kt',
                  'NativeVideoZipRestore.kt', 'NativeMiniAppAssets.kt',
-                 'NativeNetworkDiscovery.kt', 'NativeTrafficCounters.kt',
+                 'NativeNetworkDiscovery.kt', 'NativeRouterIdentity.kt',
+                 'NativeTrafficCounters.kt',
                  'NativePcIdentity.kt', 'NativePcProof.kt',
                  'NativeVerifiedPcHistory.kt'):
     source = Path('tools/android') / filename

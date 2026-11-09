@@ -21,6 +21,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Strict preflight for an update APK downloaded into the player's private cache.
@@ -41,6 +42,8 @@ class MainActivity : FlutterActivity() {
     private val nativeVideo = NativeVideoRecorder(this)
     private val miniDevices = NativeMiniAppDevices(this)
     private val networkDiscovery = NativeNetworkDiscovery(this)
+    private val routerIdentity = NativeRouterIdentity(this)
+    private val routerProbeBusy = AtomicBoolean(false)
     private val pcIdentity = NativePcIdentity()
     private val verifiedPcHistory = NativeVerifiedPcHistory(this, pcIdentity)
     private val trafficCounters = NativeTrafficCounters()
@@ -68,12 +71,14 @@ class MainActivity : FlutterActivity() {
         nativeVideo.onResume()
         miniDevices.onResume()
         networkDiscovery.onResume()
+        routerIdentity.onResume()
     }
 
     override fun onPause() {
         micActivityVisible = false
         miniDevices.onPause()
         networkDiscovery.onPause()
+        routerIdentity.onPause()
         nativeMic.stop()
         nativeVideo.onPause()
         super.onPause()
@@ -83,6 +88,7 @@ class MainActivity : FlutterActivity() {
         nativeMic.stop()
         miniDevices.onDestroy()
         networkDiscovery.onDestroy()
+        routerIdentity.onDestroy()
         videoExporter.onDestroy()
         zipBackup.onDestroy()
         zipRestore.onDestroy()
@@ -243,6 +249,40 @@ class MainActivity : FlutterActivity() {
                     "trafficPairingAllowed" -> {
                         result.success(micActivityVisible &&
                             networkDiscovery.trafficPairingAllowed())
+                    }
+                    "routerIdentityProbe" -> {
+                        if (!micActivityVisible ||
+                            !networkDiscovery.trafficPairingAllowed() ||
+                            call.arguments != null) {
+                            result.error("ROUTER_IDENTITY_DENIED",
+                                "Visible Wi-Fi without VPN and no arguments required", null)
+                        } else if (!routerProbeBusy.compareAndSet(false, true)) {
+                            result.error("ROUTER_IDENTITY_BUSY",
+                                "Router identity probe already running", null)
+                        } else {
+                            // Never block Android's UI thread with SSDP/HTTP timeouts.
+                            Thread {
+                                try {
+                                    val snapshot = routerIdentity.probe()
+                                    runOnUiThread {
+                                        if (!micActivityVisible ||
+                                            !networkDiscovery.trafficPairingAllowed()) {
+                                            result.error("ROUTER_IDENTITY_CANCELLED",
+                                                "Router identity cancelled", null)
+                                        } else {
+                                            result.success(snapshot)
+                                        }
+                                    }
+                                } catch (_: Exception) {
+                                    runOnUiThread {
+                                        result.error("ROUTER_IDENTITY_FAILED",
+                                            "Router identity unavailable on current Wi-Fi", null)
+                                    }
+                                } finally {
+                                    routerProbeBusy.set(false)
+                                }
+                            }.start()
+                        }
                     }
                     "pcIdentityStatus", "pcIdentityCreate", "pcIdentityRevoke" -> {
                         if (!micActivityVisible) {

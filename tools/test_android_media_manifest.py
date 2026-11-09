@@ -39,7 +39,8 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
                  "NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
                  "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt",
-                 "NativeNetworkDiscovery.kt", "NativeTrafficCounters.kt",
+                 "NativeNetworkDiscovery.kt", "NativeRouterIdentity.kt",
+                 "NativeTrafficCounters.kt",
                  "NativePcIdentity.kt", "NativePcProof.kt",
                  "NativeVerifiedPcHistory.kt"]:
         (templates / name).write_bytes(
@@ -61,7 +62,8 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     for name in ("NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
                  "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt",
-                 "NativeNetworkDiscovery.kt", "NativeTrafficCounters.kt",
+                 "NativeNetworkDiscovery.kt", "NativeRouterIdentity.kt",
+                 "NativeTrafficCounters.kt",
                  "NativePcIdentity.kt", "NativePcProof.kt",
                  "NativeVerifiedPcHistory.kt"):
         copied = native_class.with_name(name)
