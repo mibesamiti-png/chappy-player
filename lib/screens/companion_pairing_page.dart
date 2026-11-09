@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/pc_status_once.dart';
+import 'package:chappy_player/core/remote_traffic_report.dart';
 import 'package:chappy_player/core/pc_file_upload.dart';
 import 'package:chappy_player/core/pc_media_once.dart';
 import 'package:file_picker/file_picker.dart';
@@ -48,6 +49,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   bool _savedHistory = false;
   bool _busy = false;
   bool _verified = false;
+  bool _trafficAttempted = false;
+  RemoteTrafficReport? _trafficReport;
   bool _statusAttempted = false;
   PcStatusOnceMetrics? _statusMetrics;
   bool _mediaAttempted = false;
@@ -89,6 +92,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
           _verified = false;
           _statusMetrics = null;
           _statusAttempted = false;
+          _trafficReport = null;
+          _trafficAttempted = false;
           _mediaAttempted = false;
           _mediaMessage = null;
           _fileAttempted = false;
@@ -282,6 +287,12 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _uploadMessage = null;
       _statusMetrics = null;
       _statusAttempted = false;
+      _trafficReport = null;
+      _trafficAttempted = false;
+      _trafficReport = null;
+      _trafficAttempted = false;
+      _trafficReport = null;
+      _trafficAttempted = false;
       _mediaAttempted = false;
       _mediaMessage = null;
       _fileAttempted = false;
@@ -432,6 +443,99 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             '${PcPairingFailure.classify(error).safeMessage}';
       });
     }
+  }
+
+  Future<void> _readTrafficOnce() async {
+    final invite = _invite;
+    if (_busy || _savingHistory || !_verified || _trafficAttempted ||
+        invite == null || !invite.trafficOnce ||
+        invite.pcIdentityFingerprint == null ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _trafficAttempted = true; // Consumed before any await or Wi-Fi access.
+      _trafficReport = null;
+      _error = null;
+    });
+    try {
+      if (!await widget.discoveryClient.pairingAllowed()) {
+        throw StateError('本人PCとのWi-Fi接続がありません');
+      }
+      if (!mounted || generation != _generation) return;
+      final result = await _identityExchange.readPcTrafficOnce(
+        ip: widget.service.address,
+        port: widget.service.port,
+        tlsFingerprint: invite.fingerprint,
+        pcFingerprint: invite.pcIdentityFingerprint!,
+        invitation: invite.invitation,
+        qrExpires: invite.expiresUnix,
+        approvePhoneTraffic: (seconds) async {
+          if (!mounted || generation != _generation ||
+              ModalRoute.of(context)?.isCurrent != true ||
+              !await widget.discoveryClient.pairingAllowed()) {
+            return false;
+          }
+          if (!mounted || generation != _generation) return false;
+          final ok = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('このPCの通信量を今回だけ取得しますか？'),
+              content: Text(
+                'Windows本人のTRAFFIC別承認と、専用PC署名を確認しました。\n\n'
+                '計測: $seconds秒 / 全ネットワークアダプター合計の送受信量。\n'
+                'Wi-Fiだけの通信量とは限りません。'
+                '通信先、IP、SSID、パケット内容、ほかの端末の情報は取得しません。'
+                '保存や継続監視も行いません。',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('拒否する'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('今回だけ計測して取得'),
+                ),
+              ],
+            ),
+          );
+          return ok == true && mounted && generation == _generation &&
+              ModalRoute.of(context)?.isCurrent == true &&
+              await widget.discoveryClient.pairingAllowed();
+        },
+      );
+      if (!mounted || generation != _generation ||
+          ModalRoute.of(context)?.isCurrent != true) return;
+      if (!await widget.discoveryClient.pairingAllowed()) {
+        throw StateError('ネットワーク経路が変わりました');
+      }
+      if (!mounted || generation != _generation) return;
+      setState(() => _trafficReport = result);
+    } catch (_) {
+      if (mounted && generation == _generation) {
+        setState(() => _error = 'PC通信量の直接取得に失敗しました [TRAFFIC-ONCE]。'
+            'Wi-Fi・本人確認・TRAFFIC別承認・期限を確認し、新しいQRを発行してください。');
+      }
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  static String _trafficBytes(num value) {
+    var scaled = value.toDouble();
+    const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    var idx = 0;
+    while (scaled >= 1024 && idx < units.length - 1) {
+      scaled /= 1024;
+      idx++;
+    }
+    return '${scaled.toStringAsFixed(idx == 0 ? 0 : 1)} ${units[idx]}';
   }
 
   Future<void> _readStatusOnce() async {
@@ -1038,6 +1142,56 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                 LinearProgressIndicator(value: _fileProgress),
               if (_fileMessage != null)
                 Text(_fileMessage!, key: const Key('pair_file_result')),
+            ],
+            if (_verified && _invite?.trafficOnce == true) ...[
+              const SizedBox(height: 8),
+              const Text('NETLAB-04B: 本人Windows PCの通信カウンターのみ。'
+                  '毎回QR-v3相互署名、Windows TRAFFIC、Android別承認が必要です。'),
+              OutlinedButton.icon(
+                key: const Key('pair_traffic_once'),
+                onPressed: _busy || _trafficAttempted ? null : _readTrafficOnce,
+                icon: const Icon(Icons.network_check_outlined),
+                label: const Text('追加承認してPC通信量を1回だけ直接取得'),
+              ),
+              if (_trafficReport != null)
+                Card(
+                  key: const Key('pair_traffic_card'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('PC通信量（RAMのみ・全アダプター合計）'),
+                        Text('計測: ${_trafficReport!.seconds}秒'),
+                        Text('受信合計: ${_trafficBytes(_trafficReport!.totalRxBytes)}'),
+                        Text('送信合計: ${_trafficBytes(_trafficReport!.totalTxBytes)}'),
+                        Text('平均受信/秒: ${_trafficBytes(_trafficReport!.avgRxBytesPerSecond)}'),
+                        Text('平均送信/秒: ${_trafficBytes(_trafficReport!.avgTxBytesPerSecond)}'),
+                        Text('最大受信/秒: ${_trafficBytes(_trafficReport!.peakRxBytesPerSecond)}'),
+                        Text('最大送信/秒: ${_trafficBytes(_trafficReport!.peakTxBytesPerSecond)}'),
+                        const SizedBox(height: 8),
+                        const Text('受信推移（1秒間隔）'),
+                        for (final point in _trafficReport!.samples)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: LinearProgressIndicator(
+                              value: _trafficReport!.peakRxBytesPerSecond == 0
+                                  ? 0.0
+                                  : point.rxBytes /
+                                      _trafficReport!.peakRxBytesPerSecond,
+                              minHeight: 8,
+                            ),
+                          ),
+                        TextButton.icon(
+                          key: const Key('pair_traffic_clear'),
+                          onPressed: () => setState(() => _trafficReport = null),
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('通信量の結果を消去'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
             if (_verified && _invite?.statusOnce == true) ...[
               OutlinedButton.icon(
