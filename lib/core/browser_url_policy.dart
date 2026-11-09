@@ -8,6 +8,7 @@ class BrowserUrlPolicy {
   static Uri fromInput(String input) {
     final value = input.trim();
     if (value.isEmpty || value.length > maxLength ||
+        value.contains('\\') ||
         RegExp(r'[\x00-\x20\x7f]').hasMatch(value)) {
       throw const FormatException('URLを確認してください');
     }
@@ -18,6 +19,7 @@ class BrowserUrlPolicy {
   /// Reject a blocked navigation instead of converting it to a different URL.
   static Uri fromNavigation(String value) {
     if (value.isEmpty || value.length > maxLength ||
+        value.contains('\\') ||
         RegExp(r'[\x00-\x20\x7f]').hasMatch(value)) {
       throw const FormatException('無効なURLです');
     }

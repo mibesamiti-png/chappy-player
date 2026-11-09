@@ -19,6 +19,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage>
   String? _message;
   int _epoch = 0;
   bool _busy = false;
+  bool _foreground = true;
 
   @override
   void initState() {
@@ -41,7 +42,12 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) _cancel();
+    if (state == AppLifecycleState.resumed) {
+      _foreground = true;
+    } else {
+      _foreground = false;
+      _cancel();
+    }
   }
 
   @override
@@ -53,7 +59,8 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage>
   }
 
   Future<void> _run() async {
-    if (_busy) return;
+    if (_busy || !_foreground) return;
+    final beforeConsent = _epoch;
     final accepted = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -73,7 +80,8 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage>
         ],
       ),
     );
-    if (!mounted || accepted != true) return;
+    if (!mounted || !_foreground || beforeConsent != _epoch ||
+        accepted != true) return;
     final request = ++_epoch;
     final service = widget.serviceFactory?.call() ?? NetworkDiagnosticService();
     _active = service;
@@ -119,7 +127,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage>
           const SizedBox(height: 14),
           FilledButton.icon(
             key: const Key('r7_diag_start'),
-            onPressed: _busy ? null : _run,
+            onPressed: _busy || !_foreground ? null : _run,
             icon: const Icon(Icons.network_check),
             label: const Text('診断を開始（同意が必要）'),
           ),

@@ -420,13 +420,6 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.system_update_alt_outlined),
           ),
           IconButton(
-            tooltip: 'ブラウザ（R7、公開HTTPS限定）',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const BrowserPage()),
-            ),
-            icon: const Icon(Icons.public),
-          ),
-          IconButton(
             tooltip: 'Network Lab（LANサービス発見）',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -457,6 +450,15 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 8),
         Text('アプリ ${apps.length} 個', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 22),
+        Card(child: ListTile(
+          key: const Key('home_browser_r7'),
+          leading: const Icon(Icons.public),
+          title: const Text('ブラウザ（R7プレビュー）'),
+          subtitle: const Text('公開HTTPS専用・JavaScript初期OFF'),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const BrowserPage()),
+          ),
+        )),
         if (apps.isEmpty) Card(child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 32),
           child: Column(children: [

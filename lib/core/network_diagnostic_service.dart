@@ -71,6 +71,9 @@ class NetworkDiagnosticService {
       if (code == null) stopped = 'https';
     } catch (_) {
       stopped = 'https';
+    } finally {
+      _client?.close(force: true);
+      _client = null;
     }
     return _result(count, dns, code, stopped);
   }
