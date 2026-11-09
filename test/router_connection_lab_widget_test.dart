@@ -58,6 +58,10 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('router_once_read')));
     await tester.tap(find.byKey(const Key('router_once_read')));
     await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('router_error')), 180,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const Key('router_error')), findsOneWidget);
     expect(methodCalls, isEmpty);
     expect(find.byKey(const Key('router_device_title')), findsNothing);
@@ -77,6 +81,10 @@ void main() {
     await tester.tap(link);
     await tester.pumpAndSettle();
     expect(find.text('Router Connection Lab'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('router_once_read')), 250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const Key('router_once_read')), findsOneWidget);
     expect(methodCalls, contains('stop'));
     expect(methodCalls, isNot(contains('trafficPairingAllowed')));
