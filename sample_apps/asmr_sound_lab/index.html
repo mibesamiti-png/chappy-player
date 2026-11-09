@@ -485,7 +485,7 @@ class ASMRSystem {
  constructor(){
   const Audio=window.AudioContext||window.webkitAudioContext;
   this.ctx=new Audio({latencyHint:'interactive'});
-  this.lastContact={mouse:0,keyboard:0};this.touchState={mouse:{on:false,lastTap:-100},keyboard:{on:false,lastTap:-100}};this.boneTouch={mouse:{on:false,lastTap:-100,zone:'none'},keyboard:{on:false,lastTap:-100,zone:'none'}};this.lastRim={mouse:false,keyboard:false};this.lastSeal={mouse:false,keyboard:false};
+  this.lastContact={mouse:0,keyboard:0};this.touchState={mouse:{on:false,lastTap:-100},keyboard:{on:false,lastTap:-100}};this.boneTouch={mouse:{on:false,lastTap:-100,zone:'none'},keyboard:{on:false,lastTap:-100,zone:'none'}};this.skinTouch={mouse:{on:false,lastTap:-100},keyboard:{on:false,lastTap:-100}};this.lastRim={mouse:false,keyboard:false};this.lastSeal={mouse:false,keyboard:false};
   const c=this.ctx;
   this.mix=c.createGain();this.mix.gain.value=.86;
   // 外側の音は左右独立の密閉フィルタへ。接触音は最終ミックスへ直接送る。
@@ -651,6 +651,21 @@ class ASMRSystem {
    v.boneOcclusionEQ[i].connect(v.boneEarGains[i]);v.boneEarGains[i].connect(v.boneMerge,0,i);
   }
   v.boneMerge.connect(this.mix);
+  // SURF-01: an independent skin-contact path, filtered separately from bone/canal.
+  v.skinSource=this.source(this.noise.monoWhite);v.sources.push(v.skinSource);
+  v.skinHigh=c.createBiquadFilter();v.skinHigh.type='highpass';v.skinHigh.frequency.value=210;
+  v.skinLow=c.createBiquadFilter();v.skinLow.type='lowpass';v.skinLow.frequency.value=2400;
+  v.skinGain=c.createGain();v.skinGain.gain.value=0;
+  v.skinBus=c.createGain();v.skinEarGains=[c.createGain(),c.createGain()];
+  v.skinMerge=c.createChannelMerger(2);
+  v.skinSource.connect(v.skinHigh);v.skinHigh.connect(v.skinLow);
+  v.skinLow.connect(v.skinGain);v.skinGain.connect(v.skinBus);
+  for(let i=0;i<2;i++){
+   v.skinEarGains[i].gain.value=0;
+   v.skinBus.connect(v.skinEarGains[i]);v.skinEarGains[i].connect(v.skinMerge,0,i);
+  }
+  v.skinMerge.connect(this.externalMix);
+  v.skinSource.start(0,slot==='mouse'?.31:.61);
   // Looping noise layers start silent; a tap impulse is created only on actual new contact.
   v.boneRubSource=this.source(this.noise.monoWhite);v.sources.push(v.boneRubSource);
   v.boneRubFilter.type='bandpass';v.boneRubFilter.frequency.value=290;v.boneRubFilter.Q.value=.65;
@@ -756,14 +771,14 @@ class ASMRSystem {
    old.out.gain.setTargetAtTime(.00001,t,lerp(.014,.034,state.transientSoft/100));
    setTimeout(()=>this.disposeVoice(old),260);
   }
-  this.touchState[slot].on=false;this.boneTouch[slot]={on:false,lastTap:-100,zone:"none"};this.lastRim[slot]=false;this.lastSeal[slot]=false;
+  this.touchState[slot].on=false;this.boneTouch[slot]={on:false,lastTap:-100,zone:"none"};this.skinTouch[slot]={on:false,lastTap:-100};this.lastRim[slot]=false;this.lastSeal[slot]=false;
   this.voices[slot]=this.makeVoice(slot,mode);
   this.position(slot,state[slot].x,state[slot].y);
   this.updateVoice(this.voices[slot],state[slot]);
  }
  disposeVoice(v){
   for(const src of v.sources){try{src.stop();}catch(e){}}
-  for(const node of [...v.nodes,v.filter,v.out,v.synthGain,v.sampleBus,v.stereoBus,v.stereoOut,v.stereoFilter,v.stereoInsideFilter,v.stereoInsideGain,v.distanceFilter,v.distanceGain,v.panner,v.dry,v.pressHigh,v.pressLow,v.pressGain,v.contactLow,v.contactWarm,v.contactRes,v.canalBassShelf,v.canalBassPeak,v.contactGain,v.contactPan,v.contactSplit,v.contactMerge,...v.contactEarGains,v.rubLow,v.rubBand,v.rubGain,...v.earTone,...v.earDelay,...v.earGains,v.earMerge,v.boneBus,v.boneRubFilter,v.boneRubGain,v.bonePressFilter,v.bonePressGain,...v.boneLowpass,...v.boneOcclusionEQ,...v.boneEarGains,v.boneMerge]){
+  for(const node of [...v.nodes,v.filter,v.out,v.synthGain,v.sampleBus,v.stereoBus,v.stereoOut,v.stereoFilter,v.stereoInsideFilter,v.stereoInsideGain,v.distanceFilter,v.distanceGain,v.panner,v.dry,v.pressHigh,v.pressLow,v.pressGain,v.contactLow,v.contactWarm,v.contactRes,v.canalBassShelf,v.canalBassPeak,v.contactGain,v.contactPan,v.contactSplit,v.contactMerge,...v.contactEarGains,v.rubLow,v.rubBand,v.rubGain,...v.earTone,...v.earDelay,...v.earGains,v.earMerge,v.boneBus,v.boneRubFilter,v.boneRubGain,v.bonePressFilter,v.bonePressGain,...v.boneLowpass,...v.boneOcclusionEQ,...v.boneEarGains,v.boneMerge,v.skinHigh,v.skinLow,v.skinGain,v.skinBus,...v.skinEarGains,v.skinMerge]){
    try{node.disconnect();}catch(e){}
   }
  }
@@ -846,6 +861,11 @@ class ASMRSystem {
   // BONE-01/02/03/05: separate modeled head/face vibration bus.
   // The canal-exclusive direct path above remains unchanged and suppresses opposite-ear leakage.
   const zone=boneZoneFor(slotState),bp=zone.settings;
+  const surface=skinContactTargets(v.mode,zone,emission.gate,slotState.speed,
+    strength,wet,state.skinSurface/100);
+  v.skinGain.gain.setTargetAtTime(surface.level,t,.032);
+  v.skinLow.frequency.setTargetAtTime(surface.cutoff,t,.05);
+  for(let i=0;i<2;i++)v.skinEarGains[i].gain.setTargetAtTime(i===0?surface.left:surface.right,t,.035);
   const boneKind=boneModeWeight[v.mode]||0;
   const faceGain=state.boneOn&&!zone.isCanal?emission.gate*boneKind*zone.touch:0;
   const softness=state.boneSoftness/100;
@@ -921,7 +941,14 @@ class ASMRSystem {
    if(st.mode==='gel'&&ts.on&&!nowTouch){this.contactBump(slot,true,'touch');}
    if(st.mode==='gel'&&!ts.on&&nowTouch){this.contactBump(slot,false,'touch');}
    ts.on=nowTouch;
-   const zone=boneZoneFor(st),bt=this.boneTouch[slot];
+   const zone=boneZoneFor(st),bt=this.boneTouch[slot],skin=this.skinTouch[slot];
+   const skinCanSound=Boolean(!zone.isCanal&&state.skinSurface>0&&em.active&&em.gate>.03
+     &&skinContactTargets(st.mode,zone,em.gate,st.speed,state.strength/100,state.texture/100,state.skinSurface/100).kind>0
+     &&contactLatch(skin.on,zone.touch,.28,.09));
+   if(skinCanSound&&!skin.on&&t-skin.lastTap>.12){
+    skin.lastTap=t;this.skinTap(this.voices[slot],zone);
+   }
+   skin.on=skinCanSound;
    const boneCanSound=Boolean(state.boneOn&&!zone.isCanal&&em.active&&em.gate>.03&&(boneModeWeight[st.mode]||0)>.1&&contactLatch(bt.on,zone.touch,.28,.09));
    if(boneCanSound&&!bt.on&&t-bt.lastTap>.09){
     bt.lastTap=t;this.boneTransient(this.voices[slot],zone.id,'tap',clamp(.4+state.strength/145+.3*st.speed/100,.25,1.25));
@@ -1019,6 +1046,24 @@ class ASMRSystem {
   osc.onended=()=>{try{osc.disconnect();gain.disconnect();}catch(e){}};
  }
 
+ // SURF-02: a brief soft skin-touch transient, separate from the lower bone tap.
+ skinTap(v,zone){
+  if(!v||!zone||zone.isCanal||state.skinSurface<=0)return;
+  const c=this.ctx,t=c.currentTime+.006,src=c.createBufferSource(),
+        high=c.createBiquadFilter(),low=c.createBiquadFilter(),env=c.createGain();
+  const hardness=clamp(zone.settings?.hardness||.5,.1,1.1);
+  const duration=.038+.028*(1-hardness);
+  const level=.038*(state.skinSurface/100)*(.6+.4*hardness);
+  src.buffer=this.noise.monoWhite;
+  high.type='highpass';high.frequency.value=190;
+  low.type='lowpass';low.frequency.value=750+2700*hardness;
+  env.gain.setValueAtTime(0,t);
+  env.gain.linearRampToValueAtTime(level,t+.006);
+  env.gain.exponentialRampToValueAtTime(.00001,t+duration);
+  src.connect(high);high.connect(low);low.connect(env);env.connect(v.skinBus);
+  src.start(t,Math.random()*4,duration);src.stop(t+duration+.012);
+  src.onended=()=>{for(const n of [src,high,low,env])try{n.disconnect();}catch(e){}};
+ }
  // BONE-04: Tap and release impulse through the independently balanced bone bus.
  boneTransient(v,zoneId,kind='tap',intensity=1){
   if(!v||!state.boneOn||state.boneTap<=0)return;
