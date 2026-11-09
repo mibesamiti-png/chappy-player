@@ -22,7 +22,7 @@ webview = source("lib/core/local_app_server.dart")
 manifest = patch
 
 for needle in (
-    "connectivity.activeNetwork", "getNetworkCapabilities(network)",
+    "cm.activeNetwork", "getNetworkCapabilities(network)",
     "TRANSPORT_WIFI", "TRANSPORT_VPN", "TRANSPORT_CELLULAR",
     "getLinkProperties(network)", "route.isDefaultRoute",
     "isPrivateIpv4(candidate)", "generation == session",
