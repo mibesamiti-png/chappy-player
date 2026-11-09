@@ -314,8 +314,8 @@ function skinContactTargets(mode,zone,gate,speed,strength,texture,amount){
   (.35+.65*unit(strength))*(.75+.45*unit(texture))*unit(amount),0,.15);
  const cutoff=clamp((900+4900*hardness)*(.66+.54*unit(texture)),450,6800);
  const side=zone?.side;
- return {level,cutoff,left:side===0?1:side===1?.35:.82,
-         right:side===1?1:side===0?.35:.82,kind};
+ return {level,cutoff,left:side===0?1:side===1?0.35:0.82,
+         right:side===1?1:side===0?0.35:0.82,kind};
 }
 const modes = ['bee','ear','foam','water','gel','heart','white','brown'];
 const continuous = new Set(['bee','heart','white','brown']);
