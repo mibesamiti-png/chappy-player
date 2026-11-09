@@ -6,6 +6,7 @@ import 'package:chappy_player/core/pc_pairing_recovery_guidance.dart';
 import 'package:flutter/services.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
+import 'package:chappy_player/core/pc_status_once.dart';
 import 'package:chappy_player/core/verified_pc_history_client.dart';
 import 'package:chappy_player/core/companion_qr_invitation.dart';
 import 'package:chappy_player/screens/companion_qr_scanner_page.dart';
@@ -44,6 +45,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   bool _savedHistory = false;
   bool _busy = false;
   bool _verified = false;
+  bool _statusAttempted = false;
+  PcStatusOnceMetrics? _statusMetrics;
   // A QR invitation can be submitted at most once, even after failure.
   bool _qrConsumed = false;
   String? _code;
@@ -70,6 +73,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
           _busy = false;
           _savingHistory = false;
           _verified = false;
+          _statusMetrics = null;
+          _statusAttempted = false;
           _savedHistory = false;
           _code = null;
           _progressStage = null;
@@ -250,6 +255,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _fingerprint.text = invite.fingerprint;
       _invite = invite;
       _qrConsumed = false;
+      _statusMetrics = null;
+      _statusAttempted = false;
       _code = null;
       _error = null;
       _verified = false;
@@ -281,6 +288,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     setState(() {
       _busy = true;
       _verified = false;
+      _statusMetrics = null;
+      _statusAttempted = false;
       _savedHistory = false;
       _error = null;
       _code = null;
@@ -390,6 +399,71 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     }
   }
 
+  Future<void> _readStatusOnce() async {
+    final invite = _invite;
+    if (_busy || !_verified || _statusAttempted ||
+        invite == null || !invite.statusOnce ||
+        invite.pcIdentityFingerprint == null ||
+        ModalRoute.of(context)?.isCurrent != true) return;
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _statusAttempted = true;
+      _statusMetrics = null;
+      _error = null;
+    });
+    try {
+      final metrics = await _identityExchange.readStatusOnce(
+        ip: widget.service.address,
+        port: widget.service.port,
+        tlsFingerprint: invite.fingerprint,
+        pcFingerprint: invite.pcIdentityFingerprint!,
+        invitation: invite.invitation,
+        qrExpires: invite.expiresUnix,
+        approvePhoneStatus: () async {
+          if (!mounted || generation != _generation ||
+              ModalRoute.of(context)?.isCurrent != true) return false;
+          final approved = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('PC状態を今回だけ読み取りますか？'),
+              content: const Text(
+                'PCで本人確認とは別のSTATUS承認を行った後、'
+                'PCの専用署名を検証しました。\n\n'
+                'CPU論理コア数、メモリ合計・空き容量、起動時間だけを'
+                'この1回取得します。ファイル・アプリ・通信内容・'
+                'PC操作は対象外です。表示は保存しません。',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('拒否する'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('この1回だけ取得'),
+                ),
+              ],
+            ),
+          );
+          return approved == true && mounted && generation == _generation;
+        },
+      );
+      if (!mounted || generation != _generation) return;
+      setState(() => _statusMetrics = metrics);
+    } catch (_) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _error = 'PC状態を取得できませんでした [STATUS-ONCE]。'
+          '別承認の拒否・署名違い・期限切れ・切断を確認して、'
+          '新しいQRを発行してください。');
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   Future<void> _rememberPc() async {
     final fp = _invite?.pcIdentityFingerprint;
     if (_busy || _savingHistory || _savedHistory || !_verified ||
@@ -452,6 +526,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _busy = false;
       _savingHistory = false;
       _verified = false;
+      _statusMetrics = null;
+      _statusAttempted = false;
       _savedHistory = false;
       _code = null;
       _progressStage = null;
@@ -618,6 +694,44 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                   ),
                 ),
               ),
+            if (_verified && _invite?.statusOnce == true) ...[
+              OutlinedButton.icon(
+                key: const Key('pair_status_once'),
+                onPressed: _busy || _statusAttempted ? null : _readStatusOnce,
+                icon: const Icon(Icons.memory_outlined),
+                label: const Text('追加承認してPCの状態を一度だけ読む'),
+              ),
+              if (_statusMetrics != null)
+                Card(
+                  key: const Key('pair_status_card'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('取得したPC状態（保存なし）'),
+                        Text('論理CPU: ' +
+                            (_statusMetrics!.logicalCpus?.toString() ?? '取得不可')),
+                        Text('メモリ合計: ' +
+                            (_statusMetrics!.memoryTotalBytes == null
+                                ? '取得不可'
+                                : (_statusMetrics!.memoryTotalBytes! / 1073741824)
+                                    .toStringAsFixed(1) + ' GiB')),
+                        Text('メモリ空き: ' +
+                            (_statusMetrics!.memoryAvailableBytes == null
+                                ? '取得不可'
+                                : (_statusMetrics!.memoryAvailableBytes! / 1073741824)
+                                    .toStringAsFixed(1) + ' GiB')),
+                        Text('起動時間: ' +
+                            (_statusMetrics!.uptimeSeconds == null
+                                ? '取得不可'
+                                : (_statusMetrics!.uptimeSeconds! ~/ 3600)
+                                    .toString() + ' 時間')),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
             if (_verified && _invite?.pcIdentityFingerprint != null) ...[
               const SizedBox(height: 10),
               OutlinedButton.icon(
