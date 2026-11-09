@@ -1,30 +1,30 @@
 {
   "schemaVersion": 1,
   "project": "Chappy Player",
-  "capturedDate": "2026-11-08",
-  "sourceMainAtCapture": "ad95401f86362c760139990241a7546984c809f6",
+  "capturedDate": "2026-11-09",
+  "sourceMainAtCapture": "cc4a692b0d4c3e687e2344f399ff7111811f9e34",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "PC-LINK-R4C",
-    "name": "証明済みQR-v3に結びついた認可と実データの読み取り専用PC状態",
+    "id": "PC-LINK-R5",
+    "name": "本人の選択したファイルだけを安全に送受信するPC Transfer基盤",
     "status": "planned_not_started",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "PC-LINK-R4B",
-    "pr": 97,
-    "mergedCommit": "ad95401f86362c760139990241a7546984c809f6",
-    "sourceStatus": "merged_offline_contract_only",
+    "id": "PC-LINK-R4C",
+    "pr": 99,
+    "mergedCommit": "cc4a692b0d4c3e687e2344f399ff7111811f9e34",
+    "sourceStatus": "merged_source_ci_passed_device_unverified",
     "quickCi": {
       "status": "success",
-      "run": 42468375810
+      "run": 42587043221
     },
     "windowsCi": {
       "status": "success",
-      "run": 42468375793
+      "run": 42587042801
     },
-    "qualification": "本番通信・PC状態取得・PC操作は未実装。Python/Dartオフラインモデルと127.0.0.1模擬通信のみ完了"
+    "qualification": "実PCのCPU/RAM/uptimeを返す1回限りのQR-v3署名付きread-only PC状態取得をソース実装。CI証明あり、実Android↔Windows QAは未実施で0/15。"
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -46,7 +46,8 @@
         "KeyStore端末鍵",
         "検証済みPC鍵履歴",
         "失敗段階・安全な診断",
-        "R4Bオフラインセッション/権限モデル（実PC通信には未接続）"
+        "R4Bオフラインセッション/権限モデル（実PC通信には未接続）",
+        "R4C QR-v3署名＋専用status=1のread-only状態取得・追加Android承認UI（コード/CI成功、実機未検証）"
       ]
     },
     "windowsSource": {
@@ -58,15 +59,16 @@
         "Windows DPAPI端末鍵",
         "検証済みスマホ履歴",
         "R4A --doctor と専用ランチャー",
-        "R4Bオフラインセッション/権限モデル（実PC通信には未接続）"
+        "R4Bオフラインセッション/権限モデル（実PC通信には未接続）",
+        "R4C --status-once・STATUS別承認・実Windows CPU/RAM/uptime 1回取得（コード/CI成功、実機未検証）"
       ]
     },
     "unimplemented": [
       "永続的な再利用可能認証済みセッション",
-      "権限分離された読み取り専用PC状態API",
       "PCファイル転送",
       "PCリモート操作",
-      "自動再接続/遠隔失効"
+      "自動再接続/遠隔失効",
+      "PC Link R4Cの物理Android↔Windows実機QA（0/15）"
     ],
     "publicMiniappCatalog": {
       "stable": 2,
@@ -81,51 +83,69 @@
       "tag": "v0.3.0-b11",
       "source": "https://github.com/mibesamiti-png/chappy-player-updates/releases/tag/v0.3.0-b11",
       "status": "published_previous_not_changed"
+    },
+    "pcStatusOnce": {
+      "sourceStatus": "implemented_host_and_windows",
+      "protocol": "pc-status-once-v1",
+      "windowsStartScript": "Start-ChappyStatusOnceV3.cmd",
+      "scope": "pc.status.read",
+      "consent": "Windows YES (QR-v3 identity) + Windows STATUS (status) + Android QR signature consent + Android status consent",
+      "metrics": [
+        "logical_cpus",
+        "memory_total_bytes",
+        "memory_available_bytes",
+        "uptime_seconds"
+      ],
+      "lifetime": "1 use, QR expiry and <=90 seconds after QR-v3 identity",
+      "quickCiRun": 42587043221,
+      "windowsCiRun": 42587042801,
+      "realDeviceQa": "not_run",
+      "noStableRelease": true
     }
   },
   "nextBatch": {
-    "id": "PC-LINK-R4C",
+    "id": "PC-LINK-R5",
     "targetTasks": 8,
-    "implementationScope": "R4Bのオフラインモデルを本物の安全なQR-v3・TLSチャンネルへ接続する次段階。権限はデフォルトゼロ、双方明示同意。PC状態は読み取り専用・欠測を正しく扱う。",
+    "implementationScope": "実機テスト前に安全なファイル転送コンポーネントを実装。ホスト＋Windowsで承認範囲と選択ファイルのみ許可。PC Transfer Labは検証用として新規（公開は実機検証後）。",
     "tasks": [
       {
-        "id": "PC-R4C-01",
-        "name": "QR-v3の署名成功と実TLS接続を認可要求に安全に結び付け、テスト用真偽値とは分離",
+        "id": "PC-R5-01",
+        "name": "転送セッションをQR-v3の新しい署名・明示的なファイル権限へ分離（status権限とは絶対共有しない）",
         "status": "todo"
       },
       {
-        "id": "PC-R4C-02",
-        "name": "接続ごとの短命セッションID/リプレイ・期限・切断失効の設計と実装",
+        "id": "PC-R5-02",
+        "name": "Windowsで利用者が明示選択したファイル/保存先以外を拒否するファイル境界設計",
         "status": "todo"
       },
       {
-        "id": "PC-R4C-03",
-        "name": "読み取り専用PC状態スコープへのWindows/Android別々の明示承認",
+        "id": "PC-R5-03",
+        "name": "単一ファイルのチャンク送受信、上限、SHA-256照合、サイズ検証",
         "status": "todo"
       },
       {
-        "id": "PC-R4C-04",
-        "name": "Windows側の真のPC状態情報を安全に収集（非対応/未測定区別、秘密情報除外）",
+        "id": "PC-R5-04",
+        "name": "キャンセル、期限切れ、切断・途中転送時の一時ファイル安全処理",
         "status": "todo"
       },
       {
-        "id": "PC-R4C-05",
-        "name": "Android側の信頼されたホストUIでPC状態・拒否・通信切断を可視化",
+        "id": "PC-R5-05",
+        "name": "Androidホスト側の許可付きファイル選択・保存・進捗UI",
         "status": "todo"
       },
       {
-        "id": "PC-R4C-06",
-        "name": "TLS・期限・二重要求・中断・鍵変更・不正署名の統合回帰",
+        "id": "PC-R5-06",
+        "name": "PC Transfer Lab Debugミニアプリを新規作成（ホストの安全な承認経路のみ使用）",
         "status": "todo"
       },
       {
-        "id": "PC-R4C-07",
-        "name": "ホストのみがPC Linkを扱い、.chappy JS・公開カタログには権限を開放しない回帰",
+        "id": "PC-R5-07",
+        "name": "リプレイ・パストラバーサル・過大サイズ・署名改ざん・JS隔離テスト",
         "status": "todo"
       },
       {
-        "id": "PC-R4C-08",
-        "name": "Quick/Windows CI、必要に応じDebug APK生成と実機QA記録・引き継ぎ更新",
+        "id": "PC-R5-08",
+        "name": "Quick/Windows CI・プレビュー成果物・GitHub/Notion引き継ぎとR4C実機QA別記録",
         "status": "todo"
       }
     ],
@@ -156,7 +176,7 @@
     "repository": "https://github.com/mibesamiti-png/chappy-player",
     "pcLinkSpec": "docs/pc-link-mutual-qr-v3.md",
     "qa": "docs/pc-link-two-device-qa-matrix.md",
-    "latestBatch": "docs/pc-link-r4b-session-preview.md",
+    "latestBatch": "docs/pc-link-r4c-status-once.md",
     "ci": "docs/ci-quick-and-manual-debug.md",
     "publicLibrary": "https://github.com/mibesamiti-png/chappy-apps",
     "notion": "https://app.notion.com/p/410948b74937819d92efc11defb9a7c7"
