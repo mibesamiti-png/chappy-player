@@ -501,6 +501,78 @@ def make_handler(session: PairingSession,
             except (ValueError, TypeError, KeyError, PermissionError, OSError):
                 self._reply(403, {"status": "file_denied"})
 
+        def _handle_upload_once(self) -> None:
+            if upload_once is None or self.path not in (
+                "/v3/upload-begin", "/v3/upload-finish", "/v3/upload-chunk",
+                "/v3/upload-commit", "/v3/upload-cancel",
+            ):
+                self._reply(404, {"status": "not_found"})
+                return
+            lengths = self.headers.get_all("Content-Length", [])
+            if (len(lengths) != 1 or len(lengths[0]) > 5
+                    or not lengths[0].isascii() or not lengths[0].isdecimal()
+                    or self.headers.get_all("Transfer-Encoding", [])):
+                self._reply(400, {"status": "bad_request"})
+                return
+            length = int(lengths[0])
+            if not 1 <= length <= 25000:
+                self._reply(413, {"status": "too_large"})
+                return
+            if self.headers.get_all("Content-Type", []) != ["application/json"]:
+                self._reply(415, {"status": "unsupported_type"})
+                return
+            try:
+                body = self.rfile.read(length)
+                if len(body) != length:
+                    raise ValueError("Incomplete upload request")
+                data = _strict_identity_json(body)
+                if data.get("protocol") != UPLOAD_PROTOCOL:
+                    raise ValueError("Wrong upload permission")
+                if self.path == "/v3/upload-begin":
+                    if set(data) != {
+                        "protocol", "invitation", "phone_fp", "phone_nonce",
+                        "file_name", "size_bytes", "sha256",
+                    }:
+                        raise ValueError("Unexpected upload-begin fields")
+                    answer = upload_once.begin(
+                        invitation=data["invitation"], phone_fp=data["phone_fp"],
+                        phone_nonce=data["phone_nonce"], name=data["file_name"],
+                        size_bytes=data["size_bytes"], sha256=data["sha256"],
+                        approve_pc_upload=_ask_pc_upload_user,
+                    )
+                elif self.path == "/v3/upload-finish":
+                    if set(data) != {
+                        "protocol", "invitation", "phone_fp", "phone_proof",
+                    } or not isinstance(data["phone_proof"], dict):
+                        raise ValueError("Malformed upload proof")
+                    answer = upload_once.finish(
+                        invitation=data["invitation"], phone_fp=data["phone_fp"],
+                        phone_proof=data["phone_proof"],
+                    )
+                elif self.path == "/v3/upload-chunk":
+                    if set(data) != {"protocol", "ticket", "offset", "data"}:
+                        raise ValueError("Unexpected upload chunk")
+                    answer = upload_once.append(
+                        ticket=data["ticket"], offset=data["offset"],
+                        data=data["data"],
+                    )
+                elif self.path == "/v3/upload-commit":
+                    if set(data) != {"protocol", "ticket", "size_bytes", "sha256"}:
+                        raise ValueError("Unexpected upload commit")
+                    answer = upload_once.commit(
+                        ticket=data["ticket"], size_bytes=data["size_bytes"],
+                        sha256=data["sha256"],
+                    )
+                else:
+                    if set(data) != {"protocol", "ticket"}:
+                        raise ValueError("Unexpected upload cancel")
+                    if not upload_once.cancel_by_ticket(data["ticket"]):
+                        raise PermissionError("Invalid cancellation ticket")
+                    answer = {"protocol": UPLOAD_PROTOCOL, "status": "cancelled"}
+                self._reply(200, answer)
+            except (ValueError, TypeError, KeyError, PermissionError, OSError):
+                self._reply(403, {"status": "upload_denied"})
+
         def do_POST(self) -> None:
             if self.path.startswith("/v3/upload-"):
                 self._handle_upload_once()
