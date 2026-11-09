@@ -308,7 +308,7 @@ function skinContactTargets(mode,zone,gate,speed,strength,texture,amount){
  const weights={ear:.88,foam:.68,gel:.72,water:.38};
  const kind=weights[mode]||0;
  const unit=v=>Number.isFinite(v)?clamp(v,0,1):0;
- const moving=smoothstep(unit(Number.isFinite(speed)?speed/72:0));
+ const moving=smoothstep(unit(Number.isFinite(speed)?speed/44:0));
  const touch=zone&&!zone.isCanal?unit(zone.touch):0;
  const hardness=zone&&zone.settings?unit(zone.settings.hardness):.5;
  const level=clamp(.145*kind*touch*unit(gate)*moving*
@@ -682,6 +682,23 @@ class ASMRSystem {
   }
   v.skinMerge.connect(this.externalMix);
   v.skinSource.start(0,slot==='mouse'?.31:.61);
+  // Hair-strand rustle and slow skin drag share the external, ear-occluded skin path.
+  v.strokeHairSource=this.source(this.noise.monoWhite);v.sources.push(v.strokeHairSource);
+  v.strokeHairFilter=c.createBiquadFilter();v.strokeHairFilter.type='bandpass';
+  v.strokeHairFilter.frequency.value=2800;v.strokeHairFilter.Q.value=.7;
+  v.strokeHairGain=c.createGain();v.strokeHairGain.gain.value=0;
+  v.strokeHairSource.connect(v.strokeHairFilter);
+  v.strokeHairFilter.connect(v.strokeHairGain);v.strokeHairGain.connect(v.skinBus);
+  v.strokeDragSource=this.source(this.noise.monoBrown);v.sources.push(v.strokeDragSource);
+  v.strokeDragHigh=c.createBiquadFilter();v.strokeDragHigh.type='highpass';
+  v.strokeDragHigh.frequency.value=65;
+  v.strokeDragLow=c.createBiquadFilter();v.strokeDragLow.type='lowpass';
+  v.strokeDragLow.frequency.value=380;
+  v.strokeDragGain=c.createGain();v.strokeDragGain.gain.value=0;
+  v.strokeDragSource.connect(v.strokeDragHigh);v.strokeDragHigh.connect(v.strokeDragLow);
+  v.strokeDragLow.connect(v.strokeDragGain);v.strokeDragGain.connect(v.skinBus);
+  v.strokeHairSource.start(0,slot==='mouse'?1.31:2.14);
+  v.strokeDragSource.start(0,slot==='mouse'?.9:1.7);
   // Looping noise layers start silent; a tap impulse is created only on actual new contact.
   v.boneRubSource=this.source(this.noise.monoWhite);v.sources.push(v.boneRubSource);
   v.boneRubFilter.type='bandpass';v.boneRubFilter.frequency.value=290;v.boneRubFilter.Q.value=.65;
@@ -794,7 +811,7 @@ class ASMRSystem {
  }
  disposeVoice(v){
   for(const src of v.sources){try{src.stop();}catch(e){}}
-  for(const node of [...v.nodes,v.filter,v.out,v.synthGain,v.sampleBus,v.stereoBus,v.stereoOut,v.stereoFilter,v.stereoInsideFilter,v.stereoInsideGain,v.distanceFilter,v.distanceGain,v.panner,v.dry,v.pressHigh,v.pressLow,v.pressGain,v.contactLow,v.contactWarm,v.contactRes,v.canalBassShelf,v.canalBassPeak,v.contactGain,v.contactPan,v.contactSplit,v.contactMerge,...v.contactEarGains,v.rubLow,v.rubBand,v.rubGain,...v.earTone,...v.earDelay,...v.earGains,v.earMerge,v.boneBus,v.boneRubFilter,v.boneRubGain,v.bonePressFilter,v.bonePressGain,...v.boneLowpass,...v.boneOcclusionEQ,...v.boneEarGains,v.boneMerge,v.skinHigh,v.skinLow,v.skinGain,v.skinBus,...v.skinEarGains,v.skinMerge]){
+  for(const node of [...v.nodes,v.filter,v.out,v.synthGain,v.sampleBus,v.stereoBus,v.stereoOut,v.stereoFilter,v.stereoInsideFilter,v.stereoInsideGain,v.distanceFilter,v.distanceGain,v.panner,v.dry,v.pressHigh,v.pressLow,v.pressGain,v.contactLow,v.contactWarm,v.contactRes,v.canalBassShelf,v.canalBassPeak,v.contactGain,v.contactPan,v.contactSplit,v.contactMerge,...v.contactEarGains,v.rubLow,v.rubBand,v.rubGain,...v.earTone,...v.earDelay,...v.earGains,v.earMerge,v.boneBus,v.boneRubFilter,v.boneRubGain,v.bonePressFilter,v.bonePressGain,...v.boneLowpass,...v.boneOcclusionEQ,...v.boneEarGains,v.boneMerge,v.skinHigh,v.skinLow,v.skinGain,v.skinBus,...v.skinEarGains,v.skinMerge,v.strokeHairFilter,v.strokeHairGain,v.strokeDragHigh,v.strokeDragLow,v.strokeDragGain]){
    try{node.disconnect();}catch(e){}
   }
  }
@@ -881,7 +898,13 @@ class ASMRSystem {
     strength,wet,state.skinSurface/100);
   v.skinGain.gain.setTargetAtTime(surface.level,t,.032);
   v.skinLow.frequency.setTargetAtTime(surface.cutoff,t,.05);
-  for(let i=0;i<2;i++)v.skinEarGains[i].gain.setTargetAtTime(i===0?surface.left:surface.right,t,.035);
+  const stroke=scalpStrokeTargets(v.mode,zone,emission.gate,slotState.speed,
+    strength,wet,state.skinSurface/100,state.strokeBoost/100);
+  v.strokeHairGain.gain.setTargetAtTime(stroke.hair,t,.038);
+  v.strokeDragGain.gain.setTargetAtTime(stroke.drag,t,.06);
+  v.strokeHairFilter.frequency.setTargetAtTime(stroke.hairHz,t,.065);
+  v.strokeDragLow.frequency.setTargetAtTime(stroke.dragHz,t,.07);
+  for(let i=0;i<2;i>v.skinEarGains[i].gain.setTargetAtTime(i===0?surface.left:surface.right,t,.035);
   const boneKind=boneModeWeight[v.mode]||0;
   const faceGain=state.boneOn&&!zone.isCanal?emission.gate*boneKind*zone.touch:0;
   const softness=state.boneSoftness/100;
