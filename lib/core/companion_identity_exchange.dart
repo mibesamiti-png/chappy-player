@@ -8,6 +8,7 @@ import 'package:chappy_player/core/pc_pairing_stage.dart';
 import 'package:chappy_player/core/pc_status_once.dart';
 import 'package:chappy_player/core/pc_file_receive.dart';
 import 'package:chappy_player/core/pc_file_upload.dart';
+import 'package:chappy_player/core/pc_media_once.dart';
 import 'package:crypto/crypto.dart';
 
 /// Explicit, one-shot QR-v3 proof exchange. No trusted peer is saved.
@@ -263,6 +264,121 @@ class CompanionIdentityExchange {
         throw const FormatException('PC状態の応答が不正です');
       }
       return PcStatusOnceMetrics.parse(result['metrics'] as Map);
+    } finally {
+      _socket?.destroy();
+      _socket = null;
+      _busy = false;
+    }
+  }
+
+  /// A single action-bound media key, never unrestricted PC remote control.
+  /// QR-v3 identity and media permissions are independently approved.
+  Future<void> executePcMediaOnce({
+    required String ip,
+    required int port,
+    required String tlsFingerprint,
+    required String pcFingerprint,
+    required String invitation,
+    required int qrExpires,
+    required String command,
+    required Future<bool> Function(String) approvePhoneMedia,
+  }) async {
+    if (_busy || _cancelled) {
+      throw StateError('新しいQR-v3本人確認が必要です');
+    }
+    PcMediaOnce.label(command);
+    CompanionPairingClient.validateTarget(ip, port, tlsFingerprint);
+    if (!_hex64.hasMatch(pcFingerprint) || !_hex32.hasMatch(invitation)) {
+      throw const FormatException('PCメディア操作QRが不正です');
+    }
+    final now0 = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if (qrExpires <= now0 || qrExpires - now0 > 600) {
+      throw const FormatException('PCメディア操作QRの期限が切れています');
+    }
+    _busy = true;
+    try {
+      final phoneStatus = await identity.status();
+      _ensureActive();
+      if (!phoneStatus.created || phoneStatus.fingerprint == null ||
+          !_hex64.hasMatch(phoneStatus.fingerprint!)) {
+        throw StateError('Android端末鍵を使用できません');
+      }
+      final phoneFp = phoneStatus.fingerprint!;
+      final phoneNonce = CompanionIdentityClient.newNonce();
+      final challenge = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/media-begin',
+        json: <String, Object>{
+          'protocol': PcMediaOnce.protocol,
+          'invitation': invitation,
+          'phone_fp': phoneFp,
+          'phone_nonce': phoneNonce,
+          'command': command,
+        },
+      );
+      _ensureActive();
+      if (challenge.length != 6 ||
+          challenge['protocol'] != PcMediaOnce.protocol ||
+          challenge['status'] != 'challenge' ||
+          challenge['command'] != command ||
+          challenge['pc_nonce'] is! String ||
+          !_hex64.hasMatch(challenge['pc_nonce'] as String) ||
+          challenge['expires'] is! int ||
+          challenge['pc_proof'] is! Map) {
+        throw const FormatException('PCメディア署名チャレンジが不正です');
+      }
+      final rawPcNonce = challenge['pc_nonce'] as String;
+      final expires = challenge['expires'] as int;
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      if (expires <= now || expires > qrExpires || expires - now > 90) {
+        throw const FormatException('メディア承認チャレンジの期限が不正です');
+      }
+      final verified = await identity.verifyPcProof(
+        proof: CompanionIdentityClient.parseProof(
+          challenge['pc_proof'] as Map<dynamic, dynamic>,
+        ),
+        pcFingerprint: pcFingerprint,
+        invitation: invitation,
+        tlsFingerprint: tlsFingerprint,
+        phoneFingerprint: phoneFp,
+        phoneNonce: pcMediaScopedNonce(phoneNonce, command),
+        expiresUnix: expires,
+      );
+      _ensureActive();
+      if (!verified) throw StateError('メディア操作のPC署名が一致しません');
+      if (!await approvePhoneMedia(command)) {
+        throw StateError('スマホ側でメディア操作を拒否しました');
+      }
+      _ensureActive();
+      if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expires) {
+        throw const FormatException('承認中にメディア操作の期限が切れました');
+      }
+      final signed = await identity.signPhoneProof(
+        invitation: invitation,
+        tlsFingerprint: tlsFingerprint,
+        pcFingerprint: pcFingerprint,
+        pcNonce: pcMediaScopedNonce(rawPcNonce, command),
+        expiresUnix: expires,
+      );
+      _ensureActive();
+      final answer = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/media-finish',
+        json: <String, Object>{
+          'protocol': PcMediaOnce.protocol,
+          'invitation': invitation,
+          'phone_fp': phoneFp,
+          'phone_proof': signed,
+        },
+      );
+      _ensureActive();
+      if (answer.length != 4 ||
+          answer['protocol'] != PcMediaOnce.protocol ||
+          answer['status'] != 'executed' ||
+          answer['pc_nonce'] != rawPcNonce ||
+          answer['command'] != command) {
+        throw const FormatException('PCメディア操作の応答が不正です');
+      }
     } finally {
       _socket?.destroy();
       _socket = null;
