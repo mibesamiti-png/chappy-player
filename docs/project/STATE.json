@@ -2,28 +2,28 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-10",
-  "sourceMainAtCapture": "3efe4caa0536c5dedec5a51dd7add364efd93b5e",
+  "sourceMainAtCapture": "f5c69477eea37d3fd6f3d810368922332bdbf45e",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
     "id": "NETLAB-06B",
-    "name": "本人管理端末の通信先を安全にライブ取得する方式とBUFFALO機種別APIの検証",
-    "status": "planned_buffalo_model_required_for_router_adapter",
+    "name": "実機デバッグ優先：通信解析/BUFFALO端末一覧/ルーター自動識別のQA。NETLAB-06B機能追加は停止中",
+    "status": "paused_for_user_physical_debug",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "NETLAB-06A",
-    "pr": 129,
-    "mergedCommit": "3efe4caa0536c5dedec5a51dd7add364efd93b5e",
-    "sourceStatus": "merged_quick_android_debug_ci_success_pcap_offline_only_real_buffalo_capture_qa_not_run",
+    "id": "NETLAB-06A-DEBUG-QA",
+    "pr": 131,
+    "mergedCommit": "f5c69477eea37d3fd6f3d810368922332bdbf45e",
+    "sourceStatus": "merged_parser_regression_quick_android_ci_success_physical_debug_not_run",
     "quickCi": {
       "status": "success",
-      "run": 42702059765,
+      "run": 42708245092,
       "successfulSteps": 68
     },
     "androidDebugCi": {
       "status": "success",
-      "run": 42702059838,
+      "run": 42708245065,
       "successfulSteps": 17,
       "abi": [
         "arm64-v8a",
@@ -35,9 +35,9 @@
     },
     "windowsCi": {
       "status": "not_required",
-      "reason": "No Windows code changed"
+      "reason": "Only Dart parser/tests and QA documentation changed"
     },
-    "qualification": "New Android host offline, user-selected, owner-authorized classic PCAP analysis. IPv4 TCP/UDP destination source IP/ports; DNS question domain; one-packet TLS ClientHello SNI (unverified); plaintext HTTP request method/path without query and Host; opt-in text/plain or JSON body preview <=120 chars, sensitive-word non-display best effort. MAX 2MiB /2500 packets/160 visible, bounded raw IPv4 or Ethernet classic PCAP 2.4; no PCAPNG/IPv6/reassembly. No live packet capture, router API/PCAP export, MITM, HTTPS decryption, other-device automatic monitoring, mini-app JS, storage or background. Quick 68/68, Android Debug 17/17, 3 ABI artifacts; Android physical installation and any real BUFFALO capture QA NOT RUN. User-supplied synthetic sample pcap produced in conversation, not embedded in GitHub. Exact BUFFALO model/API still unknown. Stable/public miniapp catalog unchanged."
+    "qualification": "Debug quality pass focused on NETLAB-06A: correctly distinguish DNS server response from client query, skip all fragmented IPv4 packets including MF-first fragments, mark truncation only after >160 supported observations. Added deterministic synthetic tests for DNS response, IPv4 MF, VLAN Ethernet, TLS ClientHello SNI, unsupported packet count and 350 seeded malformed packet mutations; no crashes observed under Flutter Quick 68/68. Android Debug 17/17 and 3-ABI APK artifacts produced on exact implementation HEAD b7a8e1830907257f7016e36380b2934d3903e9cd. Created manual nine-case QA checklist docs/qa/NETLAB_DEBUG_2026-11-10.md and separate conversation download ZIP with six fully synthetic PCAP packets plus 2 negative fixtures, not persisted in GitHub. Physical device install, BUFFALO router UPnP, manual inventory import, Android file-picker sample PCAP, app resume/background physical QA ALL not_run. Debug APK may not overwrite installed release due signing key; do not advise uninstalling without backup. Automatic third-party device capture remains unsupported; no Stable/catalog changes. GameR8 eight tasks preserved."
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -609,12 +609,60 @@
       "signedStable": false,
       "publicMiniAppCatalogChanged": false,
       "docs": "docs/netlab-06a-offline-traffic-inspection.md"
+    },
+    "netlabDebugAudit": {
+      "id": "NETLAB-06A-DEBUG-QA",
+      "status": "source_and_ci_passed_real_android_qa_not_run",
+      "sourcePr": 131,
+      "sourceCommit": "f5c69477eea37d3fd6f3d810368922332bdbf45e",
+      "sourceHead": "b7a8e1830907257f7016e36380b2934d3903e9cd",
+      "quickCi": {
+        "status": "success",
+        "run": 42708245092,
+        "passed": 68
+      },
+      "androidDebugCi": {
+        "status": "success",
+        "run": 42708245065,
+        "passed": 17,
+        "abi": [
+          "arm64-v8a",
+          "armeabi-v7a",
+          "x86_64"
+        ]
+      },
+      "fixes": [
+        "dns_server_responses_no_longer_mislabeled_queries",
+        "reject_mf_flagged_first_ipv4_fragments",
+        "truncation_only_if_supported_observations_exceed_160"
+      ],
+      "coverage": [
+        "dns_reply",
+        "vlan_ipv4",
+        "tls_sni_candidate",
+        "synthetic_packet_mutations_seed_20261110",
+        "explicit_consent",
+        "manual_file_picker_guard"
+      ],
+      "manualQa": {
+        "source": "docs/qa/NETLAB_DEBUG_2026-11-10.md",
+        "casesTotal": 9,
+        "casesPassed": 0,
+        "status": "not_run"
+      },
+      "syntheticKit": "User-download ZIP in conversation; synthetic only; not stored in GitHub",
+      "physicalInstallation": "not_run",
+      "buffaloRouterRealQa": "not_run",
+      "pcapAndroidImport": "not_run",
+      "releaseSigned": false,
+      "publicCatalogChanged": false,
+      "featureExpansion": "paused_by_user_until_debug_results"
     }
   },
   "nextBatch": {
     "id": "NETLAB-06B",
     "targetTasks": 8,
-    "implementationScope": "NETLAB-06AのPCAPオフライン解析（ソースQuick68/Android17、実機未検証）が完成。ユーザー要望は他の接続端末の外部接続先や通信内容も理解すること。ただしBUFFALO型番/API未確認で他端末のライブトラフィック自動収集は未実装。次は本人管理か許可を得た端末の通信先メタデータを明示同意・最小権限で取得する方法を検証し、BUFFALO公式機種APIがない場合は安全な端末側/本人PC側計測を優先。暗号化HTTPS本文を復号したと主張しない。05B残件8タスクをobservations.deferredRouter05Bへ保持、Game R8 8タスクも延期保持。",
+    "implementationScope": "【ユーザー指示】新機能追加は一旦停止。まずNETLAB-06A回帰テスト済みDebug APKを物理Androidでインストールし、Network Labの9項目QA（docs/qa/NETLAB_DEBUG_2026-11-10.md）を実施。現状はソースQuick68/Android17成功・実機QA0/9。本人による機種不明BUFFALOのゲートウェイ自動識別・手動端末一覧・合成PCAP解析を優先。QA報告後のみ元のNETLAB-06B機能計画を再開。NETLAB-06AのPCAPオフライン解析（ソースQuick68/Android17、実機未検証）が完成。ユーザー要望は他の接続端末の外部接続先や通信内容も理解すること。ただしBUFFALO型番/API未確認で他端末のライブトラフィック自動収集は未実装。次は本人管理か許可を得た端末の通信先メタデータを明示同意・最小権限で取得する方法を検証し、BUFFALO公式機種APIがない場合は安全な端末側/本人PC側計測を優先。暗号化HTTPS本文を復号したと主張しない。05B残件8タスクをobservations.deferredRouter05Bへ保持、Game R8 8タスクも延期保持。",
     "tasks": [
       {
         "id": "NETLAB-06B-01",
@@ -689,7 +737,7 @@
     "repository": "https://github.com/mibesamiti-png/chappy-player",
     "pcLinkSpec": "docs/pc-link-mutual-qr-v3.md",
     "qa": "docs/pc-link-two-device-qa-matrix.md",
-    "latestBatch": "docs/netlab-06a-offline-traffic-inspection.md",
+    "latestBatch": "docs/qa/NETLAB_DEBUG_2026-11-10.md",
     "ci": "docs/ci-quick-and-manual-debug.md",
     "publicLibrary": "https://github.com/mibesamiti-png/chappy-apps",
     "notion": "https://app.notion.com/p/410948b74937819d92efc11defb9a7c7"
