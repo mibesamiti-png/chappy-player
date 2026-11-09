@@ -2,40 +2,38 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-09",
-  "sourceMainAtCapture": "1e7cb5e2678ea3b03be5a23b34723dc1fc66c825",
+  "sourceMainAtCapture": "d5865dba695572af5cdd036799fc31a732f8da36",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "NETWORK-R7",
-    "name": "Network R7: 本体ホストの明示的ブラウザとLAN診断・プライバシー隔離",
+    "id": "GAME-R8",
+    "name": "Game R8: ユーザー同意のセッション/ルーム同期・接続状態と安全なゲームサーバー通信",
     "status": "planned_not_started",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "PC-LINK-R6B",
-    "pr": 111,
-    "mergedCommit": "1e7cb5e2678ea3b03be5a23b34723dc1fc66c825",
-    "sourceStatus": "merged_source_three_ci_passed_physical_qa_not_run",
+    "id": "NETWORK-R7",
+    "pr": 116,
+    "mergedCommit": "d5865dba695572af5cdd036799fc31a732f8da36",
+    "sourceStatus": "merged_source_quick_and_android_ci_passed_physical_qa_not_run",
     "quickCi": {
       "status": "success",
-      "run": 42611593883
-    },
-    "windowsCi": {
-      "status": "success",
-      "run": 42611593897
+      "run": 42658869004,
+      "successfulSteps": 63
     },
     "androidDebugCi": {
       "status": "success",
-      "run": 42611593749,
+      "run": 42658868997,
+      "successfulSteps": 17,
       "abi": [
         "arm64-v8a",
         "armeabi-v7a",
         "x86_64"
       ],
-      "signedStable": false,
-      "physicalInstallation": "not_run"
+      "physicalInstallation": "not_run",
+      "signedStable": false
     },
-    "qualification": "R6Bでは共有Python/Dart署名ベクトル8件、QR-v3 P-256のlocalhost HTTP結合・拒否/期限/キャンセル/再送/同時発行検証、Windows固定マルチメディアキーdown/up模擬検証、private無権限PC Control Lab 13件QA手順、Debug APK三ABI作成をmainに統合。最終PR HEADのQuick/Windows/Debug APK CIはすべて成功。実機Android↔Windows QAは共通0/15・媒体キー0/13で未実施。"
+    "qualification": "R7ホスト専用公開HTTPSブラウザ・URLスキーム制限、JavaScript初期OFF/前景同意、WebView権限要求拒否、同意後1回だけexample.com DNS+HTTPS HEAD診断、プライベートBrowser Lab 12項目QAをソースmainに統合。Quick CI 63ステップとDebug APKビルド17ステップ成功。実機R7 0/12・PC Link 0/15+媒体0/13は未実施。WebViewの共有Cookie・サブリソース/DNS制限は残る。"
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -93,7 +91,8 @@
       "R6Aの実Windows/AndroidのQR・TLS・メディアキー挙動（物理PC Link QA 0/15、未実施）",
       "複数コマンド継続セッション・任意のPCキーボード/マウス操作（R6Aに含まれない）",
       "R6B物理Windows↔Android相互接続・PC媒体キー結果（NETLAB共通QA 0/15、媒体キー13件0/13、全未実施）",
-      "R7ブラウザ/LAN診断（未着手）"
+      "Network R7実機Browser/診断の12項目 QA（0/12、未実施）",
+      "Game R8ルーム/セッション同期とネットワーク品質計測（未着手）"
     ],
     "publicMiniappCatalog": {
       "stable": 2,
@@ -239,62 +238,98 @@
         "stableReleaseChanged": false,
         "publicCatalogChanged": false
       }
+    },
+    "networkR7": {
+      "sourceStatus": "merged_quick_android_ci_passed_physical_not_run",
+      "pr": 116,
+      "mergedCommit": "d5865dba695572af5cdd036799fc31a732f8da36",
+      "scope": "host_only",
+      "browser": "lib/screens/browser_page.dart",
+      "urlPolicy": "lib/core/browser_url_policy.dart",
+      "diagnostic": "lib/core/network_diagnostic_service.dart",
+      "networkLab": "lib/screens/network_lab_page.dart",
+      "privateLab": {
+        "id": "local.chappy.browser_lab",
+        "source": "sample_apps/browser_lab",
+        "version": "0.1.0",
+        "permissions": [],
+        "manualCases": 12,
+        "actualDevicePassed": 0,
+        "run": 42658869004
+      },
+      "quickCiRun": 42658869004,
+      "androidCiRun": 42658868997,
+      "androidAbis": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86_64"
+      ],
+      "realDeviceQa": "not_run_0_12",
+      "physicalApkInstall": "not_run",
+      "knownLimits": [
+        "WebView cookies may be shared across mini-apps",
+        "No comprehensive subresource filtering",
+        "URL hostname validation does not stop DNS rebinding",
+        "Real Android WebView navigation behavior not physically tested"
+      ],
+      "noPublicCatalogOrStable": true
     }
   },
   "nextBatch": {
-    "id": "NETWORK-R7",
+    "id": "GAME-R8",
     "targetTasks": 8,
-    "implementationScope": "ユーザー本人が明示して操作するAndroid本体のBrowser/LAN検査とprivate Browser Lab。外部サイトはHTTPS/権限/履歴隔離を優先。PC Linkの自由入力や隠しスキャンには拡張しない。R6B共通15/媒体13件の物理QAは別ゲートで未実施。",
+    "implementationScope": "既存Game Server Labのネットワーク許可モデルを保ち、ユーザー本人が明示的に参加したセッション/ルーム同期・ping/接続状態・通信の認証と上限を実装。R7ブラウザ、mini-app JSのPC権限、無断のLANスキャン、常時接続は拡大しない。実機QAは別ゲート。",
     "tasks": [
       {
-        "id": "NET-R7-01",
-        "name": "既存WebView/Network Labとミニアプリsandboxの安全境界を棚卸し",
+        "id": "GAME-R8-01",
+        "name": "既存Game Server Lab/mini-app network API、WebSocketサーバーサンプル、同意・隔離の現状監査",
         "status": "todo"
       },
       {
-        "id": "NET-R7-02",
-        "name": "Android本体の明示起動ブラウザUI、URL入力・戻る/進む・更新",
+        "id": "GAME-R8-02",
+        "name": "ホスト本人の接続先確認・明示参加による1セッションの開始/終了モデル",
         "status": "todo"
       },
       {
-        "id": "NET-R7-03",
-        "name": "HTTPS/許可/危険スキーム拒否・ダウンロード誘導などWebView安全対策",
+        "id": "GAME-R8-03",
+        "name": "ルームID・参加/退室イベント・プレイヤー識別子の最小化と署名/権限境界",
         "status": "todo"
       },
       {
-        "id": "NET-R7-04",
-        "name": "接続可否・DNS・LAN状態の明示実行診断。過剰スキャンや秘密情報収集なし",
+        "id": "GAME-R8-04",
+        "name": "ルーム同期メッセージの順序・サイズ・頻度制限、再接続/重複/拒否の検査",
         "status": "todo"
       },
       {
-        "id": "NET-R7-05",
-        "name": "閲覧履歴とサイトデータの最小化・手動削除・プライバシーを設計",
+        "id": "GAME-R8-05",
+        "name": "手動接続のPing/遅延・状態表示、タイムアウトと可視の切断",
         "status": "todo"
       },
       {
-        "id": "NET-R7-06",
-        "name": "private Browser LabのQAと既存Game Server Labのネットワーク状態連携を検討",
+        "id": "GAME-R8-06",
+        "name": "private Game Room Lab（手動QA）の整備、無権限の自動接続を禁止",
         "status": "todo"
       },
       {
-        "id": "NET-R7-07",
-        "name": "Flutter/Android/JS単体・異常系と複数ネットワーク状態の検証",
+        "id": "GAME-R8-07",
+        "name": "ネットワークなし・バックグラウンド化・拒否・同時リクエスト等のFlutter/JS/サーバーテスト",
         "status": "todo"
       },
       {
-        "id": "NET-R7-08",
-        "name": "最終HEAD CIとDebugビルドを別検証、GitHub/Notion更新（実機は別承認）",
+        "id": "GAME-R8-08",
+        "name": "最終HEAD Quick CI/Debug APK/セキュリティ境界と実機QAを分離、GitHub/Notion引き継ぎ",
         "status": "todo"
       }
     ],
     "stopBefore": [
       "PCコマンド実行",
-      "権限なしのローカルネットワーク全域スキャン",
-      "常時バックグラウンド監視",
-      "任意のPCキー・マウス入力",
-      "ミニアプリJSへの特権流出",
+      "他人のサーバーへの無断接続/攻撃的トラフィック",
+      "任意のPCキーボード/マウス入力",
+      "無断ファイルアクセス",
+      "自動常駐LANスキャン/バックグラウンド接続",
+      "Android/Windows実機PASSの推測",
       "署名Stable自動公開",
-      "Android/Windows実機PASSの推測"
+      "ミニアプリJSへのホスト特権流出"
     ]
   },
   "policy": {

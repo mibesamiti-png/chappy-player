@@ -1,8 +1,19 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
-更新: 2026-11-09。R6Bコード統合時点mainスナップショット 1e7cb5e2678ea3b03be5a23b34723dc1fc66c825。再開時は必ずGitHub最新main HEAD/PR/CIを再取得。
+更新: 2026-11-10。Network R7統合mainスナップショット d5865dba695572af5cdd036799fc31a732f8da36。作業開始時に必ず最新main HEAD/PR/CIを再取得。
 
-## 【最新】R6Bソース/3系統CI成功 → 次はNetwork R7｜2026-11-09
+## 【最新】Network R7ソース/CI完了 → 次はGame R8｜2026-11-10
+
+- [R7実装PR #116](https://github.com/mibesamiti-png/chappy-player/pull/116)はmain d5865dba695572af5cdd036799fc31a732f8da36へ統合済み。本人が明示起動するAndroid本体Browserと1回限定のDNS/HTTPS接続診断を追加。JavaScript初期OFF・確認後のみON、ページ権限拒否、入力/遷移時の公開HTTPSドメイン制限、戻る/進む/更新・手動閲覧データ削除。private Browser Lab 0.1.0は権限`[]`、手動QA12項目のみ。
+- **R7の最終main CI成功**：[Quick #42658869004](https://github.com/mibesamiti-png/chappy-player/actions/runs/42658869004) 全63ステップ、[Android Debug #42658868997](https://github.com/mibesamiti-png/chappy-player/actions/runs/42658868997) 全17ステップ。Debug APK ARM64/ARM32/x86-64とprivate Browser Lab .chappyが生成された。Windows側変更なしのため専用Windows CIをR7合格根拠とはしていない。
+- **実機QAは全て未実施**：R7 Browser/診断 0/12、PC Link共通 0/15、媒体キー 0/13。APKは生成されただけで、Androidへのインストール・WebView実閲覧・DNS実通信の物理PASSは未確認。公開カタログ・署名Stable APKは変更なし。
+- **WebViewの既知制約**：URL検査はDNS rebindingや全サブリソースのアクセス遮断を保証しない。Android WebViewのCookieやキャッシュは他のmini-appと共有される場合があり、削除は広範なログアウトを招く。フル機能の安全ブラウザではなくDebugプレビューとして扱う。
+- **次はGame R8（未着手・8タスク）**：既存Game Server Labの明示的接続・同意を保ち、ルーム参加/退室、同期状態、Ping・タイムアウト・切断を実装する。無断サーバー接続、バックグラウンド常駐・PC遠隔操作などの権限拡大は禁止。R7の実機QAは別途保持。
+- 正本：[STATE](STATE.json) / [ROADMAP](ROADMAP.md) / [R7仕様](../network-r7-browser-diagnostics.md)。Notionは手動ミラーで、開始時は最新main/PR/CIを再取得する。
+
+---
+
+## 【履歴：R6B時点】R6Bソース/3系統CI成功 → 当時の次Network R7｜2026-11-09
 
 - [R6B PR #111](https://github.com/mibesamiti-png/chappy-player/pull/111)をmainに統合（コミット 1e7cb5e2678ea3b03be5a23b34723dc1fc66c825）。R6Aの固定4種メディア操作の認証・隔離HTTP・同時再送拒否・Win32固定キーの模擬発行・UI拒否/切断手順を強化。Python/Dartの共有SHA-256署名ベクトル8つを検証。
 - **3系統の最終PR HEAD CI成功**：[Quick #42611593883](https://github.com/mibesamiti-png/chappy-player/actions/runs/42611593883) Flutter解析/Unit＋private PC Control Lab 0.1.0生成、[Windows #42611593897](https://github.com/mibesamiti-png/chappy-player/actions/runs/42611593897) 実P-256鍵でlocalhost HTTPと模擬Win32固定キー検証/Windows EXE、[Debug APK #42611593749](https://github.com/mibesamiti-png/chappy-player/actions/runs/42611593749) ARM64/ARM32/x86-64ビルド＋互換性レポート/成果物。
