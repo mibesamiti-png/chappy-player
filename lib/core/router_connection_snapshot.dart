@@ -101,11 +101,12 @@ class RouterConntrackContract {
       final proto = item['layer4'];
       final rawPort = item['dport'];
       final dport = rawPort is int ? rawPort :
-          (rawPort is String && RegExp(r'^[0-9]{1,5}
+          (rawPort is String && RegExp(r'^[0-9]{1,5}$').hasMatch(rawPort)
+              ? int.tryParse(rawPort) : null);
       if (dst is! String || !isDestinationIp(dst) ||
           proto is! String ||
           !const {'tcp', 'udp', 'icmp', 'icmpv6'}.contains(proto) ||
-          dport is! int || dport < 0 || dport > 65535) {
+          dport == null || dport < 0 || dport > 65535) {
         continue;
       }
       if ((proto == 'tcp' || proto == 'udp') && dport == 0) continue;
@@ -115,88 +116,10 @@ class RouterConntrackContract {
       if (output.length >= maxVisible) continue;
       final rawBytes = item['bytes'];
       final count = rawBytes is int ? rawBytes :
-          (rawBytes is String && RegExp(r'^[0-9]{1,16}
-      output.add(RouterConnection(
-        destinationIp: dst,
-        destinationPort: dport,
-        protocol: proto.toUpperCase(),
-        bytes: bytes,
-      ));
-    }
-    return RouterConnectionSnapshot(
-      deviceIp: deviceIp,
-      deviceName: deviceNameFor(rawLeases, deviceIp),
-      connections: List.unmodifiable(output),
-      truncated: totalMatches > maxVisible,
-    );
-  }
-}
-).hasMatch(rawPort)
-              ? int.tryParse(rawPort) : null);
-      if (dst is! String || !isDestinationIp(dst) ||
-          proto is! String ||
-          !const {'tcp', 'udp', 'icmp', 'icmpv6'}.contains(proto) ||
-          dport is! int || dport < 0 || dport > 65535) {
-        continue;
-      }
-      if ((proto == 'tcp' || proto == 'udp') && dport == 0) continue;
-      final key = '$proto|$dst|$dport';
-      if (!seen.add(key)) continue;
-      totalMatches++;
-      if (output.length >= maxVisible) continue;
-      final rawBytes = item['bytes'];
-      final bytes = rawBytes is int && rawBytes >= 0 &&
-          rawBytes <= 0x1fffffffffffff ? rawBytes : null;
-      output.add(RouterConnection(
-        destinationIp: dst,
-        destinationPort: dport,
-        protocol: proto.toUpperCase(),
-        bytes: bytes,
-      ));
-    }
-    return RouterConnectionSnapshot(
-      deviceIp: deviceIp,
-      deviceName: deviceNameFor(rawLeases, deviceIp),
-      connections: List.unmodifiable(output),
-      truncated: totalMatches > maxVisible,
-    );
-  }
-}
-).hasMatch(rawBytes)
+          (rawBytes is String && RegExp(r'^[0-9]{1,16}$').hasMatch(rawBytes)
               ? int.tryParse(rawBytes) : null);
       final bytes = count != null && count >= 0 &&
           count <= 0x1fffffffffffff ? count : null;
-      output.add(RouterConnection(
-        destinationIp: dst,
-        destinationPort: dport,
-        protocol: proto.toUpperCase(),
-        bytes: bytes,
-      ));
-    }
-    return RouterConnectionSnapshot(
-      deviceIp: deviceIp,
-      deviceName: deviceNameFor(rawLeases, deviceIp),
-      connections: List.unmodifiable(output),
-      truncated: totalMatches > maxVisible,
-    );
-  }
-}
-).hasMatch(rawPort)
-              ? int.tryParse(rawPort) : null);
-      if (dst is! String || !isDestinationIp(dst) ||
-          proto is! String ||
-          !const {'tcp', 'udp', 'icmp', 'icmpv6'}.contains(proto) ||
-          dport is! int || dport < 0 || dport > 65535) {
-        continue;
-      }
-      if ((proto == 'tcp' || proto == 'udp') && dport == 0) continue;
-      final key = '$proto|$dst|$dport';
-      if (!seen.add(key)) continue;
-      totalMatches++;
-      if (output.length >= maxVisible) continue;
-      final rawBytes = item['bytes'];
-      final bytes = rawBytes is int && rawBytes >= 0 &&
-          rawBytes <= 0x1fffffffffffff ? rawBytes : null;
       output.add(RouterConnection(
         destinationIp: dst,
         destinationPort: dport,
