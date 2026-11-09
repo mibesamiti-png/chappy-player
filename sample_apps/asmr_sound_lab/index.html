@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ASMR Sound Lab v1.4.1 — Chappy Edition</title>
+<title>ASMR Sound Lab v1.4.2 — Chappy Edition</title>
 <style>
 :root{color-scheme:dark;--bg:#0b1020;--surface:#141c2e;--line:#2a3650;--text:#eaf0fb;--muted:#a4b3c9;--a:#76dbd0;--a2:#b7a3ff}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,"Yu Gothic","Meiryo",sans-serif;background:radial-gradient(ellipse at 70% -15%,#213453 0%,#0b1020 55%);color:var(--text);min-height:100vh}
@@ -76,7 +76,7 @@
 </head>
 <body>
 <div class="page">
- <header class="top"><div><div class="eyebrow">SPATIAL AUDIO · CONTACT ACOUSTICS · 1.4.1</div><h1>ASMR Sound Lab <span style="font-size:15px;color:#9db0ca;font-weight:400">/ 合成音実験室</span></h1><div class="sub">指で音源を動かし、接近→接触→密閉を連続表現。v1.4は、音が耳に入ったときだけ低音と密閉感を追加強調。心音・耳かき・ゲルの接触挙動、音源A・Bの独立操作、音源ごとの自動最適化にも対応します。スマホは2本指、PCはマウス＋WASDで操作。録音素材の読み込みも継続。</div></div><div class="topActions"><span class="pill">完全オフライン</span><button class="button primary" id="startBtn">▶ 音声を開始</button><button class="button" id="stopBtn" disabled>■ 停止</button></div></header>
+ <header class="top"><div><div class="eyebrow">SPATIAL AUDIO · CONTACT ACOUSTICS · 1.4.2</div><h1>ASMR Sound Lab <span style="font-size:15px;color:#9db0ca;font-weight:400">/ 合成音実験室</span></h1><div class="sub">指で音源を動かし、接近→接触→密閉を連続表現。v1.4は、音が耳に入ったときだけ低音と密閉感を追加強調。心音・耳かき・ゲルの接触挙動、音源A・Bの独立操作、音源ごとの自動最適化にも対応します。スマホは2本指、PCはマウス＋WASDで操作。録音素材の読み込みも継続。</div></div><div class="topActions"><span class="pill">完全オフライン</span><button class="button primary" id="startBtn">▶ 音声を開始</button><button class="button" id="stopBtn" disabled>■ 停止</button></div></header>
  <div class="layout"><main class="stack">
   <section class="panel"><div class="stageHeader"><h2 style="margin:0">1. 音源Aを選択</h2><span class="minor">8種類 · 合成＋外部サンプル</span></div><div class="modes" id="modes">
   <button class="mode active" data-mode="bee"><span class="emoji">🐝</span><span>蜂の飛行</span><small>自発</small></button>
@@ -235,7 +235,7 @@
   <section class="panel"><h2>8. 環境ノイズ（重ねられる）</h2><div class="noiseRow"><label class="switch"><input type="checkbox" id="whiteOn"> ホワイト</label><input type="range" min="0" max="100" value="24" id="whiteLevel"><output id="whiteLevelValue">24%</output></div><div class="noiseRow"><label class="switch"><input type="checkbox" id="brownOn"> ブラウン</label><input type="range" min="0" max="100" value="32" id="brownLevel"><output id="brownLevelValue">46%</output></div><div class="hint">この2つは背景用の独立音源。蜂・耳かき・心音などと同時に再生でき、前方のマウス位置には連動しません。</div></section>
   <section class="panel"><h2>9. 設定と録音</h2><div class="bottomBar"><button class="button" id="saveBtn">↓ 設定を保存</button><button class="button" id="loadBtn">↑ 設定を読込</button><input id="loadInput" type="file" accept="application/json,.json" hidden></div><div class="bottomBar"><button class="button" id="recordBtn" disabled>● 録音開始</button><span class="minor">WebM/Opus · ブラウザ対応時のみ</span></div><div class="message" id="message" aria-live="polite"></div><div class="divider"></div><div class="miniTitle">v1.4の骨・組織伝導と試作の限界</div><div class="hint">v1.4は従来の心音・タップ・吸着音、耳内低音・密閉エンジンを維持し、頭・顔を触ったときの骨・組織伝導風の第3経路を追加。低周波の体内振動風ノイズ、耳かきの小さなタップと連続摩擦、ゲルの吸着・解除音にも対応。音源ごとのおすすめ設定を自動で適用。2音源とも左耳・右耳を自由に選んで移動できるダミーヘッド型の操作図を追加。耳への接近→接触→耳内の低域強調を連続して計算します。完全な耳内では外側への音の経路を閉じ、接触音を対象の耳へ限定します。これは<strong>主観的な密閉感を作る音響近似</strong>で、実測HRTFや耳道の精密シミュレーションではありません。サンプル音声はユーザーが読み込んだものだけを使います。急な大音量を避けるため再生前に端末の音量を下げてください。</div></section>
  </aside></div>
- <p class="footer">ASMR Sound Lab v1.4.1 · ダミーヘッド＋独立3経路（空気・頭部振動・耳内）＋左右自由配置 · スマホ2本指＋PCキーボード操作 · 合成音はオフライン。取り込んだ音源はブラウザ内だけで再生し外部送信しません。ブラウザの「音声を開始」操作が必要です。音量と低音の圧迫感が強くなっています。ヘッドホンの音量を低く設定してから開始し、不快な場合はすぐ停止してください。</p>
+ <p class="footer">ASMR Sound Lab v1.4.2 · ダミーヘッド＋独立3経路（空気・頭部振動・耳内）＋左右自由配置 · スマホ2本指＋PCキーボード操作 · 合成音はオフライン。取り込んだ音源はブラウザ内だけで再生し外部送信しません。ブラウザの「音声を開始」操作が必要です。音量と低音の圧迫感が強くなっています。ヘッドホンの音量を低く設定してから開始し、不快な場合はすぐ停止してください。</p>
 </div>
 <script>
 'use strict';
@@ -250,6 +250,12 @@ function earEntryBlend(depth){
  const normalized=Math.max(0,Math.min(1,(depth-.035)/.85));
  const progress=normalized*normalized*(3-2*normalized);
  return {progress,external:Math.cos(progress*Math.PI/2),internal:Math.sin(progress*Math.PI/2)};
+}
+// Schmitt trigger for contact events: entry must be stronger than release.
+// This affects tap/peel event edges, not the continuous contact audio gain.
+function contactLatch(wasTouching,strength,engage,release){
+ if(!Number.isFinite(strength))return false;
+ return strength >= (wasTouching ? release : engage);
 }
 // Shared head-space coordinates (0..1). Both A/B can reach either ear.
 // View: frontal dummy-head, left ear at x=.20 and right ear at x=.80.
@@ -870,7 +876,7 @@ class ASMRSystem {
    const v=this.voices[slot];if(v)this.updateVoice(v,state[slot]);
    const st=state[slot],p=physicalFor(st,slot),em=emissionFor(st);
    const ts=this.touchState[slot];
-   const nowTouch=Boolean(em.contact.touching&&em.contact.gain>.13&&em.active&&em.gate>.03);
+   const nowTouch=Boolean(em.active&&em.gate>.03&&contactLatch(ts.on,em.contact.gain,.20,.07));
    if(st.mode==='ear'&&nowTouch&&!ts.on&&t-ts.lastTap>.11){
     ts.lastTap=t;this.earTap(this.voices[slot],em.contact.gain,st.speed);
    }
@@ -878,7 +884,7 @@ class ASMRSystem {
    if(st.mode==='gel'&&!ts.on&&nowTouch){this.contactBump(slot,false,'touch');}
    ts.on=nowTouch;
    const zone=boneZoneFor(st),bt=this.boneTouch[slot];
-   const boneCanSound=Boolean(state.boneOn&&!zone.isCanal&&zone.touch>.22&&em.active&&em.gate>.03&&(boneModeWeight[st.mode]||0)>.1);
+   const boneCanSound=Boolean(state.boneOn&&!zone.isCanal&&em.active&&em.gate>.03&&(boneModeWeight[st.mode]||0)>.1&&contactLatch(bt.on,zone.touch,.28,.09));
    if(boneCanSound&&!bt.on&&t-bt.lastTap>.09){
     bt.lastTap=t;this.boneTransient(this.voices[slot],zone.id,'tap',clamp(.4+state.strength/145+.3*st.speed/100,.25,1.25));
    }
