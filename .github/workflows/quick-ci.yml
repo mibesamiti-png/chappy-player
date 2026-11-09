@@ -130,6 +130,12 @@ jobs:
           name: asmr-sound-lab-v1.4.4-preview
           path: build/asmr-sound-lab-v1.4.4.chappy
           if-no-files-found: error
+      - name: Upload ASMR standalone HTML preview (manual QA only)
+        uses: actions/upload-artifact@v4
+        with:
+          name: asmr-sound-lab-v1.4.4-html-preview
+          path: sample_apps/asmr_sound_lab/index.html
+          if-no-files-found: error
       - name: Update feed generator smoke test
         run: python3 tools/test_update_feed.py
       - name: Public APK feed publisher safety smoke test
