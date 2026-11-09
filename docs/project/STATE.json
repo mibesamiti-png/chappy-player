@@ -7,7 +7,7 @@
   "workingMode": "single-chat-fast-v2",
   "focus": {
     "id": "NETLAB-06B",
-    "name": "実機デバッグ優先：Debug QA Checklist v0.1.0公開Debugカタログ登録済み、実機9項目未実施。NETLAB-06B新機能追加は一時停止",
+    "name": "実機デバッグ優先：起動・HTTPS通信はユーザー報告で成功。チェックリスト9項目は未完了（0/9）、NETLAB-06Bは一時停止",
     "status": "paused_for_user_physical_debug",
     "entry": "docs/project/ROADMAP.md"
   },
@@ -40,9 +40,10 @@
       "sha256": "26699be9aad879f96cb7dd85c601b41896eaf8d787b74c92f4da0ba47f0fb1db"
     },
     "physicalQA": {
-      "status": "not_run",
+      "status": "partial_user_report",
       "casesTotal": 9,
-      "casesPassed": 0
+      "casesPassed": 0,
+      "notes": "App launch and HTTPS communication user-reported success on 2026-11-10 JST. Checklist QA-01..09 not completed; exact APK/build/channel and HTTPS test scope unspecified."
     },
     "qualification": "A zero-permission public-safe .chappy mini-app presents NETLAB QA-01..QA-09 with user-marked Pass/Fail/Blocked/Not run, persists only status flags (not notes), and creates user-copyable reports. Both source Quick CI 71/71 and public chappy-apps catalog validation 7/7 passed; physical on-device WebView operation, localStorage, clipboard and actual router/PCAP QA remain not_run. No debug mini-app auto-installs, no Stable publishing, no native capture/permissions. Existing private prototype QA previews are deliberately NOT published without explicit review."
   },
@@ -676,9 +677,22 @@
       "publicStableAppCount": 2,
       "source": "sample_apps/debug_checklist/index.html",
       "documentation": "sample_apps/debug_checklist/README.md",
-      "physicalDeviceStatus": "not_run",
+      "physicalDeviceStatus": "partial_user_report_app_launch_and_https_success",
       "manualCasesPassed": 0,
       "manualCasesTotal": 9
+    },
+    "userPhysicalSmoke20261110": {
+      "date": "2026-11-10",
+      "status": "user_reported_partial_pass",
+      "appStartup": "user_reported_success",
+      "httpsCommunication": "user_reported_success",
+      "scope": "User reported only that the app launched and HTTPS communication worked. Exact APK build, host/browser vs mini-app, URL and execution path were not specified. Do not infer router/PCAP, background lifecycle, signing or complete QA.",
+      "manualChecklist": {
+        "status": "not_completed",
+        "casesPassed": 0,
+        "casesTotal": 9,
+        "reason": "QA-01 requires self-check and report copy in addition to launch; QA-02..09 not explicitly tested. HTTPS connectivity is a separate smoke observation."
+      }
     }
   },
   "nextBatch": {
