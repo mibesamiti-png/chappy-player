@@ -134,7 +134,7 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
         assert manifest["id"] == "local.chappy.asmr"
         assert manifest["version"] == "1.4.0"
         assert manifest["permissions"] == []
-        assert archive.namelist() == ["manifest.json", "index.html"]
+        assert set(archive.namelist()) == {"manifest.json", "index.html", "README.md"}
         html_bytes = archive.read("index.html")
         assert html_bytes == (asmr_source / "index.html").read_bytes()
         for required in (b"AudioContext", b"Chappy.storage",
