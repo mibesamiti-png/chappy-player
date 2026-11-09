@@ -149,6 +149,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Opt in to one separately approved read-only PC status after QR-v3",
     )
     parser.add_argument(
+        "--receive-file-once", action="store_true",
+        help="One Android file to an explicit NEW PC destination via fresh QR-v3",
+    )
+    parser.add_argument(
         "--send-file-once", action="store_true",
         help="Share only ONE PC-selected 4 MiB file after a new QR-v3 proof",
     )
@@ -212,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.doctor:
         if (args.pair or args.qr or args.identity_pair or
-                args.compare_known_phone or args.status_once or args.send_file_once or args.ip or
+                args.compare_known_phone or args.status_once or args.send_file_once or args.receive_file_once or args.ip or
                 args.minutes != DEFAULT_MINUTES):
             print("--doctor cannot be combined with network options",
                   file=sys.stderr)
@@ -222,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
     if (args.identity_create or args.identity_status or args.identity_revoke
             or args.verified_list or args.verified_forget is not None
             or args.verified_clear):
-        if (args.pair or args.qr or args.identity_pair or args.compare_known_phone or args.status_once or args.send_file_once or args.ip
+        if (args.pair or args.qr or args.identity_pair or args.compare_known_phone or args.status_once or args.send_file_once or args.receive_file_once or args.ip
                 or args.minutes != DEFAULT_MINUTES):
             print("Identity commands cannot be combined with network options",
                   file=sys.stderr)
@@ -309,6 +313,14 @@ def main(argv: list[str] | None = None) -> int:
         print("--compare-known-phone requires --start --pair --qr --identity-pair",
               file=sys.stderr)
         return 2
+    if args.receive_file_once and not (
+        args.start and args.pair and args.qr and args.identity_pair
+    ):
+        print("--receive-file-once requires --start --pair --qr --identity-pair", file=sys.stderr)
+        return 2
+    if args.receive_file_once and (args.send_file_once or args.status_once):
+        print("File upload/download and status use independent QR sessions", file=sys.stderr)
+        return 2
     if args.send_file_once and not (
         args.start and args.pair and args.qr and args.identity_pair
     ):
@@ -358,6 +370,8 @@ def main(argv: list[str] | None = None) -> int:
                 options["status_once"] = True
             if args.send_file_once:
                 options["file_once"] = True
+            if args.receive_file_once:
+                options["upload_once"] = True
             run_pairing(address, args.minutes, **options)
         else:
             run_beacon(address, args.minutes)
