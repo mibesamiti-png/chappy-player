@@ -35,7 +35,8 @@ void main() {
     expect(calls, 1);
     expect(find.text('計測時間: 5秒'), findsOneWidget);
     expect(find.byKey(const Key('remote_traffic_rx')), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('remote_traffic_clear')));
+    await tester.scrollUntilVisible(
+        find.byKey(const Key('remote_traffic_clear')), 200);
     await tester.tap(find.byKey(const Key('remote_traffic_clear')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('remote_traffic_summary')), findsNothing);

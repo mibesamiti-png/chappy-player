@@ -249,18 +249,6 @@ class _NetworkLabPageState extends State<NetworkLabPage>
               icon: const Icon(Icons.monitor_heart_outlined),
               label: const Text('このスマホの通信量を測定'),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              key: const Key('netlab_remote_traffic_import'),
-              onPressed: () {
-                _cancelScan(clearResults: true);
-                Navigator.of(context).push(MaterialPageRoute<void>(
-                  builder: (_) => const RemoteTrafficImportPage(),
-                ));
-              },
-              icon: const Icon(Icons.file_open_outlined),
-              label: const Text('ほかの端末の通信レポートを読み込む'),
-            ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               key: const Key('netlab_service_type'),
@@ -363,10 +351,22 @@ class _NetworkLabPageState extends State<NetworkLabPage>
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('netlab_remote_traffic_import'),
+              onPressed: () {
+                _cancelScan(clearResults: true);
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const RemoteTrafficImportPage(),
+                ));
+              },
+              icon: const Icon(Icons.file_open_outlined),
+              label: const Text('ほかの端末の通信レポートを読み込む'),
+            ),
             const SizedBox(height: 20),
             const Text(
-              '通信量は別画面で、このスマホ全体の累積値だけを確認できます。'
-              '他のLAN機器の通信量・通信内容の解析・PC操作はまだありません。'
+              'このスマホの集計通信量とは別に、管理PCの手動JSONも読めます。'
+              'ほかの機器の通信本文・PC遠隔操作は取得しません。'
               'Android 17以降でアプリがSDK 37以上を対象とする場合は、'
               'OSのサービス選択方式が完成するまで探索を行いません。'
               '画面を閉じるかアプリが裏に回ると探索を終了します。',
