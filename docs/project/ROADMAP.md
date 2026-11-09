@@ -1,6 +1,6 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-10。**NETLAB-04B（管理PCの本人承認付きWi-Fi通信量1回直接取得）はソースmain統合、Quick/Windows/Android Debug CI全成功。次はGame R8。** 実機QAは未実施、04A手動JSON読込も保持。
+更新: 2026-11-10。**NETLAB-05A：OpenWrt管理ルーターの許可済み端末の接続先IP/ポート表示をソースmain統合。Quick CI 65/65・Android Debug CI 17/17成功。次はNETLAB-05Bのルーター機種別対応と実機QA準備。** Game R8は削除せず後に再開する。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
@@ -12,12 +12,33 @@
 | 5（開発段階完了） | Network R7 | 公開HTTPSホストブラウザ、1回だけ承認DNS/HTTPS診断 | Android本体、**private Browser Lab 0.1.0**、Debug APK 3 ABI | **ソース/Quick/Android CI成功、実機0/12未実施** |
 | 5a（開発段階完了） | NETLAB-04A | 管理Windows PCの全NIC交通量JSONを自分でスマホへ移して読込・可視化 | Windows Companion＋Androidホスト | **ソース/Quick/Windows/Android CI成功・実機未実施、Wi-Fiライブではない** |
 | 5b（開発段階完了） | NETLAB-04B | QR-v3双方向承認で管理PCの通信集計をWi-Fiから1回限定取得 | Windows Companion＋Androidホスト | **ソース/3 CI成功、物理実機未検証** |
-| 6（次） | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張・private Game Room Lab候補 | 計画・未着手（延期、廃止しない） |
+| 5c（開発段階完了） | NETLAB-05A | OpenWrtルーターのLuCI HTTPSから承認済み対象端末の接続先IP/ポート/通信方式を1回読み取る | Android本体Router Connection Lab | **ソース/Quick/Android Debug CI成功、実ルーター実機QAは未実施** |
+| 5d（次） | NETLAB-05B | 利用ルーターのメーカー・型番に応じた安全な接続先情報APIアダプター、許可済み端末選択、実機受入 | Android本体Router Connection Lab | **機種情報がないため対応先未確定。実機未検証** |
+| 6（その後） | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張・private Game Room Lab候補 | 計画・未着手（延期、廃止しない） |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
 
-## 【次】Game R8 — 本人参加のゲームサーバー・ルーム同期（8タスク・未着手）
+## 【次】NETLAB-05B — ルーター機種別アダプターと実機互換性（8タスク）
+
+前提：利用ルーターのメーカー・型番・ファームウェア、管理APIの有無がまだ分からない。**NETLAB-05Aのソース成功は、すべてのルーターへの対応を意味しない。** 自分が管理するルーターで、本人が管理・許可を得た端末のみを対象にする。
+
+1. 実際のルーターの型番・ファームウェアと対応APIを確認して機能別互換性表を作る。
+2. HTTPS/TLSピンとread-onlyアクセスを維持した機種別アダプターを設計。
+3. DHCP等の許可された端末リストから明示選択できるUI（未許可端末情報の無断蓄積なし）。
+4. 接続先IP・ポート・プロトコルと通信量・DNS/ドメイン観測の有無を区別し、見えない情報を推測しない。
+5. 認証情報・失効・拒否・過大応答・ロック時破棄のセキュリティを維持。
+6. 非対応機種・VPN・背景化・切断・更新連打をFail Closedにする。
+7. 自動テストと本人所有ルーター/Android物理接続QAを別管理。
+8. 最終HEAD Quick/Android Debug CI、実機QA、Notion/GitHub引き継ぎを更新。Stableは別承認。
+
+## 【NETLAB-05A完了記録】OpenWrtの現在接続先メタデータを1回だけ取得
+
+- [PR #123](https://github.com/mibesamiti-png/chappy-player/pull/123) main `ffdeebd7fda5c867db56917e711a37b655d84951` に統合。最終PR HEAD `b0de4215c1541cd831bfbbdc32a56b969ed4bf78` の [Quick CI #42685427286](https://github.com/mibesamiti-png/chappy-player/actions/runs/42685427286) **65/65**、[Android Debug #42685427387](https://github.com/mibesamiti-png/chappy-player/actions/runs/42685427387) **17/17**成功。Android ARM64/ARM32/x86-64 Debug APK/互換性レポート成果物あり、Windows側変更なし。
+- ホストNetwork Labに`Router Connection Lab`追加。OpenWrt HTTPS LuCI /ubus専用。管理ルーターIP・TLS証明書SHA-256指紋・読取専用資格情報・本人が情報取得を許可された対象端末IPを指定し、前景Wi-Fi・VPNなし＋独立承認後に、`luci.getConntrackList`の元方向`src`が対象IPと一致する現在の接続先IP/ポート/プロトコルのみ上限付き表示。DHCPの対象端末名はヒントであり、Android OSやアプリ名の証明ではない。
+- **物理OpenWrtルーター↔Android実機テスト・Android APK実インストールは未実施。** 自宅ルーターメーカー・型番は未提示。接続先IPだけでアクセスしたサイト・アプリ名は分からず、HTTP本文/HTTPS内容/他端末の無断監視は行わない。既存NETLAB-04A/B、ASMR、Game R8元8タスクは保護。署名Stable/公開カタログ変更なし。[仕様](../netlab-05-router-connection-lab.md)。
+
+## 【延期・計画保持】Game R8 — 本人参加のゲームサーバー・ルーム同期（8タスク・未着手）
 
 1. 既存Game Server Lab/WSSサーバー例・ミニアプリ通信APIの権限境界を監査。
 2. 利用者が選んだサーバーへの明示的な一時接続と切断。

@@ -2,35 +2,28 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-10",
-  "sourceMainAtCapture": "664802dba4b899d0334ef4ba845c96fdfe0a9861",
+  "sourceMainAtCapture": "ffdeebd7fda5c867db56917e711a37b655d84951",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "GAME-R8",
-    "name": "Game R8：本人選択サーバーへの一時接続・ルーム/セッション同期",
-    "status": "planned_not_started",
+    "id": "NETLAB-05B",
+    "name": "Router Connection Lab：実機ルーター機種別アダプター・端末選択と検証",
+    "status": "planned_requires_router_model",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "NETLAB-04B",
-    "pr": 121,
-    "mergedCommit": "664802dba4b899d0334ef4ba845c96fdfe0a9861",
-    "sourceStatus": "merged_quick_windows_android_debug_ci_success_real_two_device_qa_not_run",
+    "id": "NETLAB-05A",
+    "pr": 123,
+    "mergedCommit": "ffdeebd7fda5c867db56917e711a37b655d84951",
+    "sourceStatus": "merged_quick_android_debug_ci_passed_router_physical_qa_not_run",
     "quickCi": {
       "status": "success",
-      "run": 42676947378,
-      "successfulSteps": 64
-    },
-    "windowsCi": {
-      "status": "success",
-      "run": 42676947845,
-      "successfulSteps": 28,
-      "previewExe": "ChappyCompanion.exe",
-      "launcher": "Start-ChappyTrafficReadOnceV3.cmd"
+      "run": 42685427286,
+      "successfulSteps": 65
     },
     "androidDebugCi": {
       "status": "success",
-      "run": 42676947259,
+      "run": 42685427387,
       "successfulSteps": 17,
       "abi": [
         "arm64-v8a",
@@ -40,7 +33,11 @@
       "physicalInstallation": "not_run",
       "signedStable": false
     },
-    "qualification": "本人が管理するPCで前景明示起動、QR-v3相互認証/TLS pin、Windowsの独立TRAFFIC入力とAndroid前景の別承認後に5〜30秒の全NIC RX/TX集計を1回だけ直接取得。pc.traffic.read署名スコープ/期間拘束、再送・期限/中止/VPN経路拒否、Android RAMのみ合計・平均・ピーク・推移、NETLAB-04A手動JSON維持。Quick 64/Windows 28/Android Debug 17全ステップ成功、Windows EXE＋CMD/Android 3ABI APKあり。物理PC↔Android Wi-Fi通信の実機QA・APK実インストールは未実施。署名Stable/公開ミニアプリ無変更。"
+    "windowsCi": {
+      "status": "not_required",
+      "reason": "No Windows code changed"
+    },
+    "qualification": "OpenWrt-only Android host Router Connection Lab, user enters authorized target private IPv4 and managed router private IPv4/HTTPS port/independently verified SHA-256 cert fingerprint + LuCI read-only credentials, explicit permission each one-shot. Pinned HTTPS /ubus session.login, luci-rpc.getDHCPLeases, luci.getConntrackList ONLY. Original src==target, dst IP/port/protocol filtered max1200 records, 120 visible, 256KiB response. Foreground Wi-Fi no VPN, cancel/lock clears results and credentials, no mini-app JS. Quick 65/65 and Android Debug 17/17 + ARM64/ARM32/x86_64 artifacts, no physical router↔Android test. Other router models unknown and unsupported. No Stable/public catalog changes."
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -69,7 +66,8 @@
         "R6A media=1 QR-v3で固定4操作を表示し、操作別PC署名検証とAndroid前景別承認後に1回送信（コード/CI成功・実機未検証）",
         "R6B Python/Dart固定署名8ベクトルのDartテスト、Android Debug APKをARM64/ARM32/x86-64の3系統でCIビルド（端末インストール未実施）",
         "NETLAB-04A 管理Windows PCの交通量JSONをホストOSファイル選択で読込・厳格検査・集計/グラフ一時表示（ソース/3 CI成功、実機未検証）",
-        "NETLAB-04B 専用traffic=1 QR-v3/pinned TLS/PC署名とAndroid独立承認で本人PCの5〜30秒通信量を1回取得しRAM表示（ソース/3 CI成功、物理QA未実施）"
+        "NETLAB-04B 専用traffic=1 QR-v3/pinned TLS/PC署名とAndroid独立承認で本人PCの5〜30秒通信量を1回取得しRAM表示（ソース/3 CI成功、物理QA未実施）",
+        "NETLAB-05A: OpenWrt専用HTTPSルーター接続先メタデータ取得（対象の手動IPv4指定・TLS証明書指紋/管理資格情報・本人追加同意・RAM1回表示。Quick/Android CI成功、実機未検証）"
       ]
     },
     "windowsSource": {
@@ -105,7 +103,9 @@
       "Network R7実機Browser/診断の12項目 QA（0/12、未実施）",
       "Game R8ルーム/セッション同期とネットワーク品質計測（未着手）",
       "NETLAB-04A Windows PC通信カウンター実機計測→JSON手動移送→Android表示の物理QA（未実施）",
-      "NETLAB-04B 管理Windows PCとAndroidでの物理Wi-Fi・QR/TLS・TRAFFIC同意・計測/表示の実機QA（未実施）"
+      "NETLAB-04B 管理Windows PCとAndroidでの物理Wi-Fi・QR/TLS・TRAFFIC同意・計測/表示の実機QA（未実施）",
+      "NETLAB-05A 管理OpenWrtルーター↔Androidの物理HTTPS認証・ルーターconntrack実機表示QA（未実施）",
+      "NETLAB-05B OpenWrt以外の利用ルーター実機モデルへのAPI対応・DNS観測精度検証（モデル未提示のため保留）"
     ],
     "publicMiniappCatalog": {
       "stable": 2,
@@ -354,62 +354,149 @@
       "physicalAndroidInstallation": "not_run",
       "signedStableChanged": false,
       "publicMiniappCatalogChanged": false
+    },
+    "deferredGameR8": {
+      "status": "planned_not_started_deferred_by_user_priority",
+      "nextAfter": "NETLAB-05B",
+      "tasks": [
+        {
+          "id": "GAME-R8-01",
+          "name": "Game Server Lab/既存WSSサーバー・ミニアプリ通信APIの境界を監査し、特権/接続先を限定",
+          "status": "todo"
+        },
+        {
+          "id": "GAME-R8-02",
+          "name": "ユーザーが明示的に選択・承認したサーバーに限る一時接続と明示切断",
+          "status": "todo"
+        },
+        {
+          "id": "GAME-R8-03",
+          "name": "本人参加したルームID・最小プレイヤー識別子・参加/退室/状態同期を設計",
+          "status": "todo"
+        },
+        {
+          "id": "GAME-R8-04",
+          "name": "順序番号・メッセージ長・頻度・接続数の上限、重複や再送を厳格に扱う",
+          "status": "todo"
+        },
+        {
+          "id": "GAME-R8-05",
+          "name": "ユーザーが要求したPing/遅延・タイムアウト・切断状態を前景UIに表示",
+          "status": "todo"
+        },
+        {
+          "id": "GAME-R8-06",
+          "name": "private Game Room LabのQAチェックリスト・停止/退出を提供し、背景で自動接続しない",
+          "status": "todo"
+        },
+        {
+          "id": "GAME-R8-07",
+          "name": "オフライン・誤署名/拒否・再送/負荷・背景化・通信断のFlutter/JS/サーバー自動回帰",
+          "status": "todo"
+        },
+        {
+          "id": "GAME-R8-08",
+          "name": "最終HEAD Quick/Android Debug CIと成果物、物理QA/Stable別承認を検証しGitHub/Notion更新",
+          "status": "todo"
+        }
+      ],
+      "source": "docs/project/ROADMAP.md",
+      "stableReleaseUnchanged": true
+    },
+    "routerConnectionLab": {
+      "id": "NETLAB-05A",
+      "sourceStatus": "merged_quick_android_ci_passed",
+      "pr": 123,
+      "sourceCommit": "ffdeebd7fda5c867db56917e711a37b655d84951",
+      "supportedRouters": [
+        "OpenWrt LuCI HTTPS /ubus only"
+      ],
+      "routerModelKnown": false,
+      "physicalRouterQa": "not_run",
+      "physicalAndroidInstallation": "not_run",
+      "scope": "Single consented target RFC1918 IPv4; observed original conntrack destination IP/port/protocol only",
+      "restrictions": [
+        "TLS certificate SHA256 pin mandatory",
+        "No HTTP fallback",
+        "Only three ubus methods",
+        "No packet content",
+        "No DNS app attribution",
+        "No continuous monitoring",
+        "No mini-app JS privilege"
+      ],
+      "maxRecords": 1200,
+      "maxVisible": 120,
+      "maxResponseBytes": 262144,
+      "quickCiRun": 42685427286,
+      "quickSteps": 65,
+      "androidDebugCiRun": 42685427387,
+      "androidSteps": 17,
+      "abi": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86_64"
+      ],
+      "stableChanged": false,
+      "publicMiniappCatalogChanged": false
     }
   },
   "nextBatch": {
-    "id": "GAME-R8",
+    "id": "NETLAB-05B",
     "targetTasks": 8,
-    "implementationScope": "ユーザーが明示的に選択したゲームサーバーへの一時参加とルーム/セッション同期、順序/頻度上限とPing/終了の可視化を優先。既存Game Server Lab/Network Labの権限境界を維持する。NETLAB-04Bはソース/3CI統合済みだが物理Windows↔Android QA未実施で別ゲート。自動接続、常時監視、任意PC操作、無制限パケット転送、特権mini-app JSはしない。",
+    "implementationScope": "NETLAB-05AのOpenWrt-onlyソース/Quick 65/Android 17CI成功を維持し、実際のルーター機種に対応した安全な接続先メタデータ表示を追加。ルーター型番未提示なので機種別実装や物理動作は未検証。本人管理ルーター・許可された端末だけ、HTTPS/TLS pin、明示承認、前景ワンショット、mini-app JS特権なし。Game R8の8タスクは削除せず後続バッチに保持。",
     "tasks": [
       {
-        "id": "GAME-R8-01",
-        "name": "Game Server Lab/既存WSSサーバー・ミニアプリ通信APIの境界を監査し、特権/接続先を限定",
+        "id": "NETLAB-05B-01",
+        "name": "利用中のルーターのメーカー・型番・ファームウェア・管理APIを本人確認し、対応可否と認証方式を監査する",
+        "status": "blocked"
+      },
+      {
+        "id": "NETLAB-05B-02",
+        "name": "OpenWrt以外を含む機種別の安全なHTTPS読取アダプター契約・データ項目表を整備する",
+        "status": "blocked"
+      },
+      {
+        "id": "NETLAB-05B-03",
+        "name": "管理者が許可した端末をDHCP一覧などから明示選択できるUIを用意し、無断端末収集を防ぐ",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-02",
-        "name": "ユーザーが明示的に選択・承認したサーバーに限る一時接続と明示切断",
+        "id": "NETLAB-05B-04",
+        "name": "端末IP/ポート/プロトコル・ルーター稼働中の接続情報・通信量と、DNS名の観測可否を厳格に区別する",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-03",
-        "name": "本人参加したルームID・最小プレイヤー識別子・参加/退室/状態同期を設計",
+        "id": "NETLAB-05B-05",
+        "name": "ルーターごとの管理認証を必要最小権限・証明書ピン・秘密非保存・拒否時Fail Closedで統一する",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-04",
-        "name": "順序番号・メッセージ長・頻度・接続数の上限、重複や再送を厳格に扱う",
+        "id": "NETLAB-05B-06",
+        "name": "機種非対応/VPN・背景化・切断・誤端末・過大応答と手動更新の頻度制限を検証する",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-05",
-        "name": "ユーザーが要求したPing/遅延・タイムアウト・切断状態を前景UIに表示",
+        "id": "NETLAB-05B-07",
+        "name": "実機ルーター↔Androidで許可済み端末の接続IP/ポートと表示精度・欠落条件をQAしCI結果と区別する",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-06",
-        "name": "private Game Room LabのQAチェックリスト・停止/退出を提供し、背景で自動接続しない",
-        "status": "todo"
-      },
-      {
-        "id": "GAME-R8-07",
-        "name": "オフライン・誤署名/拒否・再送/負荷・背景化・通信断のFlutter/JS/サーバー自動回帰",
-        "status": "todo"
-      },
-      {
-        "id": "GAME-R8-08",
-        "name": "最終HEAD Quick/Android Debug CIと成果物、物理QA/Stable別承認を検証しGitHub/Notion更新",
+        "id": "NETLAB-05B-08",
+        "name": "最終HEAD Quick/Android Debug CI、ルーター機種別互換性、実機QA/Stable別承認をGitHubとNotionへ記録する",
         "status": "todo"
       }
     ],
     "stopBefore": [
       "PCコマンド実行",
-      "ユーザー承認のない自動サーバー接続",
-      "無制限のネットワーク通信・メッセージ中継",
-      "常時バックグラウンド監視",
-      "ミニアプリJSへの特権流出",
+      "ルーター管理資格情報の平文HTTP送信",
+      "無断で他人の端末接続先を監視",
+      "パケット本文/HTTPSペイロードの盗聴・MITM",
+      "端末管理アプリの偽装/無断感染",
+      "非公開管理画面への総当たりアクセス",
+      "常時背景監視",
+      "ミニアプリJSの特権拡大",
       "署名Stable自動公開",
-      "Android/Windows実機PASSの推測"
+      "CIと実機PASSの混同"
     ]
   },
   "policy": {
@@ -431,7 +518,7 @@
     "repository": "https://github.com/mibesamiti-png/chappy-player",
     "pcLinkSpec": "docs/pc-link-mutual-qr-v3.md",
     "qa": "docs/pc-link-two-device-qa-matrix.md",
-    "latestBatch": "docs/netlab-04b-consented-traffic-once.md",
+    "latestBatch": "docs/netlab-05-router-connection-lab.md",
     "ci": "docs/ci-quick-and-manual-debug.md",
     "publicLibrary": "https://github.com/mibesamiti-png/chappy-apps",
     "notion": "https://app.notion.com/p/410948b74937819d92efc11defb9a7c7"

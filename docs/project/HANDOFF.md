@@ -1,8 +1,19 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
-更新: 2026-11-10。NETLAB-04Bソース統合mainスナップショット 664802dba4b899d0334ef4ba845c96fdfe0a9861。再開時はGitHub最新main HEAD/PR/CIを再取得。
+更新: 2026-11-10。NETLAB-05A OpenWrt限定Router Connection Labソース統合mainスナップショット ffdeebd7fda5c867db56917e711a37b655d84951。再開時は必ず最新main・PR・CIを再取得。
 
-## 【最新】NETLAB-04B Wi-Fi経由の本人PC通信量取得、ソース/3CI統合完了 → 次はGame R8｜2026-11-10
+## 【最新】NETLAB-05A管理ルーター接続先情報：OpenWrt版ソース/2CI統合 → 次は機種別対応 NETLAB-05B｜2026-11-10
+
+- **[PR #123](https://github.com/mibesamiti-png/chappy-player/pull/123) をmain `ffdeebd7fda5c867db56917e711a37b655d84951`に統合。** 最終実装HEAD `b0de4215c1541cd831bfbbdc32a56b969ed4bf78` で [Quick #42685427286](https://github.com/mibesamiti-png/chappy-player/actions/runs/42685427286) **65/65**、[Android Debug #42685427387](https://github.com/mibesamiti-png/chappy-player/actions/runs/42685427387) **17/17**成功。ARM64/ARM32/x86-64 APKと互換性レポートあり。Windowsコード変更なし。
+- **本体Network LabにRouter Connection Labを追加**。現時点の対応は**OpenWrt LuCI HTTPS /ubusのみ**。本人管理ルーターのプライベートIPv4・HTTPSポート・独立確認済み証明書指紋SHA-256・LuCI管理資格情報と、情報取得を許可された対象端末のプライベートIPv4を自分で入力。前景Wi-Fi・VPNなし・新しい明示同意を要求。
+- **読取専用契約**：`session.login` / `luci-rpc.getDHCPLeases` / `luci.getConntrackList` だけ。対象端末を元方向`src`で厳密一致、現在の接続先IP・ポート・TCP/UDP等を上限付きでRAM表示。セッション・パスワード・端末IP等は終了/背景化で消去。IPから実際の閲覧サイトやアプリ名を断定しない。パケット本文の盗聴や任意ルーター操作、mini-app JS権限追加なし。
+- **物理実機QAは未実施**。ユーザーのルーター機種/ファームウェアが未提示なので、OpenWrt以外が使えるとは宣言しない。Android Debug APK生成を実機接続成功と扱わない。旧NETLAB-04A/04B、PC Link実機0/15＋媒体0/13、R7実機0/12も別ゲート維持。署名Stable/公開Chappy Appsカタログ変更なし。
+- **次はNETLAB-05B**：実際のルーターメーカー・型番確認後の機種別API対応と許可済み端末の選択UI・実機QA。Game R8の元8タスクはSTATE.observations.deferredGameR8およびROADMAPに残し、ルーター対応後に再開する。
+- 正本：[NETLAB-05仕様](../netlab-05-router-connection-lab.md) / [STATE](STATE.json) / [ROADMAP](ROADMAP.md)。Notionは手動の確認済みミラー。
+
+---
+
+## 【履歴：05A実装前】NETLAB-04B Wi-Fi経由の本人PC通信量取得、ソース/3CI統合完了 → 次はGame R8｜2026-11-10
 
 - **[実装PR #121](https://github.com/mibesamiti-png/chappy-player/pull/121)をmain `664802dba4b899d0334ef4ba845c96fdfe0a9861` に統合。** 正本 `STATE.json` の NETLAB-04B-01〜08 の8タスクは、コード/CI/記録ゲートまで完了。前バッチNETLAB-04Aの手動JSON読込とASMRを含む既存機能は維持。
 - **最終PR HEAD `7aff08d5cfbd3145f78f43ce6546b44e92b9ff97` で3 CI全成功**：[Quick #42676947378](https://github.com/mibesamiti-png/chappy-player/actions/runs/42676947378) 64/64、[Windows #42676947845](https://github.com/mibesamiti-png/chappy-player/actions/runs/42676947845) 28/28、[Android Debug #42676947259](https://github.com/mibesamiti-png/chappy-player/actions/runs/42676947259) 17/17。Windows EXE＋`Start-ChappyTrafficReadOnceV3.cmd`、Android ARM64/ARM32/x86-64のDebug APK成果物あり。
