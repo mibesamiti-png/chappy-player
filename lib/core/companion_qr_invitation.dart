@@ -17,6 +17,7 @@ class CompanionQrInvitation {
   final bool fileOnce;
   final bool uploadOnce;
   final bool mediaOnce;
+  final bool trafficOnce;
 
   const CompanionQrInvitation({
     required this.ip,
@@ -29,6 +30,7 @@ class CompanionQrInvitation {
     this.fileOnce = false,
     this.uploadOnce = false,
     this.mediaOnce = false,
+    this.trafficOnce = false,
   });
 
   static CompanionQrInvitation parse(
@@ -58,10 +60,12 @@ class CompanionQrInvitation {
     final filePresent = isV3 && parameters.containsKey('file');
     final uploadPresent = isV3 && parameters.containsKey('upload');
     final mediaPresent = isV3 && parameters.containsKey('media');
+    final trafficPresent = isV3 && parameters.containsKey('traffic');
     if (statusPresent) expected.add('status');
     if (filePresent) expected.add('file');
     if (uploadPresent) expected.add('upload');
     if (mediaPresent) expected.add('media');
+    if (trafficPresent) expected.add('traffic');
     if (parameters.keys.toSet().difference(expected).isNotEmpty ||
         expected.difference(parameters.keys.toSet()).isNotEmpty ||
         parameters.values.any((items) => items.length != 1) ||
@@ -69,6 +73,8 @@ class CompanionQrInvitation {
         (filePresent && parameters['file']!.single != '1') ||
         (uploadPresent && parameters['upload']!.single != '1') ||
         (mediaPresent && parameters['media']!.single != '1') ||
+        (trafficPresent && parameters['traffic']!.single != '1') ||
+        (trafficPresent && (statusPresent || filePresent || uploadPresent || mediaPresent)) ||
         (mediaPresent && (statusPresent || filePresent || uploadPresent)) ||
         (statusPresent && filePresent) ||
         (uploadPresent && (statusPresent || filePresent))) {
@@ -113,6 +119,7 @@ class CompanionQrInvitation {
       fileOnce: filePresent,
       uploadOnce: uploadPresent,
       mediaOnce: mediaPresent,
+      trafficOnce: trafficPresent,
     );
   }
 }
