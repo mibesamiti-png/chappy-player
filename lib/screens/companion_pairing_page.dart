@@ -289,10 +289,6 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _statusAttempted = false;
       _trafficReport = null;
       _trafficAttempted = false;
-      _trafficReport = null;
-      _trafficAttempted = false;
-      _trafficReport = null;
-      _trafficAttempted = false;
       _mediaAttempted = false;
       _mediaMessage = null;
       _fileAttempted = false;
@@ -331,6 +327,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _verified = false;
       _statusMetrics = null;
       _statusAttempted = false;
+      _trafficReport = null;
+      _trafficAttempted = false;
       _mediaAttempted = false;
       _mediaMessage = null;
       _fileAttempted = false;
@@ -931,6 +929,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _verified = false;
       _statusMetrics = null;
       _statusAttempted = false;
+      _trafficReport = null;
+      _trafficAttempted = false;
       _mediaAttempted = false;
       _mediaMessage = null;
       _fileAttempted = false;
@@ -1266,7 +1266,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
             const Text(
               '本人のPCだけに使用してください。'
               '指紋を照合せずに接続する機能はありません。'
-              '通信監視・ファイル取得・遠隔操作・証明書保存は行いません。'
+              '無断監視・任意のPC操作・証明書保存は行いません。'
               'アプリが裏に回ると接続をキャンセルします。',
               style: TextStyle(fontSize: 12, color: Colors.white60),
             ),
