@@ -1,8 +1,18 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
-更新: 2026-11-10。Network R7統合mainスナップショット d5865dba695572af5cdd036799fc31a732f8da36。作業開始時に必ず最新main HEAD/PR/CIを再取得。
+更新: 2026-11-10。NETLAB-04A統合mainスナップショット 38c35433ab793b2dfff9bf4726d66fbd4cc3b2f9。再開時はGitHub最新main HEAD/PR/CIを再取得。
 
-## 【最新】Network R7ソース/CI完了 → 次はGame R8｜2026-11-10
+## 【最新】NETLAB-04A PC通信量レポート読込完了 → 次はNETLAB-04B Wi-Fi直接取得｜2026-11-10
+
+- **[NETLAB-04A PR #119](https://github.com/mibesamiti-png/chappy-player/pull/119)をmain 38c35433ab793b2dfff9bf4726d66fbd4cc3b2f9に統合。** 管理Windows PC側でTRAFFIC同意→5〜30秒の全NIC送受信カウンター（Wi-Fi専用ではない）を上書き禁止JSONへ保存。Android本体Network LabでOSファイル選択→16KiB/厳格スキーマ検証→合計/平均/ピーク/1秒推移をRAMに表示、背景化・終了時消去。**ファイル経由でありWi-Fiでの直接読込や他機器パケット捕捉はまだない。**
+- **最終PR HEADで3 CI全成功**：[Quick #42668253644](https://github.com/mibesamiti-png/chappy-player/actions/runs/42668253644)64ステップ、[Windows #42668253778](https://github.com/mibesamiti-png/chappy-player/actions/runs/42668253778)28ステップ（EXE＋`Start-ChappyTrafficExport.cmd`）、[Android Debug #42668253834](https://github.com/mibesamiti-png/chappy-player/actions/runs/42668253834)17ステップ、ARM64/ARM32/x86-64 APK生成。
+- **実機PC→Android手動レポート読込QA未実施**。JSON未署名、PC計測機能もOS実機で確認していない。R7ブラウザ実機0/12、PC Link共通0/15＋媒体0/13も引き続き未実施。署名Stable/公開Chappy Appsカタログは変更なし。
+- **次の優先NETLAB-04B（8タスク・未着手）**：管理者本人が許可したPCとのQR-v3署名/TLS pin/双方の独立同意で、PC自身の通信集計を1回限定でWi-Fiから直接取得する。一般LANの無断スキャン・平文無認証接続・他機器のパケット本文取得はしない。Game R8は中止ではなく次の段階に繰り下げ。
+- 新仕様：[NETLAB-04A](../netlab-04a-remote-traffic-report.md) / [Issue #118](https://github.com/mibesamiti-png/chappy-player/issues/118) / [STATE](STATE.json) / [ROADMAP](ROADMAP.md)。Notionは手動ミラー。
+
+---
+
+## 【履歴：R7時点】Network R7ソース/CI完了 → 当時の次Game R8｜2026-11-10
 
 - [R7実装PR #116](https://github.com/mibesamiti-png/chappy-player/pull/116)はmain d5865dba695572af5cdd036799fc31a732f8da36へ統合済み。本人が明示起動するAndroid本体Browserと1回限定のDNS/HTTPS接続診断を追加。JavaScript初期OFF・確認後のみON、ページ権限拒否、入力/遷移時の公開HTTPSドメイン制限、戻る/進む/更新・手動閲覧データ削除。private Browser Lab 0.1.0は権限`[]`、手動QA12項目のみ。
 - **R7の最終main CI成功**：[Quick #42658869004](https://github.com/mibesamiti-png/chappy-player/actions/runs/42658869004) 全63ステップ、[Android Debug #42658868997](https://github.com/mibesamiti-png/chappy-player/actions/runs/42658868997) 全17ステップ。Debug APK ARM64/ARM32/x86-64とprivate Browser Lab .chappyが生成された。Windows側変更なしのため専用Windows CIをR7合格根拠とはしていない。

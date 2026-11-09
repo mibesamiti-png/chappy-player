@@ -1,6 +1,6 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-10。**Network R7はソースmain統合・Quick/Android Debug CI成功。次はGame R8（未着手）**。R7実機0/12、PC Link 0/15+0/13未実施。
+更新: 2026-11-10。**NETLAB-04A（管理PCの通信量レポート手動読込）ソースmain統合、Quick/Windows/Android Debug CI成功。次はNETLAB-04Bの本人承認付きWi-Fi直接読込。Game R8はその後。** 実機QA未実施。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
@@ -10,12 +10,35 @@
 | 3b | PC Link R5B | AndroidからPCへの本人選択ファイル送信・PC保存先選択・安全な一時ファイル処理 | 本体＋Companion、PC Transfer Lab拡張 | **ソース統合・Quick/Windows CI成功、実機QA未実施** |
 | 4（開発段階完了） | PC Link R6 | R6A：限定メディア操作、R6B：署名/HTTP/Win32モック検証と実機QAキット | 本体＋Companion、**private PC Control Lab 0.1.0**、Debug APK 3 ABI | **R6Bソース/3 CI成功・実機QAは0/15＋0/13** |
 | 5（開発段階完了） | Network R7 | 公開HTTPSホストブラウザ、1回だけ承認DNS/HTTPS診断 | Android本体、**private Browser Lab 0.1.0**、Debug APK 3 ABI | **ソース/Quick/Android CI成功、実機0/12未実施** |
-| 6（次） | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張・private Game Room Lab候補 | 計画・未着手 |
+| 5a（開発段階完了） | NETLAB-04A | 管理Windows PCの全NIC交通量JSONを自分でスマホへ移して読込・可視化 | Windows Companion＋Androidホスト | **ソース/Quick/Windows/Android CI成功・実機未実施、Wi-Fiライブではない** |
+| 5b（次） | NETLAB-04B | QR-v3双方向承認で管理PCの通信集計をWi-Fiから1回限定取得 | Windows Companion＋Androidホスト | 計画・未着手 |
+| 6（その後） | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張・private Game Room Lab候補 | 計画・未着手（延期、廃止しない） |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
 
-## 【次】Game R8 — ルーム同期と本人参加型通信（8タスク・未着手）
+## 【次】NETLAB-04B — 管理PCからのQR認証付きWi-Fi直接読込（8タスク・未着手）
+
+NETLAB-04Aの完成範囲は**ファイル経由**。PCに本人承認済みのWindows Companionを置く方式で、次はそのPCの通信量をスマホから安全に取得する。本バッチでもルーターや他人の端末のパケット本文は取得しない。Game R8は引き続き保持する。
+
+1. R4CのQR-v3 status署名/TLS pinとR04A通信量カウンターを監査。
+2. 新規`pc.traffic.read`署名スコープ、QR明示オプトイン、短命nonce/再利用拒否。
+3. Windows本人のTRAFFIC別承認とAndroid本人の前景別承認。
+4. 全NICの匿名化された通信量のみ、回数・サイズ・期間の上限付き返答。
+5. Androidホストに一回限りの直接読込UIと結果消去・中止を導入。
+6. 誤認証・期限・再送・Wi-Fi切替・背景化・切断時にFail Closed。
+7. Python/Dartの共有検証ベクトル・localhost結合/ウィジェット自動回帰を追加。
+8. 最終HEAD Quick/Windows/Debug APK CIを確認し、PCとAndroid実機QA・Stable公開は別ゲートで管理。
+
+## 【NETLAB-04A完了記録】管理Windows PC交通量ファイル読込
+
+- [PR #119](https://github.com/mibesamiti-png/chappy-player/pull/119) main 38c35433ab793b2dfff9bf4726d66fbd4cc3b2f9に統合。[Quick #42668253644](https://github.com/mibesamiti-png/chappy-player/actions/runs/42668253644) 64 / [Windows #42668253778](https://github.com/mibesamiti-png/chappy-player/actions/runs/42668253778) 28 / [Android Debug #42668253834](https://github.com/mibesamiti-png/chappy-player/actions/runs/42668253834) 17ステップ全成功。Windows EXEとCMD、Android Debug APK ARM64/ARM32/x86-64あり。
+- Windows PC自身の全ネットワークインターフェース通信量を本人TRAFFIC入力後だけ新規JSONへ書込。Android本体Network Labで選択→厳格16KiB形式・合計検証→合計/平均/ピーク/推移をRAM表示。
+- **パケット/接続先/他のLAN機器の通信本文なし、JSONは未署名、ファイル手動移送（リアルタイムなし）**。Windows/Android実機QA未実施、R7 0/12、PC Link 0/15+0/13継続。署名Stable/公開カタログは変更なし。[仕様](../netlab-04a-remote-traffic-report.md)。
+
+---
+
+## 【履歴：04A実施前】Game R8 — ルーム同期と本人参加型通信（8タスク・未着手）
 
 1. 既存Game Server Lab/mini-appネットワークAPIとWSSサーバー例の監査。
 2. 明示的に選択した接続先への一時セッション開始/終了。

@@ -1,29 +1,36 @@
 {
   "schemaVersion": 1,
   "project": "Chappy Player",
-  "capturedDate": "2026-11-09",
-  "sourceMainAtCapture": "d5865dba695572af5cdd036799fc31a732f8da36",
+  "capturedDate": "2026-11-10",
+  "sourceMainAtCapture": "38c35433ab793b2dfff9bf4726d66fbd4cc3b2f9",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "GAME-R8",
-    "name": "Game R8: ユーザー同意のセッション/ルーム同期・接続状態と安全なゲームサーバー通信",
+    "id": "NETLAB-04B",
+    "name": "NETLAB-04B: 管理Windows PCからの本人承認付きWi-Fi直接通信量取得",
     "status": "planned_not_started",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "NETWORK-R7",
-    "pr": 116,
-    "mergedCommit": "d5865dba695572af5cdd036799fc31a732f8da36",
-    "sourceStatus": "merged_source_quick_and_android_ci_passed_physical_qa_not_run",
+    "id": "NETLAB-04A",
+    "pr": 119,
+    "mergedCommit": "38c35433ab793b2dfff9bf4726d66fbd4cc3b2f9",
+    "sourceStatus": "merged_quick_windows_android_debug_ci_success_real_device_not_run",
     "quickCi": {
       "status": "success",
-      "run": 42658869004,
-      "successfulSteps": 63
+      "run": 42668253644,
+      "successfulSteps": 64
+    },
+    "windowsCi": {
+      "status": "success",
+      "run": 42668253778,
+      "successfulSteps": 28,
+      "previewExe": "ChappyCompanion.exe",
+      "launcher": "Start-ChappyTrafficExport.cmd"
     },
     "androidDebugCi": {
       "status": "success",
-      "run": 42658868997,
+      "run": 42668253834,
       "successfulSteps": 17,
       "abi": [
         "arm64-v8a",
@@ -33,7 +40,7 @@
       "physicalInstallation": "not_run",
       "signedStable": false
     },
-    "qualification": "R7ホスト専用公開HTTPSブラウザ・URLスキーム制限、JavaScript初期OFF/前景同意、WebView権限要求拒否、同意後1回だけexample.com DNS+HTTPS HEAD診断、プライベートBrowser Lab 12項目QAをソースmainに統合。Quick CI 63ステップとDebug APKビルド17ステップ成功。実機R7 0/12・PC Link 0/15+媒体0/13は未実施。WebViewの共有Cookie・サブリソース/DNS制限は残る。"
+    "qualification": "本人PCの全インターフェース合計RX/TXカウンターを明示TRAFFIC同意後5〜30秒だけ計測し、新規JSONへ上書き禁止エクスポート。Android本体で明示選択し16KiB/厳格項目/合計検査後、合計・平均/秒・ピーク・1秒ごとの受信量を一時表示。PCの通信先・内容、Wi-Fi上の他機器パケットは取得しない。JSONは未署名、手動移送でライブWi-Fiではない。Quick 64/Windows28/Android17ステップ成功、実機PC→Android QAは未実施。"
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -60,7 +67,8 @@
         "R5A 本体Network LabでPCの1ファイル受信・別許可・進捗・SHA-256・OS Save As（コード/CI PASS、実機未確認）",
         "R5B Android→Windowsの本人選択SAF単一ファイル・独立承認・進捗・16KiB転送（ソース/CI PASS、実機未検証）",
         "R6A media=1 QR-v3で固定4操作を表示し、操作別PC署名検証とAndroid前景別承認後に1回送信（コード/CI成功・実機未検証）",
-        "R6B Python/Dart固定署名8ベクトルのDartテスト、Android Debug APKをARM64/ARM32/x86-64の3系統でCIビルド（端末インストール未実施）"
+        "R6B Python/Dart固定署名8ベクトルのDartテスト、Android Debug APKをARM64/ARM32/x86-64の3系統でCIビルド（端末インストール未実施）",
+        "NETLAB-04A 管理Windows PCの交通量JSONをホストOSファイル選択で読込・厳格検査・集計/グラフ一時表示（ソース/3 CI成功、実機未検証）"
       ]
     },
     "windowsSource": {
@@ -77,7 +85,8 @@
         "R5A --send-file-once 明示起動・SEND別許可・4MiB/16KiB限定送信（コード/CI PASS、実機未確認）",
         "R5B --receive-file-once/Start-ChappyUploadOnceV3.cmd・RECEIVE別承認・新規保存先のみ/一時ファイル＋上書き防止ハードリンク（ソース/CI PASS、実機未検証）",
         "R6A --media-once/Start-ChappyMediaOnceV3.cmd、CONTROL別承認＋新署名＋4種Windowsメディアキー（CIはmock executorでPASS、実機媒体キーは未検証）",
-        "R6B 本物のP-256署名をHTTP 127.0.0.1で往復し、固定4キー/同時リプレイ・期限切れ/拒否を模擬検証。Win32 multimedia keyはモック発行検査、実キー未検証"
+        "R6B 本物のP-256署名をHTTP 127.0.0.1で往復し、固定4キー/同時リプレイ・期限切れ/拒否を模擬検証。Win32 multimedia keyはモック発行検査、実キー未検証",
+        "NETLAB-04A psutil全NIC通信量1秒差分を本人TRAFFIC入力で5〜30秒だけローカルJSON新規出力、ネット待受なし（ソース/3 CI成功、実機未検証）"
       ]
     },
     "unimplemented": [
@@ -92,7 +101,9 @@
       "複数コマンド継続セッション・任意のPCキーボード/マウス操作（R6Aに含まれない）",
       "R6B物理Windows↔Android相互接続・PC媒体キー結果（NETLAB共通QA 0/15、媒体キー13件0/13、全未実施）",
       "Network R7実機Browser/診断の12項目 QA（0/12、未実施）",
-      "Game R8ルーム/セッション同期とネットワーク品質計測（未着手）"
+      "Game R8ルーム/セッション同期とネットワーク品質計測（未着手）",
+      "NETLAB-04A Windows PC通信カウンター実機計測→JSON手動移送→Android表示の物理QA（未実施）",
+      "NETLAB-04B 管理PCからQR-v3署名/TLSピンで1回だけ直接Wi-Fi通信量取得（未実装）"
     ],
     "publicMiniappCatalog": {
       "stable": 2,
@@ -273,63 +284,90 @@
         "Real Android WebView navigation behavior not physically tested"
       ],
       "noPublicCatalogOrStable": true
+    },
+    "remoteTrafficReport": {
+      "sourceStatus": "merged_ci_passed_physical_not_run",
+      "id": "NETLAB-04A",
+      "pr": 119,
+      "sourceCommit": "38c35433ab793b2dfff9bf4726d66fbd4cc3b2f9",
+      "sourceScope": "owner_operated_windows_pc_all_interfaces_aggregate",
+      "androidUi": "lib/screens/remote_traffic_import_page.dart",
+      "androidSchema": "lib/core/remote_traffic_report.dart",
+      "windowsScript": "examples/windows_companion/Start-ChappyTrafficExport.cmd",
+      "windowsCollector": "examples/windows_companion/pc_traffic_export.py",
+      "format": "chappy.remote-traffic.v1",
+      "sourceTransport": "manual_json_file_transfer_not_wifi_live",
+      "jsonAuthentication": "none_unsigned",
+      "maxJsonBytes": 16384,
+      "samples": {
+        "min": 5,
+        "max": 30,
+        "intervalMs": 1000
+      },
+      "quickCiRun": 42668253644,
+      "windowsCiRun": 42668253778,
+      "androidCiRun": 42668253834,
+      "physicalDeviceQa": "not_run",
+      "stableChanged": false,
+      "publicMiniappCatalogChanged": false
     }
   },
   "nextBatch": {
-    "id": "GAME-R8",
+    "id": "NETLAB-04B",
     "targetTasks": 8,
-    "implementationScope": "既存Game Server Labのネットワーク許可モデルを保ち、ユーザー本人が明示的に参加したセッション/ルーム同期・ping/接続状態・通信の認証と上限を実装。R7ブラウザ、mini-app JSのPC権限、無断のLANスキャン、常時接続は拡大しない。実機QAは別ゲート。",
+    "implementationScope": "NETLAB-04Aの手動ファイル読込を保持し、管理者本人が明示的に接続したWindows CompanionのPC側全NIC集計通信量だけを、QR-v3相互署名/TLS pin・双方別承認の1回限定取得としてAndroid本体に表示する。自動LANスキャン、無署名HTTP、他端末のパケット本文監視、mini-app JS特権追加は禁止。Game R8はその後に保留。",
     "tasks": [
       {
-        "id": "GAME-R8-01",
-        "name": "既存Game Server Lab/mini-app network API、WebSocketサーバーサンプル、同意・隔離の現状監査",
+        "id": "NETLAB-04B-01",
+        "name": "R4C QR-v3 PC status/Windows metricsの既存経路とR04A JSON契約を監査し再利用範囲を限定",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-02",
-        "name": "ホスト本人の接続先確認・明示参加による1セッションの開始/終了モデル",
+        "id": "NETLAB-04B-02",
+        "name": "PC traffic専用の署名スコープ・QRオプトイン・nonce/期限・同一セッション再利用拒否を設計",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-03",
-        "name": "ルームID・参加/退室イベント・プレイヤー識別子の最小化と署名/権限境界",
+        "id": "NETLAB-04B-03",
+        "name": "Windows側が明示起動したときだけ別TRAFFIC承認、Androidも前景で別承認後に一回だけ取得",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-04",
-        "name": "ルーム同期メッセージの順序・サイズ・頻度制限、再接続/重複/拒否の検査",
+        "id": "NETLAB-04B-04",
+        "name": "許可済みPC自身のRX/TX集計だけを上限付きで取得しネットワーク本文・IP・SSID・ホスト名を返さない",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-05",
-        "name": "手動接続のPing/遅延・状態表示、タイムアウトと可視の切断",
+        "id": "NETLAB-04B-05",
+        "name": "Android本体の通信量画面に一回限定の本人PC通信読込・合計/速度表示、保存なし、停止・失効を追加",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-06",
-        "name": "private Game Room Lab（手動QA）の整備、無権限の自動接続を禁止",
+        "id": "NETLAB-04B-06",
+        "name": "QR期限・誤端末・誤署名・再送・背景化・接続断・他VPN経路・中止をFail Closedにする",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-07",
-        "name": "ネットワークなし・バックグラウンド化・拒否・同時リクエスト等のFlutter/JS/サーバーテスト",
+        "id": "NETLAB-04B-07",
+        "name": "Python/Dart共有の署名ベクトル、隔離localhost結合とウィジェット回帰を追加し実機QAを別管理",
         "status": "todo"
       },
       {
-        "id": "GAME-R8-08",
-        "name": "最終HEAD Quick CI/Debug APK/セキュリティ境界と実機QAを分離、GitHub/Notion引き継ぎ",
+        "id": "NETLAB-04B-08",
+        "name": "最終HEAD Quick/Windows/Android Debug CI・成果物を確認しGitHub/Notion更新。実機/Stableは別ゲート",
         "status": "todo"
       }
     ],
     "stopBefore": [
       "PCコマンド実行",
-      "他人のサーバーへの無断接続/攻撃的トラフィック",
-      "任意のPCキーボード/マウス入力",
-      "無断ファイルアクセス",
-      "自動常駐LANスキャン/バックグラウンド接続",
-      "Android/Windows実機PASSの推測",
+      "権限なしのローカルネットワーク全域スキャン",
+      "他人の端末/トラフィックの無断盗聴・MITM",
+      "明示承認なしのPC通信閲覧",
+      "平文HTTPやmDNSのみでの認証",
+      "常時バックグラウンド監視",
+      "ミニアプリJSへの特権流出",
       "署名Stable自動公開",
-      "ミニアプリJSへのホスト特権流出"
+      "Android/Windows実機PASSの推測"
     ]
   },
   "policy": {
