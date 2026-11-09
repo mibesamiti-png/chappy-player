@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:chappy_player/core/pc_pairing_stage.dart';
 import 'package:chappy_player/core/pc_status_once.dart';
+import 'package:chappy_player/core/pc_file_receive.dart';
 import 'package:crypto/crypto.dart';
 
 /// Explicit, one-shot QR-v3 proof exchange. No trusted peer is saved.
@@ -267,10 +269,153 @@ class CompanionIdentityExchange {
     }
   }
 
-  static Future<List<int>> _readBounded(SecureSocket socket) async {
+  /// Owner-selected PC file download with a NEW scope and two NEW approvals.
+  /// This does not grant path access, continuous pairing or a JS bridge API.
+  Future<PcReceivedFile> receivePcFileOnce({
+    required String ip,
+    required int port,
+    required String tlsFingerprint,
+    required String pcFingerprint,
+    required String invitation,
+    required int qrExpires,
+    required Future<bool> Function(PcFileOffer offer) approvePhoneFile,
+    void Function(int received, int total)? onProgress,
+  }) async {
+    if (_busy || _cancelled) {
+      throw StateError('新しいQR-v3でPC本人確認を先に行ってください');
+    }
+    CompanionPairingClient.validateTarget(ip, port, tlsFingerprint);
+    if (!_hex64.hasMatch(pcFingerprint) || !_hex32.hasMatch(invitation)) {
+      throw const FormatException('ファイル転送のPC認証情報が不正です');
+    }
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if (qrExpires <= now || qrExpires - now > 600) {
+      throw const FormatException('ファイル転送のQR期限が不正です');
+    }
+    _busy = true;
+    try {
+      final status = await identity.status();
+      _ensureActive();
+      if (!status.created || status.fingerprint == null ||
+          !_hex64.hasMatch(status.fingerprint!)) {
+        throw StateError('スマホの端末署名鍵が利用できません');
+      }
+      final phoneFp = status.fingerprint!;
+      final phoneNonce = CompanionIdentityClient.newNonce();
+      const protocol = PcFileOffer.protocol;
+      final challenge = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/file-begin',
+        json: <String, Object>{
+          'protocol': protocol, 'invitation': invitation,
+          'phone_fp': phoneFp, 'phone_nonce': phoneNonce,
+        },
+      );
+      _ensureActive();
+      if (challenge.length != 6 ||
+          challenge['protocol'] != protocol ||
+          challenge['status'] != 'challenge' ||
+          challenge['pc_nonce'] is! String ||
+          !_hex64.hasMatch(challenge['pc_nonce'] as String) ||
+          challenge['expires'] is! int ||
+          challenge['pc_proof'] is! Map ||
+          challenge['file'] is! Map) {
+        throw const FormatException('PCのファイル転送応答が不正です');
+      }
+      final offer = PcFileOffer.parse(challenge['file'] as Map);
+      final rawPcNonce = challenge['pc_nonce'] as String;
+      final expires = challenge['expires'] as int;
+      final current = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      if (expires <= current || expires > qrExpires ||
+          expires - current > 240) {
+        throw const FormatException('ファイル転送の認証期限が不正です');
+      }
+      final pcValid = await identity.verifyPcProof(
+        proof: CompanionIdentityClient.parseProof(
+          challenge['pc_proof'] as Map<dynamic, dynamic>,
+        ),
+        pcFingerprint: pcFingerprint, invitation: invitation,
+        tlsFingerprint: tlsFingerprint, phoneFingerprint: phoneFp,
+        phoneNonce: pcFileScopedNonce(phoneNonce), expiresUnix: expires,
+      );
+      _ensureActive();
+      if (!pcValid) {
+        throw StateError('ファイル転送用のPC署名が一致しません');
+      }
+      // A NEW, foreground Android consent shows the exact safe file/size.
+      if (!await approvePhoneFile(offer)) {
+        throw StateError('スマホ側でファイル受信を拒否しました');
+      }
+      _ensureActive();
+      if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expires) {
+        throw const FormatException('ファイル転送の追加承認が期限切れです');
+      }
+      final phoneProof = await identity.signPhoneProof(
+        invitation: invitation, tlsFingerprint: tlsFingerprint,
+        pcFingerprint: pcFingerprint,
+        pcNonce: pcFileScopedNonce(rawPcNonce), expiresUnix: expires,
+      );
+      _ensureActive();
+      final ready = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/file-finish',
+        json: <String, Object>{
+          'protocol': protocol, 'invitation': invitation,
+          'phone_fp': phoneFp, 'phone_proof': phoneProof,
+        },
+      );
+      _ensureActive();
+      if (ready.length != 6 || ready['protocol'] != protocol ||
+          ready['status'] != 'ready' ||
+          ready['pc_nonce'] != rawPcNonce ||
+          ready['expires'] != expires ||
+          ready['ticket'] is! String ||
+          !RegExp(r'^[0-9a-f]{32}$').hasMatch(ready['ticket'] as String) ||
+          ready['file'] is! Map ||
+          !offer.matches(PcFileOffer.parse(ready['file'] as Map))) {
+        throw const FormatException('PCファイル転送の開始情報が不正です');
+      }
+      final ticket = ready['ticket'] as String;
+      final bytes = BytesBuilder(copy: false);
+      var offset = 0;
+      onProgress?.call(0, offer.sizeBytes);
+      while (offset < offer.sizeBytes) {
+        _ensureActive();
+        if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expires) {
+          throw const FormatException('ファイル転送中に期限が切れました');
+        }
+        final answer = await _post(
+          ip: ip, port: port, tlsPin: tlsFingerprint,
+          path: '/v3/file-chunk',
+          json: <String, Object>{
+            'protocol': protocol, 'ticket': ticket, 'offset': offset,
+          },
+          maxResponseBytes: 25000,
+          maxPayloadBytes: 23000,
+        );
+        _ensureActive();
+        final chunk = parsePcFileChunk(
+          response: answer, expectedOffset: offset, fileSize: offer.sizeBytes,
+        );
+        bytes.add(chunk);
+        offset += chunk.length;
+        onProgress?.call(offset, offer.sizeBytes);
+      }
+      final received = Uint8List.fromList(bytes.takeBytes());
+      verifyPcReceivedFile(offer, received);
+      return PcReceivedFile(offer: offer, bytes: received);
+    } finally {
+      _socket?.destroy();
+      _socket = null;
+      _busy = false;
+    }
+  }
+
+  static Future<List<int>> _readBounded(
+      SecureSocket socket, {int maxBytes = 2048}) async {
     final bytes = <int>[];
     await for (final chunk in socket) {
-      if (bytes.length + chunk.length > 2048) {
+      if (bytes.length + chunk.length > maxBytes) {
         throw const FormatException('PC応答が大きすぎます');
       }
       bytes.addAll(chunk);
@@ -284,6 +429,8 @@ class CompanionIdentityExchange {
     required String tlsPin,
     required String path,
     required Map<String, Object> json,
+    int maxResponseBytes = 2048,
+    int maxPayloadBytes = 1024,
   }) async {
     _ensureActive();
     if (_socket != null) throw StateError('同時接続は許可されません');
@@ -314,7 +461,7 @@ class CompanionIdentityExchange {
       socket.add(body);
       await socket.flush();
       // Absolute wall-clock deadline, not a per-chunk inactivity timeout.
-      final bytes = await _readBounded(socket)
+      final bytes = await _readBounded(socket, maxBytes: maxResponseBytes)
           .timeout(const Duration(seconds: 35));
       _ensureActive();
       final response = utf8.decode(bytes);
@@ -336,7 +483,7 @@ class CompanionIdentityExchange {
       }
       final length = int.tryParse(lengthLines.single.split(':').last.trim());
       final payload = response.substring(cut + 4);
-      if (length == null || length < 1 || length > 1024 ||
+      if (length == null || length < 1 || length > maxPayloadBytes ||
           utf8.encode(payload).length != length) {
         throw const FormatException('PC応答長が一致しません');
       }

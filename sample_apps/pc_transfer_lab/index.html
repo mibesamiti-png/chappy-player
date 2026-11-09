@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PC Transfer Lab</title>
+  <style>
+    :root { color-scheme: dark; font: 15px/1.55 system-ui, sans-serif;
+      background: #0a1220; color: #eff6ff; }
+    * { box-sizing: border-box; }
+    body { margin: auto; max-width: 660px; padding: 24px 16px 48px; }
+    h1 { font-size: 25px; margin: 0 0 5px; }
+    h2 { font-size: 17px; margin-top: 0; }
+    p { color: #b8c8e1; }
+    small { color: #a7bad4; }
+    .tag { display: inline-block; border-radius: 8px; background: #22486b;
+      color: #cce6ff; padding: 3px 8px; margin-bottom: 10px; font-size: 12px; }
+    section { border: 1px solid #344b67; background: #12223a;
+      border-radius: 17px; padding: 18px; margin: 18px 0; }
+    .notice { border-left: 4px solid #f8c177; padding: 8px 14px;
+      background: #31291f; border-radius: 8px; }
+    ol { margin: 0; padding-left: 23px; }
+    li { padding: 7px 0; }
+    .check { display: flex; gap: 10px; align-items: start; padding: 9px 0;
+      border-top: 1px solid #344b67; }
+    input[type=checkbox] { width: 21px; height: 21px; flex: none; margin-top: 2px;
+      accent-color: #5cb7fa; }
+    progress { width: 100%; height: 18px; margin-top: 10px; }
+    button { border: 1px solid #6b9bce; border-radius: 10px; padding: 10px 14px;
+      background: #294e78; color: white; font: inherit; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 3px solid #8aceff; outline-offset: 3px; }
+    textarea { width: 100%; min-height: 110px; background: #0a1528;
+      color: #f5fbff; padding: 12px; border: 1px solid #42638a;
+      border-radius: 9px; font: 13px/1.5 monospace; resize: vertical; }
+    code { background: #243e5e; padding: 2px 5px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <span class="tag">Debug / R5A / 説明・手動QA</span>
+  <h1>PC Transfer Lab</h1>
+  <p>Windows → Android の<strong>本人が選んだ1ファイル</strong>を安全に転送する機能のテスト補助画面。</p>
+  <div class="notice">
+    <strong>このミニアプリ自体は転送・PC接続を行いません。</strong>
+    ファイルは Chappy Player本体の「Network Lab → PC連携」で送受信します。
+    この画面にファイル内容・鍵・通信ログは渡されません。
+  </div>
+
+  <section>
+    <h2>PC / Android 操作手順</h2>
+    <ol>
+      <li>Windows Companionの端末署名鍵を準備する。</li>
+      <li>PCで <code>Start-ChappyFileOnceV3.cmd</code> を明示起動し、転送するファイルを1つ選択する（最大4MiB）。</li>
+      <li>Androidの Network Lab → PC連携からQR-v3を読み、両端末のコードを照合する。</li>
+      <li>PCで通常の <code>YES</code>、Androidで端末署名を許可する。</li>
+      <li>Androidの「PCで選択した1ファイルを受信」を押し、PCで追加の <code>SEND</code> を入力する。</li>
+      <li>Androidでファイル名と容量を確認して受信を許可。100％の転送とSHA-256照合後、Androidの標準保存画面で保存先を選ぶ。</li>
+    </ol>
+    <p><small>1回限り・転送量上限4MiB・16KiBチャンク・途中再開は未対応。期限切れ・中断後は新しいQRが必要。</small></p>
+  </section>
+
+  <section>
+    <h2>手動検証チェック</h2>
+    <p>チェックは自分の観察を記録するだけです。自動の接続結果ではありません。</p>
+    <div id="checks">
+      <label class="check"><input type="checkbox" data-qa="startup">PCで明示起動し、ファイルを1つ選択できた</label>
+      <label class="check"><input type="checkbox" data-qa="identity">QR-v3の本人確認・PCのYESが通った</label>
+      <label class="check"><input type="checkbox" data-qa="consent">PCのSENDとAndroidの追加承認が出た</label>
+      <label class="check"><input type="checkbox" data-qa="transfer">進捗が表示され、ファイルが最後まで届いた</label>
+      <label class="check"><input type="checkbox" data-qa="save">SHA-256検証後にAndroidの保存先を選べた</label>
+    </div>
+    <progress id="progress" max="5" value="0" aria-label="手動検証進捗"></progress>
+    <p id="progressText" role="status" aria-live="polite">手動確認 0/5（実機テスト結果未登録）</p>
+    <button id="report" type="button">テスト結果を表示</button>
+    <button id="clear" type="button">チェックをリセット</button>
+    <label for="output"><small>コピー用テキスト（個人情報や秘密鍵は記入しないでください）</small></label>
+    <textarea id="output" readonly placeholder="結果を表示するとここに出ます"></textarea>
+  </section>
+  <script>
+    (() => {
+      'use strict';
+      const inputs = Array.from(document.querySelectorAll('[data-qa]'));
+      const meter = document.getElementById('progress');
+      const label = document.getElementById('progressText');
+      const output = document.getElementById('output');
+      function update() {
+        const passed = inputs.filter(item => item.checked).length;
+        meter.value = passed;
+        label.textContent = '手動確認 ' + passed + '/5（自己報告・自動QAではありません）';
+      }
+      inputs.forEach(item => item.addEventListener('change', update));
+      document.getElementById('report').addEventListener('click', () => {
+        output.value = 'PC Transfer Lab R5A 手動確認（自動検証ではない）\n' +
+          inputs.map(item => (item.checked ? '[x] ' : '[ ] ') +
+            item.parentElement.textContent.trim()).join('\n') +
+          '\n未確認・実機動作の成否は別途開発ログに記録。';
+      });
+      document.getElementById('clear').addEventListener('click', () => {
+        inputs.forEach(item => { item.checked = false; });
+        output.value = '';
+        update();
+      });
+      update();
+    })();
+  </script>
+</body>
+</html>

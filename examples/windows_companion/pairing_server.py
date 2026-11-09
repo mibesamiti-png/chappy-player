@@ -31,9 +31,11 @@ from windows_identity import identity_status
 if TYPE_CHECKING:
     from identity_pairing_v3 import IdentityPairingAttempt
     from status_once import StatusOnceAttempt
+    from file_send_once import FileSendOnceAttempt
 
 IDENTITY_PROTOCOL = "pair-identity-v3"
 STATUS_PROTOCOL = "pc-status-once-v1"
+FILE_PROTOCOL = "pc-file-receive-v1"
 
 from companion import (
     MAX_MINUTES,
@@ -181,10 +183,35 @@ def _ask_pc_status_user() -> bool:
         return False
 
 
+def _ask_pc_file_user(filename: str, count: int) -> bool:
+    """A separate, visible PC consent AFTER QR-v3 mutual key verification."""
+    from file_send_once import safe_name, MAX_FILE_BYTES
+    safe_name(filename)
+    if type(count) is not int or not 1 <= count <= MAX_FILE_BYTES:
+        return False
+    print()
+    print("==== OPTIONAL ONE-FILE PC -> ANDROID TRANSFER ====")
+    print("Already selected on this PC: " + filename)
+    print("File bytes: " + str(count) + " (no other PC files exposed)")
+    print("Scan this QR on your OWN Android; file SEND is separate from YES.")
+    answer: queue.Queue[str] = queue.Queue(maxsize=1)
+    def read_console() -> None:
+        try:
+            answer.put(input("Type SEND for this ONE file: ").strip())
+        except (EOFError, OSError):
+            answer.put("")
+    threading.Thread(target=read_console, daemon=True).start()
+    try:
+        return answer.get(timeout=MAX_APPROVAL_SECONDS) == "SEND"
+    except queue.Empty:
+        return False
+
+
 def invite_payload(ip: str, port: int, fingerprint: str,
                    token: str, expires_at: int,
                    identity_fingerprint: str | None = None,
-                   status_once: bool = False) -> str:
+                   status_once: bool = False,
+                   file_once: bool = False) -> str:
     """Strict, short-lived QR transfer string; nothing grants PC commands."""
     validate_lan_ipv4(ip)
     if not 1 <= port <= 65535:
@@ -202,12 +229,15 @@ def invite_payload(ip: str, port: int, fingerprint: str,
         raise ValueError("Invalid persistent PC identity fingerprint")
     if status_once and identity_fingerprint is None:
         raise ValueError("Read-only PC status requires QR-v3 signed identity")
+    if file_once and (identity_fingerprint is None or status_once):
+        raise ValueError("File scope requires its own QR-v3 invitation")
     version = "v3" if identity_fingerprint is not None else "v2"
     return (
         "chappy-pair://" + version + "?ip=" + ip + "&port=" + str(port)
         + "&fp=" + fingerprint + "&inv=" + token + "&exp=" + str(expires_at)
         + ("&pc=" + identity_fingerprint if identity_fingerprint is not None else "")
         + ("&status=1" if status_once else "")
+        + ("&file=1" if file_once else "")
     )
 
 
@@ -236,7 +266,8 @@ def render_qr(invitation: str) -> str:
 
 def make_handler(session: PairingSession,
                  identity: IdentityPairingAttempt | None = None,
-                 status_once: StatusOnceAttempt | None = None):
+                 status_once: StatusOnceAttempt | None = None,
+                 file_once: FileSendOnceAttempt | None = None):
     class PairHandler(BaseHTTPRequestHandler):
         server_version = "ChappyPairPreview/1.0"
         sys_version = ""
@@ -376,7 +407,74 @@ def make_handler(session: PairingSession,
             except (ValueError, TypeError, KeyError, PermissionError, OSError):
                 self._reply(403, {"status": "status_denied"})
 
+        def _handle_file_once(self) -> None:
+            if file_once is None or self.path not in (
+                "/v3/file-begin", "/v3/file-finish",
+                "/v3/file-chunk", "/v3/file-cancel",
+            ):
+                self._reply(404, {"status": "not_found"})
+                return
+            # Duplicate and ambiguous framing are forbidden for all requests.
+            lengths = self.headers.get_all("Content-Length", [])
+            if (len(lengths) != 1 or len(lengths[0]) > 5
+                    or not lengths[0].isascii()
+                    or not lengths[0].isdecimal()
+                    or self.headers.get_all("Transfer-Encoding", [])):
+                self._reply(400, {"status": "bad_request"})
+                return
+            length = int(lengths[0])
+            if not 1 <= length <= MAX_IDENTITY_REQUEST:
+                self._reply(413, {"status": "too_large"})
+                return
+            if self.headers.get_all("Content-Type", []) != ["application/json"]:
+                self._reply(415, {"status": "unsupported_type"})
+                return
+            try:
+                data_bytes = self.rfile.read(length)
+                if len(data_bytes) != length:
+                    raise ValueError("Short file request")
+                data = _strict_identity_json(data_bytes)
+                if data.get("protocol") != FILE_PROTOCOL:
+                    raise ValueError("Wrong file transfer protocol")
+                if self.path == "/v3/file-begin":
+                    if set(data) != {
+                        "protocol", "invitation", "phone_fp", "phone_nonce",
+                    }:
+                        raise ValueError("File begin keys must match")
+                    answer = file_once.begin(
+                        invitation=data["invitation"], phone_fp=data["phone_fp"],
+                        phone_nonce=data["phone_nonce"],
+                        approve_pc_file=_ask_pc_file_user,
+                    )
+                elif self.path == "/v3/file-finish":
+                    if set(data) != {
+                        "protocol", "invitation", "phone_fp", "phone_proof",
+                    } or not isinstance(data["phone_proof"], dict):
+                        raise ValueError("Bad file finish proof")
+                    answer = file_once.finish(
+                        invitation=data["invitation"], phone_fp=data["phone_fp"],
+                        phone_proof=data["phone_proof"],
+                    )
+                elif self.path == "/v3/file-chunk":
+                    if set(data) != {"protocol", "ticket", "offset"}:
+                        raise ValueError("Unexpected file chunk fields")
+                    answer = file_once.chunk(
+                        ticket=data["ticket"], offset=data["offset"],
+                    )
+                else:
+                    if set(data) != {"protocol", "ticket"}:
+                        raise ValueError("Unexpected file cancellation fields")
+                    if not file_once.cancel_by_ticket(data["ticket"]):
+                        raise PermissionError("Invalid cancellation ticket")
+                    answer = {"protocol": FILE_PROTOCOL, "status": "cancelled"}
+                self._reply(200, answer)
+            except (ValueError, TypeError, KeyError, PermissionError, OSError):
+                self._reply(403, {"status": "file_denied"})
+
         def do_POST(self) -> None:
+            if self.path.startswith("/v3/file-"):
+                self._handle_file_once()
+                return
             if self.path.startswith("/v3/status-"):
                 self._handle_status_once()
                 return
@@ -480,7 +578,8 @@ class BoundedHttpsServer(ThreadingHTTPServer):
 def run_pairing(ip: str, minutes: int, qr: bool = False,
                 identity_mode: bool = False,
                 expected_phone_fingerprint: str | None = None,
-                status_once: bool = False) -> None:
+                status_once: bool = False,
+                file_once: bool = False) -> None:
     """Expose a single, explicitly PC-approved HTTPS confirmation session."""
     from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
@@ -491,6 +590,8 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
         raise ValueError("Identity enrollment requires a scanned QR")
     if status_once and not identity_mode:
         raise ValueError("Status once requires explicit QR-v3 identity mode")
+    if file_once and (not identity_mode or status_once):
+        raise ValueError("File transfer needs a separate QR-v3 session")
     if expected_phone_fingerprint is not None and not identity_mode:
         raise ValueError("Known-phone comparison requires QR-v3 identity mode")
     # Never create a persistent signing key when a PC listener is started.
@@ -501,6 +602,12 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
         from identity_pairing_v3 import IdentityPairingAttempt
     if status_once:
         from status_once import StatusOnceAttempt
+    if file_once:
+        from file_send_once import SelectedFile, FileSendOnceAttempt
+        # A local PC owner types the absolute path before anything listens.
+        selected_path = input("Local file to share (absolute path, 4 MiB max): ").strip()
+        selected = SelectedFile.from_local_selection(selected_path)
+        print("Only this file's bytes will be available: " + selected.name)
     pem, key, fingerprint = create_ephemeral_certificate(address)
 
     with tempfile.TemporaryDirectory(prefix="chappy-pair-session-") as folder:
@@ -532,8 +639,15 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                 tls_fingerprint=fingerprint, pc_fingerprint=pc_public_fingerprint,
             ) if status_once else None
         )
+        transfer = (
+            FileSendOnceAttempt(
+                identity=identity, invitation=invitation, qr_expires=expires_at,
+                tls_fingerprint=fingerprint, pc_fingerprint=pc_public_fingerprint,
+                selected=selected,
+            ) if file_once else None
+        )
         with BoundedHttpsServer(
-            (address, 0), make_handler(session, identity, status),
+            (address, 0), make_handler(session, identity, status, transfer),
         ) as server:
             server.context = context
             port = server.server_address[1]
@@ -561,6 +675,7 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                         address, port, fingerprint, invitation, expires_at,
                         identity_fingerprint=pc_public_fingerprint,
                         status_once=status_once,
+                        file_once=file_once,
                     )
                     print("Scan this QR on your Android Chappy Network Lab:")
                     # The terminal may use a legacy encoding. Do not log the
@@ -575,6 +690,8 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                     print("Identity v3: mutual signed proof ONLY; no saved pairing.")
                 if status_once:
                     print("Optional PC status: one use, separate PC STATUS and phone consent.")
+                if file_once:
+                    print("One selected file only. Separate PC SEND and Android consent.")
                 if expected_phone_fingerprint is not None:
                     print("Manual known-phone comparison ON (NOT automatic trust).")
                     print("Expected Android public key SHA-256:")
@@ -587,14 +704,18 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                 verified_since = None
                 while time.monotonic() < deadline:
                     if finished.is_set():
-                        if status is None or identity.verified_phone_fingerprint is None:
+                        if identity is None or identity.verified_phone_fingerprint is None:
                             break
-                        if status.finished.is_set():
+                        if status is None and transfer is None:
+                            break
+                        follow_up = status if status is not None else transfer
+                        if follow_up.finished.is_set():
                             break
                         if verified_since is None:
                             verified_since = time.monotonic()
-                        if time.monotonic() - verified_since >= 90:
-                            status.cancel()
+                        follow_up_limit = 90 if status is not None else 240
+                        if time.monotonic() - verified_since >= follow_up_limit:
+                            follow_up.cancel()
                             break
                     try:
                         server.handle_request()

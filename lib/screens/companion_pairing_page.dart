@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/pc_status_once.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:chappy_player/core/verified_pc_history_client.dart';
 import 'package:chappy_player/core/companion_qr_invitation.dart';
 import 'package:chappy_player/screens/companion_qr_scanner_page.dart';
@@ -47,6 +48,10 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   bool _verified = false;
   bool _statusAttempted = false;
   PcStatusOnceMetrics? _statusMetrics;
+  bool _fileAttempted = false;
+  bool _fileSaving = false;
+  double _fileProgress = 0;
+  String? _fileMessage;
   // A QR invitation can be submitted at most once, even after failure.
   bool _qrConsumed = false;
   String? _code;
@@ -65,6 +70,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) {
+      // Android's Save As may briefly pause the app AFTER transfer completes.
+      if (_fileSaving) return;
       _generation++;
       _pairing.cancel();
       _identityExchange.cancel();
@@ -75,6 +82,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
           _verified = false;
           _statusMetrics = null;
           _statusAttempted = false;
+          _fileAttempted = false;
+          _fileProgress = 0;
+          _fileMessage = null;
           _savedHistory = false;
           _code = null;
           _progressStage = null;
@@ -257,6 +267,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _qrConsumed = false;
       _statusMetrics = null;
       _statusAttempted = false;
+      _fileAttempted = false;
+      _fileProgress = 0;
+      _fileMessage = null;
       _code = null;
       _error = null;
       _verified = false;
@@ -290,6 +303,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _verified = false;
       _statusMetrics = null;
       _statusAttempted = false;
+      _fileAttempted = false;
+      _fileProgress = 0;
+      _fileMessage = null;
       _savedHistory = false;
       _error = null;
       _code = null;
@@ -468,6 +484,101 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     }
   }
 
+  /// This short-lived transfer scope never grants files to mini-app JavaScript.
+  Future<void> _receiveFileOnce() async {
+    final invite = _invite;
+    if (_busy || _savingHistory || !_verified || _fileAttempted ||
+        invite == null || !invite.fileOnce ||
+        invite.pcIdentityFingerprint == null ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _fileAttempted = true;
+      _fileProgress = 0;
+      _fileMessage = null;
+      _error = null;
+    });
+    try {
+      final received = await _identityExchange.receivePcFileOnce(
+        ip: widget.service.address,
+        port: widget.service.port,
+        tlsFingerprint: invite.fingerprint,
+        pcFingerprint: invite.pcIdentityFingerprint!,
+        invitation: invite.invitation,
+        qrExpires: invite.expiresUnix,
+        approvePhoneFile: (offer) async {
+          if (!mounted || generation != _generation ||
+              ModalRoute.of(context)?.isCurrent != true) {
+            return false;
+          }
+          final answer = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('PCで選択されたファイルを1回だけ受信'),
+              content: Text(
+                'Windows側でYESと別のSEND承認が済み、'
+                '専用のPC署名を検証しました。\n\n'
+                'ファイル名: ${offer.fileName}\n'
+                '容量: ${offer.sizeBytes} バイト（最大4MiB）\n\n'
+                '受信後にSHA-256を検証して、'
+                'Androidの標準保存画面で保存先を選びます。'
+                '他のPCファイルやフォルダにはアクセスできません。',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('拒否する'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('この1ファイルだけ受信'),
+                ),
+              ],
+            ),
+          );
+          return answer == true && mounted && generation == _generation;
+        },
+        onProgress: (count, total) {
+          if (mounted && generation == _generation) {
+            setState(() => _fileProgress = count / total);
+          }
+        },
+      );
+      if (!mounted || generation != _generation) return;
+      // Network session has ended. Only the verified 4 MiB buffer enters SAF.
+      setState(() {
+        _fileSaving = true;
+        _fileProgress = 1;
+      });
+      final destination = await FilePicker.platform.saveFile(
+        dialogTitle: 'PCから受信したファイルを保存',
+        fileName: received.offer.fileName,
+        bytes: received.bytes,
+      );
+      if (!mounted || generation != _generation) return;
+      setState(() => _fileMessage = destination == null
+          ? '保存をキャンセルしました。再転送には新しいQRが必要です。'
+          : 'SHA-256を確認して、選択した保存先に保存しました。');
+    } catch (_) {
+      if (mounted && generation == _generation) {
+        setState(() => _error = 'PCファイル受信を完了できませんでした [FILE-ONCE]。'
+            '容量・署名・期限・接続・保存先の許可を確認して、'
+            'Windowsで新しいQRを発行してください。');
+      }
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() {
+          _fileSaving = false;
+          _busy = false;
+        });
+      }
+    }
+  }
+
   Future<void> _rememberPc() async {
     final fp = _invite?.pcIdentityFingerprint;
     if (_busy || _savingHistory || _savedHistory || !_verified ||
@@ -532,6 +643,10 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _verified = false;
       _statusMetrics = null;
       _statusAttempted = false;
+      _fileAttempted = false;
+      _fileSaving = false;
+      _fileProgress = 0;
+      _fileMessage = null;
       _savedHistory = false;
       _code = null;
       _progressStage = null;
@@ -698,6 +813,19 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                   ),
                 ),
               ),
+            if (_verified && _invite?.fileOnce == true) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const Key('pair_file_once'),
+                onPressed: _busy || _fileAttempted ? null : _receiveFileOnce,
+                icon: const Icon(Icons.file_download_outlined),
+                label: const Text('PCで選択した1ファイルを受信する'),
+              ),
+              if (_busy && _fileAttempted)
+                LinearProgressIndicator(value: _fileProgress),
+              if (_fileMessage != null)
+                Text(_fileMessage!, key: const Key('pair_file_result')),
+            ],
             if (_verified && _invite?.statusOnce == true) ...[
               OutlinedButton.icon(
                 key: const Key('pair_status_once'),

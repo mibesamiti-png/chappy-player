@@ -63,6 +63,25 @@ void main() {
           throwsFormatException);
     }
   });
+  test('QR-v3 file scope is explicit, not QR-v2 or status permission', () {
+    final pc = List<String>.filled(64, 'c').join();
+    final modern = '${encoded.replaceFirst('://v2', '://v3')}&pc=$pc';
+    final file = CompanionQrInvitation.parse('$modern&file=1', now: knownNow);
+    expect(file.fileOnce, isTrue);
+    expect(file.statusOnce, isFalse);
+    expect(CompanionQrInvitation.parse(modern, now: knownNow).fileOnce, isFalse);
+    for (final malformed in <String>[
+      '$encoded&file=1',
+      '$modern&file=0',
+      '$modern&file=true',
+      '$modern&file=1&file=1',
+      '$modern&file=1&status=1',
+    ]) {
+      expect(() => CompanionQrInvitation.parse(malformed, now: knownNow),
+          throwsFormatException);
+    }
+  });
+
   test('expired and too-far invitations are rejected', () {
     expect(
       () => CompanionQrInvitation.parse(
