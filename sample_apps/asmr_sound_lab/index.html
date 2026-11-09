@@ -1,0 +1,1644 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASMR Sound Lab v1.4 — Chappy Edition</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--surface:#141c2e;--line:#2a3650;--text:#eaf0fb;--muted:#a4b3c9;--a:#76dbd0;--a2:#b7a3ff}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,"Yu Gothic","Meiryo",sans-serif;background:radial-gradient(ellipse at 70% -15%,#213453 0%,#0b1020 55%);color:var(--text);min-height:100vh}
+.page{width:min(1250px,calc(100% - 32px));margin:0 auto;padding:28px 0 40px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:23px;flex-wrap:wrap}.eyebrow{color:var(--a);font-size:12px;letter-spacing:.17em;font-weight:700}.top h1{font-size:clamp(26px,4vw,42px);margin:5px 0}.sub{color:var(--muted);font-size:13px;max-width:760px;line-height:1.7}.button{border:1px solid var(--line);border-radius:11px;padding:10px 14px;color:var(--text);background:#26334c;font-size:14px;cursor:pointer;font-weight:600;transition:.15s}.button:hover{border-color:var(--a)}.button:focus-visible,.mode:focus-visible{outline:2px solid var(--a);outline-offset:2px}.primary{background:linear-gradient(110deg,#56c5c2,#7f8ee8);color:#091321;border:0;padding:12px 19px}.primary:hover{filter:brightness(1.1)}.button:disabled{opacity:.45;cursor:not-allowed}.topActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.layout{display:grid;grid-template-columns:minmax(400px,1.42fr) minmax(305px,.82fr);gap:16px}.panel{border:1px solid var(--line);background:rgba(21,29,46,.91);border-radius:17px;padding:18px;box-shadow:0 12px 35px #0002}.panel h2{margin:0 0 14px;font-size:16px}.minor{color:var(--muted);font-size:12px}.modes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.mode{padding:13px 5px;border-radius:11px;border:1px solid var(--line);background:#1a263c;color:var(--text);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px}.mode .emoji{font-size:25px;line-height:1.3}.mode.active{background:#173c4b;border-color:#5edbd0;box-shadow:inset 0 0 0 1px #5edbd055}.mode:hover{border-color:#66aea9}.mode small{color:#a3d8dc;font-size:10px}.stageHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px}.status{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.dot{background:#69758c;border-radius:50%;width:8px;height:8px}.dot.on{background:#67d5b3;box-shadow:0 0 9px #67d5b3aa}.stage{position:relative;border-radius:13px;overflow:hidden;border:1px solid #334567;background:#0e192a;user-select:none;touch-action:none;aspect-ratio:1.55;cursor:crosshair}.stage canvas{display:block;width:100%;height:100%}.cornerLabel{position:absolute;font-size:11px;color:#a8bdd0;pointer-events:none}.cornerLabel.topLeft{left:15px;top:14px}.cornerLabel.topRight{right:15px;top:14px}.cornerLabel.bottom{bottom:11px;left:50%;transform:translateX(-50%)}.stageInfo{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:12px}.stageInfo b{color:var(--text);font-variant-numeric:tabular-nums}.help{border-left:3px solid #67d4c9;padding:11px 13px;margin:13px 0 0;background:#152c3c;border-radius:4px 9px 9px 4px;color:#c6dcf1;font-size:12px;line-height:1.75}.control{margin:15px 0}.clabel{display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:0 0 8px}.clabel output{font-variant-numeric:tabular-nums;color:#83d9d2;font-size:12px}input[type=range]{width:100%;accent-color:#70d6cd;cursor:pointer}.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.switch{display:flex;align-items:center;gap:9px;color:#d0d9eb;font-size:13px}.switch input{accent-color:#71d8d1;width:17px;height:17px}.noiseRow{display:grid;grid-template-columns:100px 1fr 34px;gap:12px;align-items:center;margin:12px 0}.noiseRow label{font-size:13px}.noiseRow output{text-align:right;font-size:12px;color:#8edbd4}.hint{font-size:12px;color:var(--muted);line-height:1.65}.bottomBar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}.wave{width:100%;height:85px;background:#0c1626;border:1px solid var(--line);border-radius:11px;display:block}.footer{color:#8da0b9;font-size:12px;line-height:1.7;margin-top:16px}.miniTitle{font-size:13px;font-weight:650;margin:12px 0 8px}.pill{font-size:10px;background:#253c45;border:1px solid #365e5c;border-radius:12px;padding:3px 7px;color:#8fe4d8}.stack{display:grid;gap:16px}.infoStrip{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:12px}.message{color:#e7d7a5;font-size:12px;min-height:20px}.divider{height:1px;background:var(--line);margin:15px 0}
+@media(max-width:820px){.layout{grid-template-columns:1fr}.modes{grid-template-columns:repeat(4,1fr)}.stage{aspect-ratio:1.33}.row2{grid-template-columns:1fr 1fr}}@media(max-width:430px){.modes{grid-template-columns:repeat(2,1fr)}.stage{aspect-ratio:1}.row2{grid-template-columns:1fr}.noiseRow{grid-template-columns:95px 1fr 32px}}
+.sourceDot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:4px}.mouseDot{background:#86eee1}.keyboardDot{background:#c296ee}
+.keyboardPill{background:#473657;color:#efcdff;border-color:#694b7d}.kbdSettings{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.selectLabel{color:var(--muted);font-size:13px}.selectMode{background:#1a263c;color:var(--text);border:1px solid #485679;border-radius:9px;padding:9px 12px;font-size:13px;flex:1;min-width:180px}.keyGuide{padding:12px;background:#29243b;border-radius:11px;color:#e1d4ff;font-size:12px;line-height:1.9;margin-bottom:10px}.keyGuide b{font-weight:750;color:#f8eaff}.keyGuide span{color:#8c7d9d;padding:0 3px}
+/* v0.3: dual-finger mobile surface. The two touch lanes have separate pointer identities. */
+.touchSetup{display:grid;gap:8px;margin:0 0 10px;padding:10px 12px;border:1px solid #35506a;border-radius:12px;background:#112337}
+.touchSetup .switch{font-size:13px}.touchSetup .switch strong{font-size:13px;color:#c9f3ee}
+.touchSelectors{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.touchSelectors label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#bdcddf;min-width:0}
+.touchSelectors .selectMode{min-width:0;width:100%;font-size:12px;padding:8px 6px}
+.touchTip{font-size:11px;color:#b1cde1;line-height:1.6}
+.stage .touchLaneLabels{display:none;position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;grid-template-columns:1fr 1fr}
+.touchLaneLabels span{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;padding-top:10px;color:#b9eee9;text-shadow:0 1px 4px #0016;font-size:12px}
+.touchLaneLabels span+span{color:#ebc5ff;border-left:2px dashed #a6a4cf7a}
+.touchLaneLabels small{font-size:10px;color:#d6e6ee}
+.stage.dualTouch .touchLaneLabels{display:none}
+.stage.dualTouch .cornerLabel{display:none}
+.stage.dualTouch{cursor:crosshair;touch-action:none;overscroll-behavior:contain;-webkit-user-select:none;user-select:none;aspect-ratio:1.65}
+@media(max-width:820px){.stage{aspect-ratio:1.3}}
+@media(max-width:430px){.page{width:calc(100% - 18px);padding-top:12px}.panel{padding:12px}.modes{grid-template-columns:repeat(4,1fr);gap:4px}.mode{font-size:10px;padding:9px 1px;gap:3px}.mode .emoji{font-size:20px}.mode small{font-size:8px}.stage{aspect-ratio:1.05}.stage.dualTouch{aspect-ratio:1.35}.touchLaneLabels small{font-size:9px;max-width:115px;text-align:center}.touchSetup{padding:9px}}
+/* v0.4 independent external/inside-ear effects */
+.effectGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.effectBlock{border:1px solid #355069;background:#11283a;border-radius:12px;padding:12px}
+.effectBlock:nth-child(2){border-color:#61507f;background:#262039}
+.effectBlock .switch{min-height:44px;align-items:flex-start;line-height:1.5}
+.effectBlock .clabel{margin-top:12px}
+.effectBlock:nth-child(2) .clabel output{color:#d4b8ff}
+.presetButtons{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.presetButtons .button{font-size:12px;padding:9px 10px;flex:1;min-width:112px}
+#sealPanel{border-color:#4b587d}
+@media(max-width:520px){.effectGrid{grid-template-columns:1fr}.effectBlock{padding:10px}.effectBlock .switch{min-height:0}.presetButtons .button{min-width:43%}}
+/* v1.2: contact-aware mode badges, per-source activation and presets */
+.soundRules{border:1px solid #416975;background:linear-gradient(120deg,#122e37,#21243d);border-radius:13px;padding:14px;margin:12px 0 5px}
+.ruleTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:11px}
+.ruleSlots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.ruleSlot{background:#121e30;border:1px solid #455276;border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ruleSlot:nth-child(2){border-color:#67577b}
+.ruleSlot .selectMode{width:100%;min-width:0}
+.ruleSlot .button{padding:8px;font-size:12px}
+.ruleStatus{font-size:11px;color:#a9d4d3;line-height:1.6;min-height:2.7em}
+.modeBehavior{font-size:10px;color:#a9d4d3}
+@media(max-width:430px){.soundRules{padding:10px}.ruleSlots{gap:7px}.ruleSlot{padding:8px}.ruleTop{align-items:flex-start}.ruleSlot .selectMode{padding:7px 4px;font-size:11px}}
+/* v0.8: spatial head / ear model and contact distance UI */
+.modelStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:6px 0 18px}
+.modelStats>div{display:flex;flex-direction:column;gap:4px;border:1px solid #476778;background:#132b3d;border-radius:11px;padding:12px 14px}
+.modelStats>div:nth-child(2){border-color:#65547e;background:#292138}
+.modelStats span{font-size:12px;color:#a2bccb}.modelStats strong{font-size:16px}.modelStats small{font-size:12px;color:#a9ddce}
+.modelStats>div:nth-child(2) small{color:#dac3f5}
+/* sample import, distance tuning, spectral seal with presence-preserving parallel paths */
+.sampleInfo{font-size:12px;line-height:1.7;color:#b4c9df}
+.sampleBox{padding:13px;border:1px solid #49645b;border-radius:12px;background:#102a2d}
+.sampleList{padding:8px 10px;background:#0d1926;border-radius:9px;line-height:1.75;overflow-wrap:anywhere}
+.sampleLinks{display:grid;gap:7px;margin-top:8px;font-size:12px}
+.sampleLinks a{color:#84dfd2}
+.audioFile{width:100%;color:#d0ddef;font-size:12px;margin:8px 0}
+.audioFile::file-selector-button{border:1px solid #3e6b68;background:#203e43;color:#e4f9f2;border-radius:8px;padding:9px 10px;margin-right:9px;cursor:pointer}
+
+/* v1.4: three-path head/face vibration engine */
+.boneStatus{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:13px 0 8px}
+.boneStatus>div{border:1px solid #345b61;background:#132e35;border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:4px}
+.boneStatus span{font-size:11px;color:#9db6c9}.boneStatus b{font-size:14px;color:#9de7da}
+#bonePanel{border-color:#46736d;background:linear-gradient(145deg,#132c38,#151c2e)}
+#bonePanel .control{margin:13px 0}#bonePanel .hint{line-height:1.7}
+@media(max-width:430px){.boneStatus{gap:6px}.boneStatus>div{padding:7px}}
+</style>
+</head>
+<body>
+<div class="page">
+ <header class="top"><div><div class="eyebrow">SPATIAL AUDIO · CONTACT ACOUSTICS · 1.4</div><h1>ASMR Sound Lab <span style="font-size:15px;color:#9db0ca;font-weight:400">/ 合成音実験室</span></h1><div class="sub">指で音源を動かし、接近→接触→密閉を連続表現。v1.4は、音が耳に入ったときだけ低音と密閉感を追加強調。心音・耳かき・ゲルの接触挙動、音源A・Bの独立操作、音源ごとの自動最適化にも対応します。スマホは2本指、PCはマウス＋WASDで操作。録音素材の読み込みも継続。</div></div><div class="topActions"><span class="pill">完全オフライン</span><button class="button primary" id="startBtn">▶ 音声を開始</button><button class="button" id="stopBtn" disabled>■ 停止</button></div></header>
+ <div class="layout"><main class="stack">
+  <section class="panel"><div class="stageHeader"><h2 style="margin:0">1. 音源Aを選択</h2><span class="minor">8種類 · 合成＋外部サンプル</span></div><div class="modes" id="modes">
+  <button class="mode active" data-mode="bee"><span class="emoji">🐝</span><span>蜂の飛行</span><small>自発</small></button>
+  <button class="mode" data-mode="ear"><span class="emoji">🪶</span><span>耳かき</span><small>接触</small></button>
+  <button class="mode" data-mode="foam"><span class="emoji">🫧</span><span>泡</span><small>接触</small></button>
+  <button class="mode" data-mode="water"><span class="emoji">💧</span><span>水</span><small>自発</small></button>
+  <button class="mode" data-mode="gel"><span class="emoji">🟣</span><span>ゲル</span><small>接触</small></button>
+  <button class="mode" data-mode="heart"><span class="emoji">💗</span><span>心音</span><small>密着</small></button>
+  <button class="mode" data-mode="white"><span class="emoji">🌬️</span><span>ホワイト</span><small>自発</small></button>
+  <button class="mode" data-mode="brown"><span class="emoji">🌌</span><span>ブラウン</span><small>自発</small></button>
+  </div></section>
+  <section class="panel"><div class="stageHeader"><h2 style="margin:0">2. ダミーヘッドの周囲で2音源を操作</h2><div class="status"><span class="dot" id="liveDot"></span><span id="statusText">音声停止中</span></div></div>
+   <div class="touchSetup">
+    <label class="switch"><input id="dualTouchToggle" type="checkbox"> <strong>スマホ2本指モード</strong></label>
+    <div class="touchSelectors">
+     <label for="touchModeA"><span class="sourceDot mouseDot"></span> 指A <select id="touchModeA" class="selectMode" aria-label="音源Aの音の種類"></select></label>
+     <label for="touchModeB"><span class="sourceDot keyboardDot"></span> 指B <select id="touchModeB" class="selectMode" aria-label="音源Bの音の種類"></select></label>
+    </div>
+    <div class="touchTip" id="touchTip">左右2つのダミーヘッド操作パッド。それぞれの指で左右どちらの耳にも近づけられます。耳の中心に入るほど密閉。指を離すと接触音は停止します。さらに、頭・耳に触れるまでは無音です。</div>
+   </div>
+   <div class="soundRules" id="soundRules">
+    <div class="ruleTop"><strong>🎛 発音の条件・音源別の自動最適化</strong><label class="switch"><input type="checkbox" id="autoOptimize" checked> 自動最適化 ON</label></div>
+    <div class="ruleSlots">
+     <div class="ruleSlot"><strong><span class="sourceDot mouseDot"></span>音源A</strong>
+      <label class="selectLabel" for="behaviorMouse">発音タイプ</label><select class="selectMode" id="behaviorMouse"><option value="auto">おすすめ（自動判別）</option><option value="contact">接触しているときだけ</option><option value="free">離れていても自発的に鳴る</option></select>
+      <div class="ruleStatus" id="behaviorMouseInfo"></div><button class="button" id="optimizeMouse">Aの最適設定を適用</button>
+     </div>
+     <div class="ruleSlot"><strong><span class="sourceDot keyboardDot"></span>音源B</strong>
+      <label class="selectLabel" for="behaviorKeyboard">発音タイプ</label><select class="selectMode" id="behaviorKeyboard"><option value="auto">おすすめ（自動判別）</option><option value="contact">接触しているときだけ</option><option value="free">離れていても自発的に鳴る</option></select>
+      <div class="ruleStatus" id="behaviorKeyboardInfo"></div><button class="button" id="optimizeKeyboard">Bの最適設定を適用</button>
+     </div>
+    </div>
+    <div class="hint" style="margin-top:10px">接触音は<strong>頭・耳の形に触れている間だけ</strong>鳴ります。耳かきは軽く当てると「コツッ」、動かすと擦れ音。心音も密着時だけ鳴るのが初期設定です。自発音は蜂・水・ノイズなど、離れていても鳴る音です。自動最適化ONでは音を変更した瞬間に、その音専用の反応・音量設定へ切り替えます。両音源は別々に最適化します。</div>
+   </div>
+   <div id="stage" class="stage" role="application" aria-label="音源位置操作エリア。2本指モードでは左右に独立したダミーヘッド図。どちらの指も両耳へ自由に動かせます。"><canvas id="map"></canvas><div class="touchLaneLabels" aria-hidden="true"><span><b>指A</b><small>指の位置に追従</small></span><span><b>指B</b><small>指の位置に追従</small></span></div><span class="cornerLabel topLeft">◀ 左耳にも右耳にも移動</span><span class="cornerLabel topRight">自由配置 ▶</span><span class="cornerLabel bottom">耳の中心：接触・耳内</span></div>
+   <div class="stageInfo"><span><i class="sourceDot mouseDot"></i> 音源A: <b id="mousePos">自由配置</b></span><span>速度: <b id="speedOut">0</b></span></div>
+   <div class="stageInfo"><span><i class="sourceDot keyboardDot"></i> 音源B: <b id="keyboardPos">自由配置</b></span><span>速度: <b id="keyboardSpeed">0</b></span><span id="keyboardState">キー入力待ち</span></div>
+   <div class="help" id="modeHelp">蜂は音声開始で自動的に鳴ります。マウスを動かすと左右・距離感が変化。下の「自動飛行」を有効にすると蜂が勝手に飛び回ります。</div>
+   <div class="infoStrip"><label class="switch"><input id="autoToggle" type="checkbox"> <span id="autoLabel">蜂を自動飛行させる</span></label><button class="button" id="centerBtn">⊕ 音源を初期位置に戻す</button></div>
+  </section>
+  <section class="panel" id="sealPanel" aria-label="物理耳モデルと閉塞効果">
+   <div class="stageHeader"><h2 style="margin:0">3. 頭・耳道シミュレーター</h2><span class="pill">距離 → 接触 → 密閉</span></div>
+   <div class="modelStats"><div><span>左耳</span><strong id="leftStatus">開放</strong><small id="leftOcclusion">閉塞 0%</small></div><div><span>右耳</span><strong id="rightStatus">開放</strong><small id="rightOcclusion">閉塞 0%</small></div></div>
+   <div class="control"><div class="clabel"><label for="rangeCm">操作する距離の最大幅</label><output id="rangeCmValue">25 cm</output></div><input id="rangeCm" type="range" min="8" max="80" step="1" value="25"><div class="hint">音源の移動図の端までの距離を変更。小さいほど耳の近くを細かく調整できます。</div></div>
+   <div class="control"><div class="clabel"><label for="insertionCm">接触後の仮想移動深さ</label><output id="insertionCmValue">1.5 cm</output></div><input id="insertionCm" type="range" min="0.5" max="3.0" step="0.1" value="1.5"><div class="hint">指を画面の下側へ進めるほど、接触→密閉へ。実際の耳への挿入を勧めるものではない、音響演出用の仮想深さです。</div></div>
+   <div class="miniTitle">🖐 タッチ操作と耳の入口の細かさ</div>
+   <div class="row2">
+     <div class="control"><div class="clabel"><label for="entryPoint">耳の入口の判定範囲</label><output id="entryPointValue">74%</output></div><input type="range" min="55" max="88" step="1" value="74" id="entryPoint"><div class="hint">耳マークの周囲にある接触範囲の半径。大きくすると指で入口を狙いやすくなります。</div></div>
+     <div class="control"><div class="clabel"><label for="nearFocus">入口付近の操作精度</label><output id="nearFocusValue">78%</output></div><input type="range" min="0" max="100" value="75" id="nearFocus"><div class="hint">入口に近づくにつれて距離変化を細かくします。</div></div>
+   </div>
+   <div class="miniTitle">🎧 耳に入る瞬間の音</div>
+   <div class="row2">
+     <div class="control"><div class="clabel"><label for="transition">音の変化の滑らかさ</label><output id="transitionValue">58%</output></div><input type="range" min="0" max="100" value="58" id="transition"><div class="hint">入口や密閉で音が急変しないようにします。</div></div>
+     <div class="control"><div class="clabel"><label for="surfaceFriction">入口の擦れ・接触音</label><output id="surfaceFrictionValue">68%</output></div><input type="range" min="0" max="100" value="68" id="surfaceFriction"><div class="hint">入口に触れた瞬間から、細かい擦過音を混ぜます。</div></div>
+   </div>
+   <div class="row2">
+     <div class="control"><div class="clabel"><label for="canalResonance">耳の奥の共鳴</label><output id="canalResonanceValue">72%</output></div><input type="range" min="0" max="100" value="72" id="canalResonance"><div class="hint">耳道内部のこもり・中低域の響きを調整。</div></div>
+     <div class="control"><div class="clabel"><label for="sealDepth">密閉が完成する深さ</label><output id="sealDepthValue">42%</output></div><input type="range" min="0" max="100" value="42" id="sealDepth"><div class="hint">低いほど入口ですぐ、高いほど奥で密閉。</div></div>
+   </div>
+   <div class="presetButtons"><button class="button acousticPreset" data-preset="natural">自然な移行</button><button class="button acousticPreset" data-preset="soft">なめらかな密閉</button><button class="button acousticPreset" data-preset="intense">密着・ゴリゴリ強め</button><button class="button" id="tryGel">左ゲル・右耳かきで試す</button></div>
+   <div class="effectGrid">
+    <div class="effectBlock"><label class="switch" for="sealOn"><input id="sealOn" type="checkbox" checked><strong>① 接触から生じる外音の密閉</strong></label><div class="clabel"><label for="seal">閉塞の反応強度</label><output id="sealValue">96%</output></div><input id="seal" type="range" min="0" max="100" value="90"><div class="clabel"><label for="sealKeep">外音の明瞭さを残す</label><output id="sealKeepValue">78%</output></div><input id="sealKeep" type="range" min="0" max="100" value="75"><div class="hint">ここを上げても離れた場所では閉塞しません。接触中にだけ外音の音色が変わります。</div></div>
+    <div class="effectBlock"><label class="switch" for="insideOn"><input id="insideOn" type="checkbox" checked><strong>② 耳の内部の接触・振動音</strong></label><div class="clabel"><label for="inside">むにゅ・ゴリゴリの強さ</label><output id="insideValue">95%</output></div><input id="inside" type="range" min="0" max="100" value="85"><div class="clabel"><label for="bodyNoise">ゴーッという擬似体内ノイズ</label><output id="bodyNoiseValue">84%</output></div><input id="bodyNoise" type="range" min="0" max="100" value="65"><div class="hint">接触後に超小さなノイズが増え、低域へ変化。外のホワイトノイズがそのまま増幅される現象とは区別しています。</div></div>
+   </div>
+   <div class="control" style="margin-bottom:7px"><div class="clabel"><span>左右の耳の感度</span><span class="minor">左右を個別に調整</span></div>
+    <div class="row2"><div><div class="clabel"><label for="leftEar">◀ 左耳</label><output id="leftEarValue">100%</output></div><input id="leftEar" type="range" min="0" max="100" value="100"></div><div><div class="clabel"><label for="rightEar">右耳 ▶</label><output id="rightEarValue">100%</output></div><input id="rightEar" type="range" min="0" max="100" value="100"></div></div></div>
+   <div class="presetButtons"><button class="button effectPreset" data-seal="95" data-inside="0" data-keep="65">外音の密閉のみ</button><button class="button effectPreset" data-seal="0" data-inside="95" data-keep="80">内部の音のみ</button><button class="button effectPreset" data-seal="92" data-inside="95" data-keep="75">両方を強く</button><button class="button effectPreset" data-seal="0" data-inside="0" data-keep="80">効果を解除</button></div>
+   <div class="hint" style="margin-top:10px"><strong>A・Bどちらも左耳と右耳の両方へ自由に移動</strong>できます。耳のマーク中心に指を近づけると仮想的に耳内へ進み、外音遮断と内部低音が連動します。蜂・心音・ノイズは耳を塞ぎません。心音は頭や耳への接触時だけ鳴ります。</div>
+  </section>
+
+  <section class="panel" id="bonePanel" aria-label="骨・軟部組織の疑似振動伝達">
+    <div class="stageHeader"><h2 style="margin:0">4. 頭・顔の骨／組織振動</h2><span class="pill">v1.4 NEW</span></div>
+    <label class="switch" for="boneOn"><input id="boneOn" type="checkbox" checked><strong>頭・顔への接触で内部振動を再現</strong></label>
+    <div class="hint" style="margin-top:10px">頭や頬を叩くと短い振動、なでると柔らかな摩擦、押し続けると小さな低域ノイズ。空気中の音・耳内の直接接触音とは独立した経路で左右に伝えます。実際の骨伝導デバイスではありません。</div>
+    <div class="boneStatus"><div><span>音源Aの接触部位</span><b id="boneZoneMouse">非接触</b></div><div><span>音源Bの接触部位</span><b id="boneZoneKeyboard">非接触</b></div></div>
+    <div class="row2"><div class="control"><div class="clabel"><label for="boneStrength">内部振動の強さ</label><output id="boneStrengthValue">58%</output></div><input id="boneStrength" type="range" min="0" max="100" value="58"></div>
+    <div class="control"><div class="clabel"><label for="boneSoftness">軟部組織の柔らかさ</label><output id="boneSoftnessValue">48%</output></div><input id="boneSoftness" type="range" min="0" max="100" value="48"></div></div>
+    <div class="row2"><div class="control"><div class="clabel"><label for="boneCross">反対耳への振動の広がり</label><output id="boneCrossValue">66%</output></div><input id="boneCross" type="range" min="0" max="100" value="66"></div>
+    <div class="control"><div class="clabel"><label for="boneOcclusion">耳の密閉との連動</label><output id="boneOcclusionValue">58%</output></div><input id="boneOcclusion" type="range" min="0" max="100" value="58"></div></div>
+    <div class="row2"><div class="control"><div class="clabel"><label for="boneTap">トントンと叩く音</label><output id="boneTapValue">70%</output></div><input id="boneTap" type="range" min="0" max="100" value="70"></div>
+    <div class="control"><div class="clabel"><label for="boneRub">撫でる・擦る振動</label><output id="boneRubValue">63%</output></div><input id="boneRub" type="range" min="0" max="100" value="63"></div></div>
+    <label class="switch" for="showBoneZones"><input id="showBoneZones" type="checkbox" checked>ダミーヘッドに接触部位のガイドを表示</label>
+    <div class="presetButtons"><button class="button bonePreset" data-bone="off">効果OFF</button><button class="button bonePreset" data-bone="natural">自然</button><button class="button bonePreset" data-bone="asmr">ASMR強調</button><button class="button bonePreset" data-bone="heavy">振動強め</button></div>
+    <div class="hint" style="margin-top:10px"><b>試し方：</b>音源Aを耳かきにして、額で軽くタップ→左頬をこする→耳の中心へ動かす。音源Bでゲルを片耳に密閉すれば、もう片方から頬を触ったときの差も聴けます。設定JSONにも保存されます。</div>
+  </section>
+  <section class="panel" id="samplePanel" aria-label="実録音サンプル読み込み">
+   <div class="stageHeader"><h2 style="margin:0">5. 実録音サンプルを追加</h2><span class="pill">ローカル読み込み · 外部送信なし</span></div>
+   <div class="sampleBox">
+    <div class="sampleInfo">入手した<strong>WAV / MP3 / OGG / M4A</strong>を、音の種類に割り当てて読み込めます。A・Bどちらにも反映。タッチ操作、距離、密閉、録音にも対応します。サンプル未登録なら従来の合成音が鳴ります。</div>
+    <div class="kbdSettings" style="margin-top:10px"><label for="sampleTarget" class="selectLabel">割当先</label>
+     <select id="sampleTarget" class="selectMode"><option value="gel">🟣 ゲル</option><option value="ear">🪶 耳かき</option><option value="foam">🫧 泡</option><option value="water">💧 水</option><option value="heart">💗 心音</option><option value="bee">🐝 蜂</option><option value="white">🌬️ ホワイト</option><option value="brown">🌌 ブラウン</option></select></div>
+    <input id="sampleFile" class="audioFile" aria-label="音声ファイルを選択" type="file" accept="audio/*,.wav,.ogg,.mp3,.m4a,.flac" multiple>
+    <div class="clabel"><label for="sampleBlend">合成音と録音の混合比</label><output id="sampleBlendValue">78%</output></div><input id="sampleBlend" type="range" min="0" max="100" value="75">
+    <label class="switch" style="margin:9px 0"><input id="preserveStereo" type="checkbox"> バイノーラル録音の左右を維持（3D位置移動より原音優先）</label>
+    <div class="hint">0%=合成のみ / 100%=読み込んだ録音のみ（サンプルがない種類は合成音）。接触系は短く切り出してランダムに繰り返します。<strong>通常はステレオ素材を位置操作のためモノラル化。上のチェックを入れると元の左右を維持し、音量とこもり具合で距離を表現</strong>します。</div>
+    <div class="miniTitle">読み込んだ素材 <span class="minor">（ページを閉じると解除）</span></div><div id="sampleList" class="sampleList" aria-live="polite">まだ読み込まれていません。</div>
+    <button class="button" id="clearSamples" style="margin-top:8px">読み込んだサンプルを解除</button>
+   </div>
+   <div class="miniTitle">無料のCC0素材の入手先</div>
+   <div class="sampleLinks"><a href="https://opengameart.org/content/40-cc0-water-splash-slime-sfx" target="_blank" rel="noopener noreferrer">水・泡・スライム40種類（rubberduck / CC0）</a><a href="https://opengameart.org/content/8-wet-squish-slurp-impacts" target="_blank" rel="noopener noreferrer">湿った吸着・潰れ音8種類（Independent.nu / CC0）</a><a href="https://opengameart.org/content/heartbeat-single-sound" target="_blank" rel="noopener noreferrer">心音サンプル（Independent.nu / CC0）</a></div>
+   <div class="hint" style="margin-top:9px">上記リンクは素材提供元のページ。ZIPなどの圧縮ファイルは端末で解凍し、音声ファイルを選んでください。音声のライセンスは必ず素材元で確認してください。<strong>本HTML自体には外部の実録音は同梱していません。</strong></div>
+  </section>
+  <section class="panel"><div class="stageHeader"><h2 style="margin:0">6. 音源B（PCはキーボード）</h2><span class="pill keyboardPill">独立音源</span></div>
+   <div class="kbdSettings"><label class="selectLabel" for="keyboardMode">キー側の音の種類</label><select id="keyboardMode" class="selectMode"><option value="bee">🐝 蜂の飛行</option><option value="ear">🪶 耳かき</option><option value="foam" selected>🫧 泡</option><option value="water">💧 水</option><option value="gel">🟣 ゲル</option><option value="heart">💗 心音</option><option value="white">🌬️ ホワイトノイズ</option><option value="brown">🌌 ブラウンノイズ</option></select></div>
+   <div class="infoStrip"><label class="switch"><input id="keyboardEnabled" type="checkbox" checked> キー音源を有効</label><label class="switch"><input id="keyboardLatch" type="checkbox"> 発音を固定（Kで切替）</label></div>
+   <div class="control"><div class="clabel"><label for="keyboardLevel">音源Bの音量</label><output id="keyboardLevelValue">95%</output></div><input id="keyboardLevel" type="range" min="0" max="100" value="85"></div>
+   <div class="keyGuide"><b>W A S D</b> または <b>矢印キー</b>：音源を移動 <span>｜</span> <b>Space</b>：その場で発音 <span>｜</span> <b>K</b>：発音固定 <span>｜</span> <b>1〜8</b>：Bの音を変更</div>
+   <div class="hint">PCはWASDで音源Bを頭の周囲へ自由移動。Spaceで発音。スマホはBパッドで左右どちらの耳へも移動できます。</div>
+  </section>
+  <section class="panel"><div class="stageHeader"><h2 style="margin:0">音の波形</h2><span class="minor">ステレオ出力のミックス波形</span></div><canvas class="wave" id="scope"></canvas></section>
+ </main><aside class="stack">
+  <section class="panel"><h2>7. 質感と音量を調整</h2>
+   <div class="sampleBox" style="margin-bottom:15px">
+    <div class="miniTitle" style="margin-top:0">🔇 クリック音・起動ノイズ対策</div>
+    <div class="control"><div class="clabel"><label for="startFade">再生開始のフェードイン</label><output id="startFadeValue">350 ms</output></div><input type="range" min="100" max="1000" step="50" value="350" id="startFade"></div>
+    <div class="control"><div class="clabel"><label for="stopFade">停止時のフェードアウト</label><output id="stopFadeValue">180 ms</output></div><input type="range" min="90" max="450" step="30" value="180" id="stopFade"></div>
+    <div class="control"><div class="clabel"><label for="transientSoft">接触・泡の瞬間音を丸くする</label><output id="transientSoftValue">50%</output></div><input type="range" min="0" max="100" value="50" id="transientSoft"></div>
+    <div class="hint">開始音量は必ず0から徐々に上げます。ノイズのON/OFFや音の切り替えも滑らかに処理。瞬間音の丸みはリアルさと引き換えになるので、違いを聴き比べられます。</div>
+   </div>
+   <div class="sampleBox" style="margin-bottom:15px;border-color:#54756c">
+    <div class="miniTitle" style="margin-top:0">💗 心音：密着してから伝わる音</div>
+    <div class="control"><div class="clabel"><label for="heartBpm">心拍数</label><output id="heartBpmValue">72 BPM</output></div><input id="heartBpm" type="range" min="42" max="135" step="1" value="72"></div>
+    <div class="row2">
+     <div class="control"><div class="clabel"><label for="heartWarm">心音の丸み・重み</label><output id="heartWarmValue">72%</output></div><input id="heartWarm" type="range" min="0" max="100" value="72"></div>
+     <div class="control"><div class="clabel"><label for="heartRumble">密着時の低いゴー音</label><output id="heartRumbleValue">67%</output></div><input id="heartRumble" type="range" min="0" max="100" value="67"></div>
+    </div>
+    <div class="hint">心音は初期設定で<strong>接触音</strong>。頭・耳に密着すると「ドン・トッ」の2段階の拍動と低域の体内振動風ノイズが現れ、離すと滑らかに消えます。体内ノイズは臨場感を狙った合成表現です。</div>
+   </div>
+   <div class="sampleBox" style="margin-bottom:15px;border-color:#6b6387">
+    <div class="miniTitle" style="margin-top:0">🪶 接触の瞬間・材質の作り込み</div>
+    <div class="control"><div class="clabel"><label for="earTap">耳かき・軽いタップ音（コツッ）</label><output id="earTapValue">76%</output></div><input id="earTap" type="range" min="0" max="100" value="76"></div>
+    <div class="control"><div class="clabel"><label for="earScrape">耳かき・動かしたときの擦れ</label><output id="earScrapeValue">80%</output></div><input id="earScrape" type="range" min="0" max="100" value="80"></div>
+    <div class="control"><div class="clabel"><label for="gelSuction">ゲルの吸着・引き剥がし</label><output id="gelSuctionValue">74%</output></div><input id="gelSuction" type="range" min="0" max="100" value="74"></div>
+    <div class="hint">耳かきは押し始め・触れ直しで軽く打音。動かしたときのみ摩擦成分が増え、強く擦ると低い粒立ちが増します。ゲルは接触と解除で別の湿った過渡音を重ねます。</div>
+   </div>
+   <div class="control"><div class="clabel"><label for="strength">強さ・接触圧</label><output id="strengthValue">52%</output></div><input type="range" min="0" max="100" value="52" id="strength"></div>
+   <div class="control"><div class="clabel"><label for="texture">質感・湿り気</label><output id="textureValue">50%</output></div><input type="range" min="0" max="100" value="50" id="texture"></div>
+   <div class="control"><div class="clabel"><label for="rate">動作・変化の速さ</label><output id="rateValue">50%</output></div><input type="range" min="0" max="100" value="50" id="rate"></div>
+   <div class="divider"></div><div class="control"><div class="clabel"><label for="pressure">低音の圧迫振動（補助）</label><output id="pressureValue">46%</output></div><input type="range" min="0" max="100" value="46" id="pressure"></div>
+   <div class="hint">耳への接触中だけ低い振動を足します。</div>
+   <div class="control"><div class="clabel"><label for="insideBass">耳内の低音・ゴーッ音の強さ</label><output id="insideBassValue">88%</output></div><input type="range" min="0" max="100" value="88" id="insideBass"><div class="hint">耳の中心へ近づくほど200〜500Hz周辺の温かさと、低いノイズが増えます。</div></div>
+   <div class="sampleBox" style="margin:14px 0 17px;border-color:#657aaf;background:#142337">
+    <div class="miniTitle" style="margin-top:0">🎧 v1.4：耳内の低音と密閉をさらに強化</div>
+    <div class="control"><div class="clabel"><label for="canalBassBoost">耳に入ったときの低音ブースト</label><output id="canalBassBoostValue">62%</output></div><input id="canalBassBoost" type="range" min="0" max="100" value="62"><div class="hint">耳の入口を越えたときだけ約80〜250Hzの厚みを増やす。0%で追加効果なし。耳の外にいる間は影響しません。</div></div>
+    <div class="control"><div class="clabel"><label for="canalSealBoost">密閉感の追加強調</label><output id="canalSealBoostValue">66%</output></div><input id="canalSealBoost" type="range" min="0" max="100" value="66"><div class="hint">耳の奥へ進むほど、外部の高音をこもらせ、内部の低いゴー音との対比を強調。接触音の音量は維持する方向で調整します。</div></div>
+    <div class="presetButtons"><button class="button earBoostPreset" data-bass="0" data-seal="0">追加効果OFF</button><button class="button earBoostPreset" data-bass="35" data-seal="35">自然</button><button class="button earBoostPreset" data-bass="62" data-seal="66">強め</button><button class="button earBoostPreset" data-bass="92" data-seal="96">かなり強め</button></div>
+    <div class="hint" style="margin-top:9px">この2つは耳内への入り具合に連動します。実際の圧力を加える機能ではなく、音響による疑似密閉表現。低音を増やしたので端末音量は小さめから試してください。</div>
+   </div>
+   <div class="control"><div class="clabel"><label for="insideIsolation">耳内音の左右分離</label><output id="insideIsolationValue">100%</output></div><input type="range" min="0" max="100" value="100" id="insideIsolation"><div class="hint">100%で完全に密閉した音源は反対耳へ送られません。</div></div>
+   <div class="control"><div class="clabel"><label for="proximityBoost">耳元の音量・存在感</label><output id="proximityBoostValue">63%</output></div><input type="range" min="0" max="100" value="63" id="proximityBoost"><div class="hint">近づいた時だけ存在感を高めます。音割れ防止のリミッターを通します。</div></div>
+   <div class="divider"></div><div class="control"><div class="clabel"><label for="spatial">頭部遮蔽・左右定位の強さ</label><output id="spatialValue">95%</output></div><input type="range" id="spatial" min="0" max="100" value="85"><div class="hint">左右の耳までの実距離と頭の遮蔽を簡易計算。空気中の高音減衰を距離の主要因にはしません。実測HRTFではない独自近似です。</div></div>
+   <div class="divider"></div><div class="control"><div class="clabel"><label for="master">マスター音量（出力リミッターあり）</label><output id="masterValue">35%</output></div><input type="range" min="0" max="100" value="35" id="master"></div>
+   <div class="control"><div class="clabel"><label for="mouseLevel">音源Aの音量</label><output id="mouseLevelValue">95%</output></div><input type="range" min="0" max="100" value="85" id="mouseLevel"></div>
+   <div class="hint">「強さ」は音量だけでなくイベント頻度や音の荒さにも影響。「質感」は音色・濾過周波数などを変えます。音量は前版より強くしています。必ず小さな音から上げてください。</div>
+  </section>
+  <section class="panel"><h2>8. 環境ノイズ（重ねられる）</h2><div class="noiseRow"><label class="switch"><input type="checkbox" id="whiteOn"> ホワイト</label><input type="range" min="0" max="100" value="24" id="whiteLevel"><output id="whiteLevelValue">24%</output></div><div class="noiseRow"><label class="switch"><input type="checkbox" id="brownOn"> ブラウン</label><input type="range" min="0" max="100" value="32" id="brownLevel"><output id="brownLevelValue">46%</output></div><div class="hint">この2つは背景用の独立音源。蜂・耳かき・心音などと同時に再生でき、前方のマウス位置には連動しません。</div></section>
+  <section class="panel"><h2>9. 設定と録音</h2><div class="bottomBar"><button class="button" id="saveBtn">↓ 設定を保存</button><button class="button" id="loadBtn">↑ 設定を読込</button><input id="loadInput" type="file" accept="application/json,.json" hidden></div><div class="bottomBar"><button class="button" id="recordBtn" disabled>● 録音開始</button><span class="minor">WebM/Opus · ブラウザ対応時のみ</span></div><div class="message" id="message" aria-live="polite"></div><div class="divider"></div><div class="miniTitle">v1.4の骨・組織伝導と試作の限界</div><div class="hint">v1.4は従来の心音・タップ・吸着音、耳内低音・密閉エンジンを維持し、頭・顔を触ったときの骨・組織伝導風の第3経路を追加。低周波の体内振動風ノイズ、耳かきの小さなタップと連続摩擦、ゲルの吸着・解除音にも対応。音源ごとのおすすめ設定を自動で適用。2音源とも左耳・右耳を自由に選んで移動できるダミーヘッド型の操作図を追加。耳への接近→接触→耳内の低域強調を連続して計算します。完全な耳内では外側への音の経路を閉じ、接触音を対象の耳へ限定します。これは<strong>主観的な密閉感を作る音響近似</strong>で、実測HRTFや耳道の精密シミュレーションではありません。サンプル音声はユーザーが読み込んだものだけを使います。急な大音量を避けるため再生前に端末の音量を下げてください。</div></section>
+ </aside></div>
+ <p class="footer">ASMR Sound Lab v1.4 · ダミーヘッド＋独立3経路（空気・頭部振動・耳内）＋左右自由配置 · スマホ2本指＋PCキーボード操作 · 合成音はオフライン。取り込んだ音源はブラウザ内だけで再生し外部送信しません。ブラウザの「音声を開始」操作が必要です。音量と低音の圧迫感が強くなっています。ヘッドホンの音量を低く設定してから開始し、不快な場合はすぐ停止してください。</p>
+</div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smoothstep = x => {x=clamp(x,0,1);return x*x*(3-2*x);};
+// Shared head-space coordinates (0..1). Both A/B can reach either ear.
+// View: frontal dummy-head, left ear at x=.20 and right ear at x=.80.
+// The center of the ear circle represents a *virtual* entry depth, not actual insertion.
+const EAR_SPOTS=[{x:.205,y:.52},{x:.795,y:.52}];
+function physicalFor(s,slot){
+ const x=clamp(s.x,0,1),y=clamp(1-s.y,0,1);
+ const nearest=EAR_SPOTS.map(p=>Math.hypot((x-p.x)*1.07,(y-p.y)*.9));
+ const target=nearest[0]<=nearest[1]?0:1;
+ const aperture=lerp(.051,.104,(state.entryPoint-55)/33);
+ const radial=nearest[target];
+ const insertion=state.insertionCm;
+ const insideDepth=smoothstep((aperture-radial)/aperture);
+ const focus=lerp(1,2.5,state.nearFocus/100);
+ const distanceCm=radial>=aperture
+   ? state.rangeCm*Math.pow(clamp((radial-aperture)/.45,0,1),focus)
+   : -insertion*insideDepth;
+ const near=smoothstep((5.5-distanceCm)/5.5);
+ const rim=smoothstep((1.6-distanceCm)/1.6);
+ const firstTouch=smoothstep((.28-distanceCm)/.28);
+ const sealStart=lerp(.025,.26,state.sealDepth/100);
+ const sealProgress=smoothstep((insideDepth-sealStart)/(1-sealStart));
+ const emission=emissionFor(s);
+ const eligible=emission.behavior==='contact' && emission.gate>.005;
+ const contact=eligible?sealProgress:0;
+ // World geometry: a nominal 19cm spacing between the ears, plus front/back plane.
+ const wx=(x-.5)*(.19/(.795-.205)),wz=(y-.52)*.32;
+ const distances=EAR_SPOTS.map(p=>Math.max(.011,Math.hypot(wx-(p.x-.5)*(.19/.59),wz)));
+ return {distanceCm,target,side:target===0?-1:1,distances,contact,penetration:insideDepth,
+    insideDepth, near,rim:eligible?rim:0,firstTouch:eligible?firstTouch:0,
+    sealProgress:contact,wx,wz,earRadius:aperture,eligible,radial};
+}
+const modes = ['bee','ear','foam','water','gel','heart','white','brown'];
+const continuous = new Set(['bee','heart','white','brown']);
+const gestures = new Set(['ear','foam','water','gel']);
+// Source behavior and sound-specific tuning are per slot; shared acoustic controls stay untouched.
+// Water defaults to spontaneous flowing water; users can select contact to model splashes on the head.
+const soundProfiles={
+ bee:  {behavior:'free',level:72,attack:65,release:145,density:1.0,edge:75},
+ ear:  {behavior:'contact',level:90,attack:26,release:65,density:1.12,edge:82},
+ foam: {behavior:'contact',level:88,attack:38,release:95,density:1.20,edge:77},
+ water:{behavior:'free',level:78,attack:75,release:135,density:.75,edge:70},
+ gel:  {behavior:'contact',level:92,attack:48,release:120,density:.86,edge:85},
+ heart:{behavior:'contact',level:78,attack:65,release:145,density:1,edge:77},
+ white:{behavior:'free',level:58,attack:110,release:180,density:1,edge:72},
+ brown:{behavior:'free',level:66,attack:125,release:190,density:1,edge:72}
+};
+const behaviorName={contact:'接触音',free:'自発音'};
+function resolvedBehavior(s){return s.behavior==='contact'||s.behavior==='free'?s.behavior:soundProfiles[s.mode].behavior;}
+// Contact collision in the same normalized coordinate system as paintHead().
+// This tests the dummy-head skin and the two visible ears, not an invisible broad proximity circle.
+function headContact(s){
+ const x=clamp(s.x,0,1),y=clamp(1-s.y,0,1),p=s.profile||soundProfiles[s.mode];
+ const softness=clamp(p.edge/100,.1,1);
+ const ellipses=[{x:.5,y:.52,rx:.236,ry:.31},...EAR_SPOTS.map(e=>({x:e.x,y:e.y,rx:.056,ry:.086}))];
+ let penetration=0;
+ for(const e of ellipses){
+  const normal=Math.hypot((x-e.x)/e.rx,(y-e.y)/e.ry);
+  penetration=Math.max(penetration,Math.max(0,1-normal));
+ }
+ return {touching:penetration>0,gain:smoothstep(penetration/lerp(.055,.19,softness)),penetration};
+}
+// Contact-zone classifier. Geometric regions are illustrative, not a measured anatomical mesh.
+// The audio filters interpolate between zones to avoid an abrupt timbre change at a border.
+const boneZoneNames={none:'非接触',scalp:'頭皮',forehead:'額',jaw:'顎',cheek_L:'左頬',cheek_R:'右頬',temple_L:'左こめかみ',temple_R:'右こめかみ',behindEar_L:'左耳の後ろ',behindEar_R:'右耳の後ろ',earCanal_L:'左耳道',earCanal_R:'右耳道'};
+const boneZones={
+ scalp:{frequency:145,lowpass:480,body:.75,hardness:.42,cross:.92},
+ forehead:{frequency:250,lowpass:920,body:.82,hardness:.95,cross:.92},
+ jaw:{frequency:198,lowpass:690,body:.93,hardness:1.06,cross:.82},
+ cheek_L:{frequency:125,lowpass:470,body:.92,hardness:.48,cross:.68},
+ cheek_R:{frequency:125,lowpass:470,body:.92,hardness:.48,cross:.68},
+ temple_L:{frequency:260,lowpass:920,body:.97,hardness:.88,cross:.60},
+ temple_R:{frequency:260,lowpass:920,body:.97,hardness:.88,cross:.60},
+ behindEar_L:{frequency:220,lowpass:710,body:1,hardness:.82,cross:.48},
+ behindEar_R:{frequency:220,lowpass:710,body:1,hardness:.82,cross:.48},
+ earCanal_L:{frequency:175,lowpass:460,body:.3,hardness:.38,cross:.10},
+ earCanal_R:{frequency:175,lowpass:460,body:.3,hardness:.38,cross:.10},
+ none:{frequency:200,lowpass:650,body:0,hardness:0,cross:0}
+};
+const boneModeWeight={bee:.08,ear:1,foam:.62,water:.48,gel:.93,heart:.52,white:0,brown:0};
+function boneZoneFor(s){
+ const x=clamp(s.x,0,1),y=clamp(1-s.y,0,1),contact=headContact(s);
+ if(!contact.touching)return {id:'none',touch:0,isCanal:false,side:-1,settings:boneZones.none};
+ const distances=EAR_SPOTS.map(p=>Math.hypot((x-p.x)*1.07,(y-p.y)*.9));
+ const near=distances[0]<=distances[1]?0:1;
+ const ear=EAR_SPOTS[near],outer=near===0?x<ear.x:x>ear.x;
+ const aperture=lerp(.051,.104,(state.entryPoint-55)/33);
+ let zone;
+ if(distances[near]<aperture*.58)zone=near===0?'earCanal_L':'earCanal_R';
+ else if(distances[near]<.098 && outer)zone=near===0?'behindEar_L':'behindEar_R';
+ else if(y<.335)zone='scalp';
+ else if(y<.445 && x>.34 && x<.66)zone='forehead';
+ else if(y>.675)zone='jaw';
+ else if(x<.355||x>.645)zone=x<.5?'temple_L':'temple_R';
+ else zone=x<.5?'cheek_L':'cheek_R';
+ return {id:zone,touch:contact.gain,isCanal:zone.startsWith('earCanal'),side:zone.endsWith('_L')?0:zone.endsWith('_R')?1:-1,settings:boneZones[zone]};
+}
+function emissionFor(s){
+ const behavior=resolvedBehavior(s),contact=headContact(s);
+ const inputActive=s.enabled!==false && (s.pressed||s.auto||(continuous.has(s.mode)&&behavior==='free'));
+ // Free mode allows a synthetic rubbing source to operate without a press as requested.
+ const active=s.enabled!==false && (behavior==='free'||inputActive);
+ return {behavior,contact,active,gate:active*(behavior==='contact'?contact.gain:1)};
+}
+function applyProfile(slot,resetBehavior=true){
+ const s=state[slot],p=soundProfiles[s.mode];
+ s.profile={...p};s.level=p.level;
+ if(resetBehavior)s.behavior='auto';
+}
+function setMode(slot,mode){
+ if(!modes.includes(mode))return;
+ const s=state[slot];s.mode=mode;
+ if(state.autoOptimize){applyProfile(slot,true);$(slot+'Level').value=s.level;}
+ if(slot==='mouse'){s.auto=false;$('autoToggle').checked=false;}
+ refreshModeUI();engine?.changeMode(slot,mode);engine?.updateParameters();updateLabels();updateStatus();
+}
+const modeHelp = {
+ bee: '蜂は音声開始で鳴ります。マウスを動かすと移動し、自動飛行もできます。',
+ ear: '押しながらドラッグで擦れ音。圧力と移動速度で質感が変化します。',
+ foam: '押しながらドラッグで細かな泡の破裂音。',
+ water: 'ドラッグで流動音・小さな水滴音が重なります。',
+ gel: 'ドラッグで粘った摩擦音。内部接触を上げると耳の奥の低中域が強くなります。',
+ heart: '頭や耳に密着したときだけ低いS1・短いS2と体内振動風のゴー音が立ち上がります。心拍数や低音の量も調整できます。',
+ white: 'ホワイトノイズを連続生成します。',
+ brown: 'ブラウンノイズを連続生成します。'
+};
+const state = {
+ mouse:{mode:'bee',x:.14,y:.78,speed:0,pressed:false,auto:false,level:72,behavior:'auto',profile:{...soundProfiles.bee}},
+ keyboard:{mode:'foam',x:.86,y:.78,speed:0,pressed:false,auto:false,level:88,behavior:'auto',profile:{...soundProfiles.foam},enabled:true,latch:false},
+ autoOptimize:true,boneOn:true,showBoneZones:true,boneStrength:58,boneSoftness:48,boneCross:66,boneOcclusion:58,boneTap:70,boneRub:63,strength:52,texture:50,rate:50,master:35,heartBpm:72,heartWarm:72,heartRumble:67,earTap:76,earScrape:80,gelSuction:74,pressure:46,insideBass:88,canalBassBoost:62,canalSealBoost:66,insideIsolation:100,proximityBoost:63,spatial:90,sampleBlend:75,preserveStereo:false,startFade:350,stopFade:180,transientSoft:50,
+ sealOn:true,insideOn:true,seal:96,sealKeep:78,inside:95,bodyNoise:84,rangeCm:25,insertionCm:1.5,leftEar:100,rightEar:100,
+ entryPoint:74,nearFocus:78,transition:58,surfaceFriction:82,canalResonance:72,sealDepth:42,
+ whiteOn:false,brownOn:false,whiteLevel:24,brownLevel:32
+};
+let audioBusy=false;
+let engine=null,recordChunks=[],recorder=null,lastPointer=0,lastMX=0,lastMY=0,lastAnim=0;
+const sampleFiles=Object.fromEntries(modes.map(m=>[m,[]])); // [{name,bytes,buffer?}] for each sound
+let sampleRoundRobin=0;
+const activePointers={mouse:null,keyboard:null}; // {id, lane, x, y, timestamp}
+let dualTouch=window.matchMedia?.('(pointer: coarse)')?.matches || false;
+const keys = new Set();
+const keyMap = {KeyW:[0,1],KeyA:[-1,0],KeyS:[0,-1],KeyD:[1,0],ArrowUp:[0,1],ArrowLeft:[-1,0],ArrowDown:[0,-1],ArrowRight:[1,0]};
+let lastStatus = '';
+function setMessage(message){$('message').textContent=message;}
+function updateLabels(){
+  for(const id of ['boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub','strength','texture','rate','master','heartBpm','heartWarm','heartRumble','earTap','earScrape','gelSuction','pressure','insideBass','canalBassBoost','canalSealBoost','insideIsolation','proximityBoost','whiteLevel','brownLevel','mouseLevel','keyboardLevel','spatial','sampleBlend','startFade','stopFade','transientSoft','seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']) {
+    const value = id==='mouseLevel'?state.mouse.level:id==='keyboardLevel'?state.keyboard.level:state[id];
+    $(id+'Value').textContent = id==='rangeCm'?value+' cm':id==='insertionCm'?Number(value).toFixed(1)+' cm':id==='heartBpm'?value+' BPM':(id==='startFade'||id==='stopFade')?value+' ms':value+'%';
+  }
+  for(const slot of ['mouse','keyboard']){
+    const s=state[slot],phy=physicalFor(s,slot);
+    const ear=phy.target===0?'左耳':'右耳';
+    $('boneZone'+(slot==='mouse'?'Mouse':'Keyboard')).textContent=boneZoneNames[boneZoneFor(s).id];
+    $(slot+'Pos').textContent=ear+' '+(phy.distanceCm<0?'耳内 '+(-phy.distanceCm).toFixed(2)+'cm':phy.distanceCm<.05?'入口':phy.distanceCm.toFixed(1)+'cm')+' / '+(s.x<.4?'頭の左側':s.x>.6?'頭の右側':'中央');
+  }
+  $('speedOut').textContent = String(Math.round(state.mouse.speed));
+  $('keyboardSpeed').textContent = String(Math.round(state.keyboard.speed));
+  $('keyboardState').textContent = state.keyboard.enabled ? (emissionFor(state.keyboard).gate>.01?'発音中':resolvedBehavior(state.keyboard)==='contact'?'接触待ち':'連続再生') : 'OFF';
+}
+function refreshModeUI(){
+  document.querySelectorAll('.mode').forEach(button=>{
+    const selected = button.dataset.mode===state.mouse.mode;
+    button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
+  });
+  $('modeHelp').textContent=modeHelp[state.mouse.mode]+' / '+(resolvedBehavior(state.mouse)==='contact'?'頭・耳に触れるまでは無音です。':'接触せずに鳴ります。');
+  $('autoOptimize').checked=state.autoOptimize;
+  for(const slot of ['mouse','keyboard']){
+   const s=state[slot],label=slot==='mouse'?'Mouse':'Keyboard',kind=resolvedBehavior(s);
+   $('behavior'+label).value=s.behavior;
+   const on=emissionFor(s),p=s.profile;
+   $('behavior'+label+'Info').textContent=(s.behavior==='auto'?'自動判定：':'手動指定：')+behaviorName[kind]+' · '+(kind==='contact'?(on.contact.touching?'頭・耳に接触中':'接触待ち'):'空中でも再生')+' / 音量'+s.level+'% / 立上り'+p.attack+'ms';
+  }
+  $('autoLabel').textContent=state.mouse.mode==='bee'?'マウス音源を自動飛行':'マウス音源を自動移動・再生';
+  $('keyboardMode').value=state.keyboard.mode;
+  $('touchModeA').value=state.mouse.mode;
+  $('touchModeB').value=state.keyboard.mode;
+  $('keyboardEnabled').checked=state.keyboard.enabled;
+  $('keyboardLatch').checked=state.keyboard.latch;
+}
+function updateBehaviorLive(){
+ for(const slot of ['mouse','keyboard']){
+  const s=state[slot],label=slot==='mouse'?'Mouse':'Keyboard',e=emissionFor(s),p=s.profile||soundProfiles[s.mode];
+  const condition=e.behavior==='contact'?(e.gate>.02?'接触・再生中':e.contact.touching?'接触中・操作待ち':'空中・無音'):'空中でも再生';
+  const text=(s.behavior==='auto'?'自動判定：':'手動指定：')+behaviorName[e.behavior]+' · '+condition+' / 音量'+s.level+'% / 立上り'+p.attack+'ms';
+  const el=$('behavior'+label+'Info');if(el.textContent!==text)el.textContent=text;
+ }
+}
+function updateStatus(){
+  const playing=Boolean(engine && engine.ctx.state==='running');
+  const activeA=emissionFor(state.mouse).gate>.01;
+  const activeB=emissionFor(state.keyboard).gate>.01;
+  const label=playing?`再生中 · A ${activeA?'ON':'待機'} / B ${activeB?'ON':'待機'}`:'音声停止中';
+  if(label!==lastStatus){$('statusText').textContent=label;lastStatus=label;}
+  $('liveDot').classList.toggle('on',playing);
+  $('startBtn').disabled=playing||audioBusy;$('stopBtn').disabled=!playing||audioBusy;
+}
+class ASMRSystem {
+ constructor(){
+  const Audio=window.AudioContext||window.webkitAudioContext;
+  this.ctx=new Audio({latencyHint:'interactive'});
+  this.lastContact={mouse:0,keyboard:0};this.touchState={mouse:{on:false,lastTap:-100},keyboard:{on:false,lastTap:-100}};this.boneTouch={mouse:{on:false,lastTap:-100,zone:'none'},keyboard:{on:false,lastTap:-100,zone:'none'}};this.lastRim={mouse:false,keyboard:false};this.lastSeal={mouse:false,keyboard:false};
+  const c=this.ctx;
+  this.mix=c.createGain();this.mix.gain.value=.86;
+  // 外側の音は左右独立の密閉フィルタへ。接触音は最終ミックスへ直接送る。
+  this.externalMix=c.createGain();
+  this.externalSplit=c.createChannelSplitter(2);
+  this.externalMerge=c.createChannelMerger(2);
+  this.ears=['left','right'].map((side,i)=>{
+   // Dry direct sound keeps transients/presence audible. The filtered wet path
+   // contributes low/mid energy without globally cutting the source by -24 dB.
+   // Separate parameters per ear support asymmetric seal settings.
+   const low=c.createBiquadFilter(),warm=c.createBiquadFilter(),direct=c.createGain(),wet=c.createGain();
+   low.type='lowpass';low.frequency.value=17000;low.Q.value=.707;
+   warm.type='peaking';warm.frequency.value=350;warm.Q.value=.75;warm.gain.value=1;
+   direct.gain.value=1;wet.gain.value=0;
+   this.externalSplit.connect(direct,i);direct.connect(this.externalMerge,0,i);
+   this.externalSplit.connect(low,i);low.connect(warm);warm.connect(wet);wet.connect(this.externalMerge,0,i);
+   return {low,warm,direct,wet};
+  });
+  this.externalMix.connect(this.externalSplit);
+  this.externalMerge.connect(this.mix);
+  // Gain happens BEFORE compression, and final output passes through a soft-clip stage.
+  this.master=c.createGain();
+  this.limiter=c.createDynamicsCompressor();
+  this.limiter.threshold.value=-15;this.limiter.knee.value=8;
+  this.limiter.ratio.value=16;this.limiter.attack.value=.003;this.limiter.release.value=.16;
+  this.safety=c.createWaveShaper();this.safety.oversample='2x';
+  const curve=new Float32Array(65536);
+  for(let i=0;i<curve.length;i++) {const x=i*2/(curve.length-1)-1;curve[i]=Math.tanh(x*1.55)/Math.tanh(1.55)*.91;}
+  this.safety.curve=curve;
+  // The final gate is initialized to 0 *before* any oscillator/buffer plays.
+  // It prevents non-zero waveforms being connected abruptly on AudioContext.resume().
+  this.startGate=c.createGain();this.startGate.gain.value=0;
+  this.started=false;
+  this.lastTickTime=null;
+  this.out=c.createGain();this.out.gain.value=.9;
+  this.analyser=c.createAnalyser();this.analyser.fftSize=1024;
+  this.stream=c.createMediaStreamDestination();
+  this.mix.connect(this.master);this.master.connect(this.limiter);
+  this.limiter.connect(this.safety);this.safety.connect(this.startGate);this.startGate.connect(this.out);
+  this.out.connect(this.analyser);this.analyser.connect(c.destination);this.out.connect(this.stream);
+  this.noise={monoWhite:this.makeNoise('white',1),monoBrown:this.makeNoise('brown',1),
+              stereoWhite:this.makeNoise('white',2),stereoBrown:this.makeNoise('brown',2)};
+  this.bodyNoiseNodes=this.makeBodyNoise();
+  this.background={};this.voices={mouse:null,keyboard:null};
+  this.startBackgrounds();this.changeMode('mouse',state.mouse.mode);
+  this.changeMode('keyboard',state.keyboard.mode);this.updateParameters();
+ }
+ fadeIn(){
+  if(this.started||this.ctx.state!=='running')return;
+  this.started=true;
+  const t=this.ctx.currentTime,p=this.startGate.gain,duration=state.startFade/1000;
+  p.cancelScheduledValues(t);p.setValueAtTime(0,t);
+  // smoothstep reduces sudden slope changes at both ends of the fade.
+  const curve=new Float32Array(65);
+  for(let i=0;i<curve.length;i++){const x=i/(curve.length-1);curve[i]=x*x*(3-2*x);}
+  p.setValueCurveAtTime(curve,t+.005,duration);
+ }
+ // Loaded samples are short sound fragments, never a network fetch. All audio is decoded locally.
+ attachContinuousSample(v){
+  if(!['bee','white','brown'].includes(v.mode))return;
+  const list=sampleFiles[v.mode].filter(x=>x.buffer);
+  if(!list.length||v.sampleLoop)return;
+  const c=this.ctx,src=c.createBufferSource();
+  const stereo=state.preserveStereo&&list[0].stereoBuffer?.numberOfChannels===2;
+  src.buffer=stereo?list[0].stereoBuffer:list[0].buffer;src.loop=true;
+  const gain=c.createGain();gain.gain.value=.55;
+  src.connect(gain);if(stereo){gain.connect(v.stereoBus);gain.connect(v.sampleBus);}else gain.connect(v.sampleBus);src.start();v.sampleLoop=src;
+  v.track(src);v.nodes.push(gain);
+ }
+ triggerSample(v,time,isHeartbeat){
+  const clips=sampleFiles[v.mode].filter(x=>x.buffer);
+  if(!clips.length||state.sampleBlend===0)return;
+  const c=this.ctx,clip=clips[Math.floor(Math.random()*clips.length)];
+  const b=clip.buffer;if(!b||b.duration<.03)return;
+  const t=Math.max(c.currentTime+.006,time),src=c.createBufferSource(),g=c.createGain();
+  const stereo=state.preserveStereo&&clip.stereoBuffer?.numberOfChannels===2;
+  src.buffer=stereo?clip.stereoBuffer:b;
+  const duration=isHeartbeat?Math.min(b.duration,1.2):Math.min(b.duration,.2+Math.random()*.35);
+  const pos=Math.max(0,Math.random()*Math.max(0,b.duration-duration));
+  const rate=clamp((.83+Math.random()*.3)*(0.88+state.rate/400),.5,1.5);src.playbackRate.value=rate;
+  const actual=duration/rate,fade=Math.min(.018,actual/5);
+  const volume=isHeartbeat?.65:(v.mode==='gel'?.5:.35);
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.linearRampToValueAtTime(volume,t+fade);
+  g.gain.setValueAtTime(volume,t+Math.max(fade,actual-.045));
+  g.gain.linearRampToValueAtTime(.0001,t+actual);
+  src.connect(g);if(stereo){g.connect(v.stereoBus);g.connect(v.sampleBus);}else g.connect(v.sampleBus);
+  src.start(t,pos,duration);src.stop(t+actual+.025);
+  src.onended=()=>{try{src.disconnect();g.disconnect();}catch(e){}};
+ }
+ masterGain(){return 1.95*Math.pow(state.master/100,1.22);}
+ makeNoise(kind,channels){
+  const rate=this.ctx.sampleRate,len=rate*8,buffer=this.ctx.createBuffer(channels,len,rate);
+  for(let channel=0;channel<channels;channel++){
+   const data=buffer.getChannelData(channel);let brown=0;
+   for(let i=0;i<len;i++){
+    const white=Math.random()*2-1;
+    if(kind==='white')data[i]=white*.82;
+    else{brown=(brown+.032*white)/1.035;data[i]=brown*2.75;}
+   }
+   if(kind==='brown')for(let i=0,n=Math.floor(rate*.3);i<n;i++){
+    const t=i/(n-1),j=len-n+i;data[j]=data[j]*(1-t)+data[i]*t;
+   }
+  }
+  return buffer;
+ }
+ source(buffer){const n=this.ctx.createBufferSource();n.buffer=buffer;n.loop=true;return n;}
+ makeBodyNoise(){
+  const c=this.ctx,merged=c.createChannelMerger(2),arr=[];
+  for(let i=0;i<2;i++){
+   const src=this.source(this.noise.monoWhite),low=c.createBiquadFilter(),high=c.createBiquadFilter(),gain=c.createGain();
+   low.type='lowpass';low.frequency.value=1000;low.Q.value=.65;
+   high.type='highpass';high.frequency.value=55;
+   gain.gain.value=0;
+   src.connect(low);low.connect(high);high.connect(gain);gain.connect(merged,0,i);
+   src.start(0,i*.19);arr.push({src,low,high,gain});
+  }
+  merged.connect(this.mix);return arr;
+ }
+ startBackgrounds(){
+  for(const kind of ['white','brown']){
+   const c=this.ctx,src=this.source(kind==='white'?this.noise.stereoWhite:this.noise.stereoBrown);
+   const gain=c.createGain(),filter=c.createBiquadFilter();
+   gain.gain.value=0; // OFF must be truly silent, including the first render quantum.
+   filter.type='highpass';filter.frequency.value=kind==='brown'?38:26;
+   src.connect(filter);filter.connect(gain);gain.connect(this.externalMix);src.start();
+   this.background[kind]={src,gain};
+  }
+ }
+ makeVoice(slot,mode){
+  const c=this.ctx;
+  const v={slot,mode,nodes:[],sources:[],out:c.createGain(),filter:c.createBiquadFilter(),
+   panner:c.createPanner(),dry:c.createGain(),synthGain:c.createGain(),sampleBus:c.createGain(),
+   stereoBus:c.createGain(),stereoOut:c.createGain(),stereoFilter:c.createBiquadFilter(),stereoInsideFilter:c.createBiquadFilter(),stereoInsideGain:c.createGain(),
+   distanceFilter:c.createBiquadFilter(),distanceGain:c.createGain(),pressHigh:c.createBiquadFilter(),
+   pressLow:c.createBiquadFilter(),pressGain:c.createGain(),nextEvent:c.currentTime+.05,
+   nextHeartbeat:c.currentTime+.1,lastPulse:-100,lastSample:-100,noiseFilter:null,noiseGain:null,bee:null,heartBodyGain:null,heartBodyFilter:null,
+   contactLow:c.createBiquadFilter(),contactWarm:c.createBiquadFilter(),contactRes:c.createBiquadFilter(),canalBassShelf:c.createBiquadFilter(),canalBassPeak:c.createBiquadFilter(),contactGain:c.createGain(),contactPan:c.createStereoPanner(),
+   contactSplit:c.createChannelSplitter(2),contactMerge:c.createChannelMerger(2),contactEarGains:[c.createGain(),c.createGain()],
+   rubSrc:null,rubLow:c.createBiquadFilter(),rubBand:c.createBiquadFilter(),rubGain:c.createGain(),earTone:[c.createBiquadFilter(),c.createBiquadFilter()],earDelay:[c.createDelay(.01),c.createDelay(.01)],earGains:[c.createGain(),c.createGain()],earMerge:c.createChannelMerger(2)};
+  // Dedicated third transmission route: contact vibration, never gated by canal-exclusive L/R routing.
+  v.boneBus=c.createGain();v.boneBus.gain.value=0;
+  v.boneRubSource=null;v.bonePressSource=null;
+  v.boneRubFilter=c.createBiquadFilter();v.boneRubGain=c.createGain();v.boneRubGain.gain.value=0;
+  v.bonePressFilter=c.createBiquadFilter();v.bonePressGain=c.createGain();v.bonePressGain.gain.value=0;
+  v.boneLowpass=[c.createBiquadFilter(),c.createBiquadFilter()];
+  v.boneOcclusionEQ=[c.createBiquadFilter(),c.createBiquadFilter()];
+  v.boneEarGains=[c.createGain(),c.createGain()];v.boneMerge=c.createChannelMerger(2);
+  for(let i=0;i<2;i++){
+   v.boneLowpass[i].type='lowpass';v.boneLowpass[i].frequency.value=650;
+   v.boneOcclusionEQ[i].type='lowshelf';v.boneOcclusionEQ[i].frequency.value=240;v.boneOcclusionEQ[i].gain.value=0;
+   v.boneEarGains[i].gain.value=0;
+   v.boneBus.connect(v.boneLowpass[i]);v.boneLowpass[i].connect(v.boneOcclusionEQ[i]);
+   v.boneOcclusionEQ[i].connect(v.boneEarGains[i]);v.boneEarGains[i].connect(v.boneMerge,0,i);
+  }
+  v.boneMerge.connect(this.mix);
+  // Looping noise layers start silent; a tap impulse is created only on actual new contact.
+  v.boneRubSource=this.source(this.noise.monoWhite);v.sources.push(v.boneRubSource);
+  v.boneRubFilter.type='bandpass';v.boneRubFilter.frequency.value=290;v.boneRubFilter.Q.value=.65;
+  v.boneRubSource.connect(v.boneRubFilter);v.boneRubFilter.connect(v.boneRubGain);v.boneRubGain.connect(v.boneBus);
+  v.bonePressSource=this.source(this.noise.monoBrown);v.sources.push(v.bonePressSource);
+  v.bonePressFilter.type='lowpass';v.bonePressFilter.frequency.value=160;
+  v.bonePressSource.connect(v.bonePressFilter);v.bonePressFilter.connect(v.bonePressGain);v.bonePressGain.connect(v.boneBus);
+  v.boneRubSource.start(0,slot==='mouse'?.75:1.14);v.bonePressSource.start(0,slot==='mouse'?1.3:.51);
+  v.out.gain.value=0;v.stereoOut.gain.value=0;v.stereoInsideGain.gain.value=0;
+  v.filter.type='lowpass';v.filter.frequency.value=14000;
+  v.panner.panningModel='HRTF';v.panner.distanceModel='inverse';
+  v.panner.refDistance=.75;v.panner.maxDistance=15;v.panner.rolloffFactor=.78;
+  v.panner.coneInnerAngle=360;
+  v.pressHigh.type='highpass';v.pressHigh.frequency.value=42;
+  v.pressLow.type='lowpass';v.pressLow.frequency.value=310;
+  v.contactLow.type='lowpass';v.contactLow.frequency.value=1400;
+  v.contactWarm.type='lowshelf';v.contactWarm.frequency.value=240;v.contactWarm.gain.value=6;
+  v.contactRes.type='peaking';v.contactRes.frequency.value=420;v.contactRes.Q.value=.75;v.contactRes.gain.value=4;
+  v.canalBassShelf.type='lowshelf';v.canalBassShelf.frequency.value=210;v.canalBassShelf.gain.value=0;
+  v.canalBassPeak.type='peaking';v.canalBassPeak.frequency.value=115;v.canalBassPeak.Q.value=.85;v.canalBassPeak.gain.value=0;
+  v.contactGain.gain.value=0;
+  v.synthGain.connect(v.filter);v.sampleBus.connect(v.filter);
+  // For genuine binaural recordings, keep L/R rather than routing them through mono HRTF.
+  v.stereoBus.connect(v.stereoOut);v.stereoOut.connect(v.stereoFilter);
+  v.stereoFilter.type='lowpass';v.stereoFilter.connect(this.externalMix);
+  v.stereoBus.connect(v.stereoInsideFilter);v.stereoInsideFilter.type='lowpass';
+  v.stereoInsideFilter.frequency.value=800;v.stereoInsideFilter.connect(v.stereoInsideGain);
+  v.stereoInsideGain.connect(this.mix);
+  v.filter.connect(v.out);
+  // Physically-inspired per-ear transfer: separate distance, ITD, and head-shadow LPFs.
+  // This replaces a fixed-distance PannerNode and keeps each side independent.
+  for(let i=0;i<2;i++){
+   v.earTone[i].type='lowpass';v.earTone[i].Q.value=.707;
+   v.out.connect(v.earTone[i]);v.earTone[i].connect(v.earDelay[i]);
+   v.earDelay[i].connect(v.earGains[i]);v.earGains[i].connect(v.earMerge,0,i);
+  }
+  v.earMerge.connect(this.externalMix);
+  v.distanceFilter.type='lowpass';
+  // Contact pressure follows the actual touch position, not an independent distance fader.
+  v.out.connect(v.pressHigh);v.pressHigh.connect(v.pressLow);
+  v.pressLow.connect(v.pressGain);
+  // 接触経路は外音遮断フィルタを通らない。中・低域成分を抽出して近接させる。
+  v.out.connect(v.contactLow);v.contactLow.connect(v.contactWarm);
+  v.contactWarm.connect(v.contactRes);v.contactRes.connect(v.canalBassShelf);v.canalBassShelf.connect(v.canalBassPeak);v.canalBassPeak.connect(v.contactGain);
+  // 左右の接触音の効き方も、独立した2つのチャンネルで制御する。
+  for(let i=0;i<2;i++){
+   v.contactGain.connect(v.contactEarGains[i]);
+   v.pressGain.connect(v.contactEarGains[i]);
+   v.contactEarGains[i].connect(v.contactMerge,0,i);
+  }
+  v.contactMerge.connect(this.mix);
+
+  v.add=(node,dest=v.synthGain)=>{node.connect(dest);v.nodes.push(node);return node;};
+  v.track=source=>{v.sources.push(source);return source;};
+  // Continuous, very low-level friction: starts at the outer ear, then deepens.
+  // Sound layer is tied to contact and finger motion; no abrupt samples required.
+  v.rubSrc=v.track(this.source(this.noise.monoWhite));
+  v.rubLow.type='lowpass';v.rubLow.frequency.value=2500;
+  v.rubBand.type='bandpass';v.rubBand.frequency.value=700;v.rubBand.Q.value=.48;
+  v.rubGain.gain.value=0;
+  v.rubSrc.connect(v.rubLow);v.rubLow.connect(v.rubBand);v.rubBand.connect(v.rubGain);
+  for(const g of v.contactEarGains)v.rubGain.connect(g);v.rubSrc.start();
+
+  const addNoise=(buffer,type,freq,q)=>{
+   const src=v.track(this.source(buffer)),f=c.createBiquadFilter(),g=c.createGain();
+   f.type=type;f.frequency.value=freq;f.Q.value=q;g.gain.value=1;
+   src.connect(f);f.connect(g);v.add(g);src.start();v.noiseFilter=f;v.noiseGain=g;
+  };
+  if(mode==='bee'){
+   const saw=v.track(c.createOscillator()),tri=v.track(c.createOscillator()),lfo=v.track(c.createOscillator());
+   const lfoGain=c.createGain(),g1=c.createGain(),g2=c.createGain(),mod=c.createGain();
+   saw.type='sawtooth';tri.type='triangle';lfo.type='sine';
+   saw.frequency.value=158;tri.frequency.value=314;lfo.frequency.value=5.6;
+   mod.gain.value=6;lfo.connect(mod);mod.connect(saw.frequency);
+   lfoGain.gain.value=.15;lfo.connect(lfoGain);lfoGain.connect(g1.gain);
+   g1.gain.value=.25;g2.gain.value=.08;
+   saw.connect(g1);tri.connect(g2);v.add(g1);v.add(g2);
+   [saw,tri,lfo].forEach(n=>n.start());v.bee={saw,tri,lfo};
+  }else if(mode==='ear')addNoise(this.noise.monoWhite,'bandpass',2500,.6);
+  else if(mode==='foam')addNoise(this.noise.monoWhite,'highpass',1550,.7);
+  else if(mode==='water')addNoise(this.noise.monoWhite,'bandpass',1150,.48);
+  else if(mode==='gel')addNoise(this.noise.monoBrown,'lowpass',460,.7);
+  else if(mode==='heart'){
+   // Low contact rumble is independent of the heartbeat transients. It is not a literal muscle recording.
+   const src=v.track(this.source(this.noise.monoBrown));
+   const hp=c.createBiquadFilter(),lp=c.createBiquadFilter(),g=c.createGain();
+   hp.type='highpass';hp.frequency.value=36;lp.type='lowpass';lp.frequency.value=155;
+   g.gain.value=0;src.connect(hp);hp.connect(lp);lp.connect(g);
+   for(const earGain of v.contactEarGains)g.connect(earGain);
+   src.start(Math.max(0,c.currentTime),.23);v.nodes.push(hp,lp,g);
+   v.heartBodyGain=g;v.heartBodyFilter=lp;
+  }
+  else if(mode==='white')addNoise(this.noise.monoWhite,'highpass',35,.7);
+  else if(mode==='brown')addNoise(this.noise.monoBrown,'highpass',35,.7);
+  this.attachContinuousSample(v);
+  return v;
+ }
+ changeMode(slot,mode){
+  if(!modes.includes(mode))return;
+  const c=this.ctx,t=c.currentTime,old=this.voices[slot];
+  if(old){
+   old.out.gain.cancelScheduledValues(t);
+   old.out.gain.setTargetAtTime(.00001,t,lerp(.014,.034,state.transientSoft/100));
+   setTimeout(()=>this.disposeVoice(old),260);
+  }
+  this.touchState[slot].on=false;this.boneTouch[slot]={on:false,lastTap:-100,zone:"none"};this.lastRim[slot]=false;this.lastSeal[slot]=false;
+  this.voices[slot]=this.makeVoice(slot,mode);
+  this.position(slot,state[slot].x,state[slot].y);
+  this.updateVoice(this.voices[slot],state[slot]);
+ }
+ disposeVoice(v){
+  for(const src of v.sources){try{src.stop();}catch(e){}}
+  for(const node of [...v.nodes,v.filter,v.out,v.synthGain,v.sampleBus,v.stereoBus,v.stereoOut,v.stereoFilter,v.stereoInsideFilter,v.stereoInsideGain,v.distanceFilter,v.distanceGain,v.panner,v.dry,v.pressHigh,v.pressLow,v.pressGain,v.contactLow,v.contactWarm,v.contactRes,v.canalBassShelf,v.canalBassPeak,v.contactGain,v.contactPan,v.contactSplit,v.contactMerge,...v.contactEarGains,v.rubLow,v.rubBand,v.rubGain,...v.earTone,...v.earDelay,...v.earGains,v.earMerge,v.boneBus,v.boneRubFilter,v.boneRubGain,v.bonePressFilter,v.bonePressGain,...v.boneLowpass,...v.boneOcclusionEQ,...v.boneEarGains,v.boneMerge]){
+   try{node.disconnect();}catch(e){}
+  }
+ }
+ position(slot,x,y){
+  const v=this.voices[slot];if(!v)return;
+  v.physical=physicalFor(state[slot],slot);
+ }
+ updateVoice(v,slotState){
+  const c=this.ctx,t=c.currentTime;
+  const strength=state.strength/100,wet=state.texture/100,rate=state.rate/100;
+  const emission=emissionFor(slotState),active=emission.active;
+  const profile=slotState.profile||soundProfiles[v.mode];
+  const phy=physicalFor(slotState,v.slot);v.physical=phy;
+  const levels={bee:.27,ear:.48,foam:.42,water:.44,gel:.45,heart:.67,white:.22,brown:.42};
+  const base=levels[v.mode]*(.32+.77*strength)*(slotState.level/100)*emission.gate;
+  // AudioParam smoothing prevents contact-edge clicks; release is independent of attack.
+  const target=base,tauLevel=(base>v.out.gain.value?profile.attack:profile.release)/1000/3;
+  v.out.gain.setTargetAtTime(target,t,Math.max(.008,tauLevel));
+  const hasSample=sampleFiles[v.mode].some(s=>s.buffer),blend=hasSample?state.sampleBlend/100:0;
+  v.synthGain.gain.setTargetAtTime(hasSample?Math.max(0,1-blend):1,t,.035);
+  const binaural=state.preserveStereo&&sampleFiles[v.mode].some(f=>f.stereoBuffer?.numberOfChannels===2);
+  const d=Math.max(0,phy.distanceCm)/100;
+  const effect={bee:0,ear:.88,foam:.69,water:.55,gel:1,heart:.12,white:0,brown:0}[v.mode]||0;
+  const depth=phy.eligible ? phy.insideDepth*effect : 0;
+  const insertBlend=smoothstep((depth-.035)/.85);
+  v.sampleBus.gain.setTargetAtTime(blend*(binaural?insertBlend:1),t,.035);
+  const sealed=smoothstep((depth-.12)/.75);
+  const shadow=state.spatial/100;
+  const contact=phy.contact*effect,rim=phy.rim*effect,near=phy.near*effect;
+  const tau=lerp(.02,.13,state.transition/100);
+  const strengthNear=state.proximityBoost/100;
+  const nearBoost=1+strengthNear*(.35*near+1.15*insertBlend);
+  const binauralGain=clamp(.16/(d+.073),.28,1.72);
+  const stereoLevel=(binaural?blend*(slotState.level/100)*(.32+.75*strength)*emission.gate:0);
+  // Binaural original stereo is reduced in ear-insertion mode: otherwise it leaks across ears.
+  v.stereoOut.gain.setTargetAtTime(stereoLevel*binauralGain*.57*nearBoost*(1-insertBlend),t,tau);
+  v.stereoFilter.frequency.setTargetAtTime(14000,t,.06);
+  v.stereoInsideGain.gain.setTargetAtTime(0,t,tau); // no bypass of ear-exclusive routing
+  const r1=phy.distances[phy.target],rOpp=phy.distances[1-phy.target];
+  const sideStrength=smoothstep((Math.abs(slotState.x-.5)-.03)/.31);
+  for(let i=0;i<2;i++){
+   const same=i===phy.target,r=phy.distances[i];
+   const atten=clamp(.17/(r+.07),.25,1.95)*nearBoost;
+   const shadowGain=same?1:lerp(1,.34,shadow*sideStrength);
+   const cutoff=same?16500:lerp(14500,1000,shadow*sideStrength);
+   // Sound source gradually leaves the free-field path when it is inside the ear.
+   const exterior=1-insertBlend;
+   const farIsolation=same?1:1-(state.insideIsolation/100)*smoothstep(depth/.72);
+   const gain=atten*shadowGain*exterior*farIsolation;
+   const extraDelay=same?0:Math.min(.00070,Math.max(0,(rOpp-r1)/343));
+   v.earGains[i].gain.setTargetAtTime(gain,t,.032);
+   v.earTone[i].frequency.setTargetAtTime(cutoff,t,.034);
+   v.earDelay[i].delayTime.setTargetAtTime(extraDelay,t,.030);
+  }
+  // Internal bone/contact layer is single-ear mono. It gets stronger toward the canal center.
+  const inside=state.insideOn?state.inside/100:0;
+  const bass=state.insideBass/100;
+  const contactGain=emission.gate>0?inside*(.18*rim+.78*contact+.28*insertBlend)*(.44+.55*strength)*nearBoost*emission.gate:0;
+  v.contactGain.gain.setTargetAtTime(contactGain,t,tau);
+  const friction=state.surfaceFriction/100;
+  const movement=clamp(slotState.speed/80,0,1);
+  const earMotion=v.mode==='ear'?smoothstep(movement/.40)*(state.earScrape/100):1;
+  const rubbing=emission.gate>0&&state.insideOn ? friction*(.004*near+.027*rim+.078*contact)*(.12+.88*movement)*(.45+.5*strength)*nearBoost*emission.gate*earMotion:0;
+  v.rubGain.gain.setTargetAtTime(rubbing,t,tau);
+  v.rubLow.frequency.setTargetAtTime(lerp(4800,580,clamp(.75*contact+.3*rim,0,1)),t,tau);
+  v.rubBand.frequency.setTargetAtTime(lerp(1600,235,clamp(.9*contact+.25*rim,0,1)),t,tau);
+  if(v.heartBodyGain){
+   const contactAmount=emission.contact.gain*emission.gate;
+   const bodyWeight=state.heartRumble/100;
+   v.heartBodyGain.gain.setTargetAtTime(bodyWeight*.13*contactAmount*(.55+.45*strength),t,.055);
+   v.heartBodyFilter.frequency.setTargetAtTime(lerp(210,95,state.heartWarm/100),t,.08);
+  }
+  for(let i=0;i<2;i++){
+   const same=i===phy.target;
+   const sensitivity=(i===0?state.leftEar:state.rightEar)/100;
+   const cross=same?1:.085*(1-(state.insideIsolation/100)*smoothstep(depth/.75));
+   v.contactEarGains[i].gain.setTargetAtTime(sensitivity*cross,t,tau);
+  }
+  // BONE-01/02/03/05: separate modeled head/face vibration bus.
+  // The canal-exclusive direct path above remains unchanged and suppresses opposite-ear leakage.
+  const zone=boneZoneFor(slotState),bp=zone.settings;
+  const boneKind=boneModeWeight[v.mode]||0;
+  const faceGain=state.boneOn&&!zone.isCanal?emission.gate*boneKind*zone.touch:0;
+  const softness=state.boneSoftness/100;
+  const movementBone=smoothstep(clamp(slotState.speed/70,0,1));
+  const pressLevel=(.003+.008*state.strength/100)*faceGain;
+  v.boneBus.gain.setTargetAtTime(.8*(state.boneStrength/100)*faceGain*bp.body,t,state.boneOn?Math.max(.025,tau):.018);
+  v.boneRubGain.gain.setTargetAtTime((state.boneRub/100)*movementBone*(.09+.17*state.strength/100)*faceGain,t,tau);
+  v.bonePressGain.gain.setTargetAtTime(pressLevel*(1-.6*movementBone)*(.55+softness*.7),t,tau);
+  v.boneRubFilter.frequency.setTargetAtTime(lerp(bp.frequency*2.2,bp.frequency*.95,softness),t,tau);
+  v.bonePressFilter.frequency.setTargetAtTime(lerp(210,115,softness),t,tau);
+  const balance=zone.side<0?0:zone.side===0?-1:1;
+  const cross=lerp(.22,.95,state.boneCross/100)*bp.cross;
+  for(let i=0;i<2;i++){
+   const direct=balance===0?1:(i===(balance<0?0:1)?1:cross);
+   const realClose=zone.id==='forehead'||zone.id==='scalp'?1:direct;
+   const sensitivity=(i===0?state.leftEar:state.rightEar)/100;
+   v.boneEarGains[i].gain.setTargetAtTime(sensitivity*realClose,t,tau);
+   const shade=(i===(balance<0?0:1)||balance===0)?1:.78;
+   v.boneLowpass[i].frequency.setTargetAtTime(lerp(bp.lowpass*1.12,bp.lowpass*.65,softness)*shade,t,tau);
+   // Low shelf affects only this bone bus; it is distinct from canal bass EQ.
+   const closed=this.closure?.[i]||0;
+   v.boneOcclusionEQ[i].gain.setTargetAtTime(3.8*(state.boneOcclusion/100)*closed,t,tau);
+  }
+  v.contactLow.frequency.setTargetAtTime(v.mode==='heart'?480:lerp(2300,1150,contact),t,tau);
+  v.contactWarm.frequency.setTargetAtTime(lerp(340,195,contact),t,tau);
+  v.contactWarm.gain.setTargetAtTime((3+15*bass*contact),t,tau);
+  v.contactRes.gain.setTargetAtTime((2+9*bass*contact),t,tau);
+  // Extra ear-only low band EQ. Keep 0 dB until physically inside the virtual ear.
+  // Limit to a moderate +9 dB shelf and +3.5 dB peak to reduce heavy clipping.
+  const canalIn=phy.eligible?smoothstep((phy.insideDepth-.18)/.68)*effect:0;
+  const bassExtra=state.canalBassBoost/100;
+  v.canalBassShelf.gain.setTargetAtTime(9*bassExtra*canalIn,t,tau);
+  v.canalBassPeak.gain.setTargetAtTime(3.5*bassExtra*canalIn,t,tau);
+  v.canalBassShelf.frequency.setTargetAtTime(lerp(260,175,canalIn),t,.065);
+  const pressure=state.pressure/100 * (.26*rim+.74*contact);
+  v.pressGain.gain.setTargetAtTime(emission.gate*.34*pressure*(.4+.6*bass)*nearBoost,t,tau);
+  v.pressLow.frequency.setTargetAtTime(lerp(190,410,pressure),t,.06);
+  if(v.noiseFilter){
+   const f=v.noiseFilter;
+   const freq={ear:lerp(1000,5300,1-wet),foam:lerp(950,5300,wet),water:lerp(400,2100,wet),gel:lerp(130,950,wet),white:35,brown:35}[v.mode]||1300;
+   f.frequency.setTargetAtTime(freq,t,.045);
+   if(v.noiseGain){
+    const earMotion=v.mode==='ear'?smoothstep(clamp(slotState.speed/38,0,1))*(state.earScrape/100):1;
+    const gelMotion=v.mode==='gel'?.17+.83*smoothstep(clamp(slotState.speed/55,0,1)):1;
+    v.noiseGain.gain.setTargetAtTime((v.mode==='white'||v.mode==='brown')?1:lerp(.09,.83,Math.min(1,slotState.speed/100*.65+strength*.55))*earMotion*gelMotion,t,.035);
+   }
+  }
+  let upper=13000;
+  if(v.mode==='bee'&&v.bee){
+   upper=lerp(400,2600,wet);
+   v.bee.saw.frequency.setTargetAtTime(lerp(115,230,rate),t,.09);
+   v.bee.tri.frequency.setTargetAtTime(lerp(230,460,rate),t,.09);
+   v.bee.lfo.frequency.setTargetAtTime(lerp(3,9,rate),t,.09);
+  }else if(v.mode==='gel')upper=lerp(340,1800,wet);
+  else if(v.mode==='ear')upper=lerp(4000,11000,1-wet);
+  else if(v.mode==='water')upper=lerp(2600,11000,wet);
+  else if(v.mode==='foam')upper=lerp(2700,10000,wet);
+  else if(v.mode==='heart')upper=lerp(950,440,state.heartWarm/100);
+  v.filter.frequency.setTargetAtTime(Math.max(180,upper),t,.05);
+ }
+ updateParameters(){
+  const c=this.ctx,t=c.currentTime;
+  this.master.gain.setTargetAtTime(this.masterGain(),t,.04);
+  const closure=[0,0],proximity=[0,0],totalRim=[0,0];
+  for(const slot of ['mouse','keyboard']){
+   const v=this.voices[slot];if(v)this.updateVoice(v,state[slot]);
+   const st=state[slot],p=physicalFor(st,slot),em=emissionFor(st);
+   const ts=this.touchState[slot];
+   const nowTouch=Boolean(em.contact.touching&&em.contact.gain>.13&&em.active&&em.gate>.03);
+   if(st.mode==='ear'&&nowTouch&&!ts.on&&t-ts.lastTap>.11){
+    ts.lastTap=t;this.earTap(this.voices[slot],em.contact.gain,st.speed);
+   }
+   if(st.mode==='gel'&&ts.on&&!nowTouch){this.contactBump(slot,true,'touch');}
+   if(st.mode==='gel'&&!ts.on&&nowTouch){this.contactBump(slot,false,'touch');}
+   ts.on=nowTouch;
+   const zone=boneZoneFor(st),bt=this.boneTouch[slot];
+   const boneCanSound=Boolean(state.boneOn&&!zone.isCanal&&zone.touch>.22&&em.active&&em.gate>.03&&(boneModeWeight[st.mode]||0)>.1);
+   if(boneCanSound&&!bt.on&&t-bt.lastTap>.09){
+    bt.lastTap=t;this.boneTransient(this.voices[slot],zone.id,'tap',clamp(.4+state.strength/145+.3*st.speed/100,.25,1.25));
+   }
+   if(!boneCanSound&&bt.on&&zone.id==='none')this.boneTransient(this.voices[slot],bt.zone,'release',.38);
+   bt.on=boneCanSound;bt.zone=zone.id;
+   const modeFactor={gel:1,ear:.84,foam:.67,water:.52}[st.mode]||0;
+   const rim=p.rim*modeFactor,seal=p.contact*modeFactor;
+   proximity[p.target]=Math.max(proximity[p.target],p.near*(st.pressed?1:.08)*modeFactor);
+   totalRim[p.target]=Math.max(totalRim[p.target],rim);
+   // Hysteretic state events prevent rapid click retriggering at the boundary.
+   if(rim>.55&&!this.lastRim[slot]){this.lastRim[slot]=true;if(!['ear','gel'].includes(st.mode))this.contactBump(slot,false,'touch');}
+   if(rim<.22&&this.lastRim[slot]){this.lastRim[slot]=false;if(!['ear','gel'].includes(st.mode))this.contactBump(slot,true,'touch');}
+   if(seal>.40&&!this.lastSeal[slot]){this.lastSeal[slot]=true;this.contactBump(slot,false,'seal');}
+   if(seal<.20&&this.lastSeal[slot]){this.lastSeal[slot]=false;this.contactBump(slot,true,'seal');}
+   const depth=(state.sealOn?state.seal/100:0)*seal;
+   const earScale=(p.target===0?state.leftEar:state.rightEar)/100;
+   const contribution=clamp(depth*earScale,0,1);
+   closure[p.target]=1-(1-closure[p.target])*(1-contribution);
+  }
+  this.closure=closure;
+  const tau=lerp(.018,.13,state.transition/100);
+  for(let i=0;i<2;i++){
+   const d=closure[i],keep=state.sealKeep/100,ear=this.ears[i];
+   // Stronger *spectral contrast*, not another blanket attenuation of the source.
+   // The same-ear internal contact path remains separate from this external path.
+   const sealExtra=(state.canalSealBoost/100)*d;
+   const dry=(1-d*(.80-.25*keep))*(1-.36*sealExtra);
+   const wet=d*(.28+.72*keep)*(1+.20*sealExtra);
+   ear.low.frequency.setTargetAtTime(17000*Math.pow(430/17000,d)*Math.pow(.52,sealExtra),t,tau);
+   ear.warm.gain.setTargetAtTime((2+6*state.canalResonance/100)*d*keep+2*sealExtra,t,tau);
+   ear.direct.gain.setTargetAtTime(dry,t,tau);
+   ear.wet.gain.setTargetAtTime(wet,t,tau);
+   // Near-contact noise shifts from faint airy noise to low muffled rumble.
+   const body=state.insideOn?(state.bodyNoise/100):0;
+   const node=this.bodyNoiseNodes[i];
+   const near=proximity[i],rim=totalRim[i];
+   node.low.frequency.setTargetAtTime(lerp(9200,360,clamp(.13*near+.23*rim+.87*d+.16*sealExtra,0,1)),t,tau*1.4);
+   // Body-noise low-end increases only with actual ear closure; high-pass is fixed at 55 Hz.
+   const baseRumble=.003*near+.014*rim+.16*Math.pow(d,1.55);
+   const extraRumble=.105*sealExtra*Math.pow(d,1.2)+.045*(state.canalBassBoost/100)*Math.pow(d,1.7);
+   node.gain.gain.setTargetAtTime((near+rim+d>0.001)?body*(state.insideBass/100)*(baseRumble+extraRumble):0,t,tau*1.3);
+  }
+  for(const kind of ['white','brown']){
+   this.background[kind].gain.gain.setTargetAtTime(state[kind+'On']?Math.pow(state[kind+'Level']/100,2)*(kind==='brown'?.72:.23):0,t,.06);
+  }
+ }
+ pop(v,type,time,intensity=1){
+  if(!gestures.has(type))return;
+  const c=this.ctx,s=state.strength/100,wet=state.texture/100;
+  let freq,dur,amp,noise=false;
+  if(type==='foam'){freq=480+Math.random()*1900;dur=.022+Math.random()*.042;amp=.13*intensity;noise=Math.random()<.4;}
+  else if(type==='water'){freq=240+Math.random()*870;dur=.05+Math.random()*.1;amp=.22*intensity;noise=Math.random()<.25;}
+  else if(type==='gel'){freq=75+Math.random()*300;dur=.06+Math.random()*.17;amp=.19*intensity;noise=Math.random()<.65;}
+  else{freq=720+Math.random()*3800;dur=.007+Math.random()*.029;amp=.038*intensity*(state.earScrape/100);noise=Math.random()<.86;}
+  const t=Math.max(c.currentTime,time);
+  if(!noise){
+   const osc=c.createOscillator(),g=c.createGain();
+   osc.type=type==='gel'?'triangle':'sine';
+   osc.frequency.setValueAtTime(freq,t);
+   osc.frequency.exponentialRampToValueAtTime(Math.max(50,freq*(type==='water'?.57:type==='gel'?.77:1.5)),t+dur);
+   const attack=Math.min(dur*.45,lerp(.003,.013,state.transientSoft/100));
+   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(amp*(.5+s*.7),t+attack);
+   g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+   osc.connect(g);g.connect(v.synthGain);osc.start(t);osc.stop(t+dur+.01);
+   osc.onended=()=>{try{osc.disconnect();g.disconnect();}catch(e){}};
+  }else{
+   const src=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();
+   src.buffer=this.noise.monoWhite;f.type=type==='gel'?'lowpass':'bandpass';
+   f.frequency.value=type==='gel'?lerp(220,1800,wet):freq;f.Q.value=.7;
+   src.connect(f);f.connect(g);g.connect(v.synthGain);
+   const attack=Math.min(dur*.45,lerp(.003,.013,state.transientSoft/100));
+   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(amp*.5,t+attack);
+   g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+   src.start(t,Math.random()*5);src.stop(t+dur+.012);
+   src.onended=()=>{try{src.disconnect();f.disconnect();g.disconnect();}catch(e){}};
+  }
+  if(state.pressure>7 && physicalFor(state[v.slot],v.slot).contact>.3 && t-v.lastPulse>.15 && Math.random()<.70){
+   v.lastPulse=t;this.pressurePulse(v,t,intensity);
+  }
+ }
+ pressurePulse(v,t,intensity){
+  const c=this.ctx,depth=state.pressure/100;
+  const osc=c.createOscillator(),gain=c.createGain();
+  osc.type='sine';const f=64+Math.random()*35;
+  osc.frequency.setValueAtTime(f,t);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(45,f*.7),t+.12);
+  const amp=.070*depth*Math.min(1.3,intensity);
+  gain.gain.setValueAtTime(.00001,t);
+  gain.gain.exponentialRampToValueAtTime(Math.max(.0001,amp),t+.012);
+  gain.gain.exponentialRampToValueAtTime(.00001,t+.13);
+  osc.connect(gain);gain.connect(v.synthGain);osc.start(t);osc.stop(t+.14);
+  osc.onended=()=>{try{osc.disconnect();gain.disconnect();}catch(e){}};
+ }
+
+ // BONE-04: Tap and release impulse through the independently balanced bone bus.
+ boneTransient(v,zoneId,kind='tap',intensity=1){
+  if(!v||!state.boneOn||state.boneTap<=0)return;
+  const bp=boneZones[zoneId]||boneZones.forehead;
+  const c=this.ctx,t=c.currentTime+.006;
+  const release=kind==='release',length=release?.075:.105;
+  const level=(state.boneTap/100)*(release?.018:.095)*bp.hardness*intensity;
+  const oscillator=c.createOscillator(),envelope=c.createGain();oscillator.type='triangle';
+  oscillator.frequency.setValueAtTime(bp.frequency*(.87+Math.random()*.24),t);
+  oscillator.frequency.exponentialRampToValueAtTime(Math.max(55,bp.frequency*.62),t+length);
+  envelope.gain.setValueAtTime(0,t);
+  envelope.gain.linearRampToValueAtTime(level,t+.006);
+  envelope.gain.exponentialRampToValueAtTime(.00001,t+length);
+  oscillator.connect(envelope);envelope.connect(v.boneBus);
+  oscillator.start(t);oscillator.stop(t+length+.012);
+  oscillator.onended=()=>{try{oscillator.disconnect();envelope.disconnect();}catch(e){}};
+ }
+ contactBump(slot,releasing=false,kind='seal'){
+  const v=this.voices[slot];if(!v||!gestures.has(v.mode)||!state.insideOn||!state.inside||(!releasing&&!headContact(state[slot]).touching))return;
+  const p=physicalFor(state[slot],slot);
+  const material={gel:1,ear:.75,foam:.55,water:.35}[v.mode]||.4;
+  const power=(state.inside/100)*material*(kind==='touch'?.55:1)*(v.mode==='gel'?state.gelSuction/70:1);
+  if(power<.035)return;
+  const c=this.ctx,t=c.currentTime+.007;
+  // Tiny contact/suction transient: pitched thump + short filtered air movement.
+  const osc=c.createOscillator(),g=c.createGain(),pan=c.createStereoPanner();
+  const dur=v.mode==='gel'?(releasing?.115:.086):(kind==='touch'?.062:.12);
+  const f=v.mode==='gel'?(releasing?190:105):releasing?(kind==='touch'?310:200):(kind==='touch'?260:126);
+  osc.type=v.mode==='gel'?'sine':kind==='touch'?'triangle':'sine';osc.frequency.setValueAtTime(f,t);
+  osc.frequency.exponentialRampToValueAtTime(releasing?f*.62:f*.68,t+dur);
+  const attack=lerp(.008,.026,state.transientSoft/100);
+  g.gain.setValueAtTime(.00001,t);g.gain.exponentialRampToValueAtTime(.031*power,t+Math.min(attack,dur*.45));
+  g.gain.exponentialRampToValueAtTime(.00001,t+dur);
+  pan.pan.value=p.target===0?-.98:.98;
+  osc.connect(g);g.connect(pan);pan.connect(this.mix);osc.start(t);osc.stop(t+dur+.01);
+  osc.onended=()=>{try{osc.disconnect();g.disconnect();pan.disconnect();}catch(e){}};
+ }
+ earTap(v,contactStrength,speed){
+  if(!v||v.mode!=='ear'||state.earTap<=0)return;
+  const c=this.ctx,t=c.currentTime+.006;
+  const hard=clamp(.35+speed/145+state.strength/200,.25,1.18);
+  const level=(state.earTap/100)*(.18+.22*contactStrength)*hard;
+  // A lightly damped hard-tip impulse plus tiny woody tick, never a hard-edged waveform step.
+  const osc=c.createOscillator(),g=c.createGain();osc.type='triangle';
+  const f=520+Math.random()*420;
+  osc.frequency.setValueAtTime(f,t);osc.frequency.exponentialRampToValueAtTime(f*.58,t+.031);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(level,t+.0025);
+  g.gain.exponentialRampToValueAtTime(.0001,t+.045);
+  osc.connect(g);g.connect(v.synthGain);osc.start(t);osc.stop(t+.05);
+  const src=c.createBufferSource(),filter=c.createBiquadFilter(),ng=c.createGain();
+  src.buffer=this.noise.monoWhite;filter.type='bandpass';filter.frequency.value=2100+Math.random()*950;filter.Q.value=.8;
+  ng.gain.setValueAtTime(0,t);ng.gain.linearRampToValueAtTime(level*.24,t+.002);
+  ng.gain.exponentialRampToValueAtTime(.0001,t+.023);
+  src.connect(filter);filter.connect(ng);ng.connect(v.synthGain);src.start(t,Math.random()*4);src.stop(t+.028);
+  osc.onended=()=>{for(const n of [osc,g])try{n.disconnect();}catch(e){}};
+  src.onended=()=>{for(const n of [src,filter,ng])try{n.disconnect();}catch(e){}};
+ }
+ heartPulse(v,t,accent){
+  const c=this.ctx,body=state.heartWarm/100;
+  const dur=accent?lerp(.105,.17,body):lerp(.065,.103,body);
+  const base=accent?lerp(83,58,body):lerp(128,91,body);
+  const level=accent?.31:.24;
+  for(const [mul,amp] of [[1,1],[1.65,.39],[2.5,.13]]){
+   const osc=c.createOscillator(),g=c.createGain();osc.type='sine';
+   osc.frequency.setValueAtTime(base*mul,t);
+   osc.frequency.exponentialRampToValueAtTime(Math.max(34,base*mul*.84),t+dur);
+   g.gain.setValueAtTime(0,t);
+   g.gain.linearRampToValueAtTime(level*amp,t+.008);
+   g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+   osc.connect(g);g.connect(v.synthGain);osc.start(t);osc.stop(t+dur+.01);
+   osc.onended=()=>{try{osc.disconnect();g.disconnect();}catch(e){}};
+  }
+ }
+
+ tick(){
+  if(this.ctx.state!=='running')return;
+  const t=this.ctx.currentTime;
+  if(this.lastTickTime!==null && (t-this.lastTickTime>.28 || t<this.lastTickTime)){
+   for(const v of Object.values(this.voices))if(v){v.nextEvent=t+.025;v.nextHeartbeat=t+.09;}
+  }
+  this.lastTickTime=t;
+  this.updateParameters();
+  for(const slot of ['mouse','keyboard']){
+   const v=this.voices[slot],s=state[slot];if(!v)continue;
+   if(slot==='keyboard'&&!s.enabled){v.nextEvent=t+.04;v.nextHeartbeat=t+.1;continue;}
+   if(v.mode==='heart'){
+    const active=emissionFor(s).gate>.055;
+    if(!active){v.nextHeartbeat=t+.075;continue;}
+    const period=60/state.heartBpm;let n=0;
+    while(v.nextHeartbeat<t+.08&&n++<2){
+     const h=v.nextHeartbeat;
+     this.heartPulse(v,h,true);
+     this.heartPulse(v,h+Math.min(.23,period*.28),false);
+     if(sampleFiles[v.mode].some(s=>s.buffer))this.triggerSample(v,h,true);
+     v.nextHeartbeat+=period;
+    }
+   }else if(gestures.has(v.mode)&&emissionFor(s).gate>.01){
+    const speed=s.auto?50:s.speed;
+    if(v.mode==='ear'&&speed<9){v.nextEvent=t+.04;continue;}
+    if(v.mode==='gel'&&speed<5){v.nextEvent=t+.06;continue;}
+    const intensity=clamp(speed/85*.6+state.strength/100*.7+.12,.1,1.5);
+    const eventRate=Math.min(52,{ear:16,foam:12,water:8,gel:6}[v.mode]*(.35+state.rate/90)*intensity*(s.profile?.density||1));
+    let count=0;
+    while(v.nextEvent<t+.07&&count++<6){
+     this.pop(v,v.mode,v.nextEvent,(.35+Math.random()*.75)*intensity);
+     // Small secondary foam bubbles arrive in short quiet clusters.
+     if(v.mode==='foam'&&Math.random()<.28)this.pop(v,'foam',v.nextEvent+.012+Math.random()*.022,.19*intensity);
+     // Water touching the skin gains tiny splash transients while it is moving.
+     if(v.mode==='water'&&speed>25&&headContact(s).touching&&Math.random()<.22)this.pop(v,'water',v.nextEvent+.020,.23*intensity);
+     if(sampleFiles[v.mode].some(s=>s.buffer) && v.nextEvent-v.lastSample>.11){
+       this.triggerSample(v,v.nextEvent,false);v.lastSample=v.nextEvent;
+     }
+     v.nextEvent+=Math.max(.014,-Math.log(1-Math.random()*.88)/Math.max(1,eventRate));
+    }
+    if(v.nextEvent<t-.2)v.nextEvent=t;
+   }else v.nextEvent=t+.03;
+  }
+ }
+ async close(){
+  const c=this.ctx;if(c.state==='closed')return;
+  const p=this.startGate.gain,t=c.currentTime,ms=state.stopFade;
+  if(typeof p.cancelAndHoldAtTime==='function')p.cancelAndHoldAtTime(t);
+  else {const approx=p.value;p.cancelScheduledValues(t);p.setValueAtTime(approx,t);}
+  p.setTargetAtTime(0,t,Math.max(.015,ms/1000/5));
+  await new Promise(resolve=>setTimeout(resolve,ms+50));
+  await c.close();for(const v of Object.values(this.voices))if(v)this.disposeVoice(v);
+ }
+}
+const stage=$('stage'),map=$('map'),cx=map.getContext('2d'),scope=$('scope'),sx=scope.getContext('2d');
+function canvasSize(canvas){
+ const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(1,Math.floor(canvas.clientWidth*dpr)),h=Math.max(1,Math.floor(canvas.clientHeight*dpr));
+ if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}return{w,h,dpr};
+}
+function paintHead(x0,width,h,dpr){
+ const pt=(x,y)=>[x0+x*width,y*h];
+ const c=pt(.5,.53);
+ const halo=cx.createRadialGradient(c[0],c[1],width*.05,c[0],c[1],width*.56);
+ halo.addColorStop(0,'#1d334b');halo.addColorStop(1,'#0f1b2d');
+ cx.fillStyle=halo;cx.fillRect(x0,0,width,h);
+ // Neck / shoulders give the diagram a mannequin-like silhouette.
+ cx.fillStyle='#30465b';cx.beginPath();cx.ellipse(...pt(.5,1.035),width*.28,h*.15,0,0,Math.PI*2);cx.fill();
+ cx.fillStyle='#c1b2a3';cx.strokeStyle='#f0d6ba';cx.lineWidth=1.7*dpr;
+ cx.beginPath();cx.ellipse(...pt(.5,.52),width*.235,h*.31,0,0,Math.PI*2);cx.fill();cx.stroke();
+ if(state.showBoneZones){
+  cx.save();cx.globalAlpha=.24;cx.fillStyle='#61bfc4';
+  for(const [px,py,rx,ry] of [[.5,.385,.13,.065],[.41,.56,.07,.085],[.59,.56,.07,.085],[.33,.52,.025,.07],[.67,.52,.025,.07],[.5,.70,.092,.032]]){
+   cx.beginPath();cx.ellipse(...pt(px,py),width*rx,h*ry,0,0,Math.PI*2);cx.fill();
+  }
+  cx.restore();
+  if(width>210*dpr){cx.fillStyle='#244150';cx.font=`${10*dpr}px system-ui`;cx.textAlign='center';
+   cx.fillText('額',...pt(.5,.385));cx.fillText('頬',...pt(.41,.56));cx.fillText('頬',...pt(.59,.56));cx.fillText('顎',...pt(.5,.7));}
+ }
+ cx.fillStyle='#b7a392';cx.beginPath();cx.ellipse(...pt(.5,.28),width*.235,h*.115,0,Math.PI,Math.PI*2);cx.fill();
+ cx.fillStyle='#a89786';cx.lineWidth=1.1*dpr;
+ for(const eye of [.42,.58]){
+  cx.beginPath();cx.ellipse(...pt(eye,.47),width*.037,h*.011,0,0,Math.PI*2);cx.fill();
+ }
+ cx.strokeStyle='#7e6f66';cx.lineWidth=1.5*dpr;cx.lineCap='round';
+ cx.beginPath();cx.moveTo(...pt(.5,.48));cx.lineTo(...pt(.487,.60));cx.lineTo(...pt(.513,.61));cx.stroke();
+ cx.beginPath();cx.ellipse(...pt(.5,.69),width*.045,h*.012,0,0,Math.PI);cx.stroke();
+ for(let i=0;i<2;i++){
+  const ep=EAR_SPOTS[i],spot=pt(ep.x,ep.y),depth=engine?.closure?.[i]||0;
+  const rw=width*.054,rh=h*.086;
+  cx.fillStyle='#d6b7a4';cx.strokeStyle=depth>.05?'#dcb8fa':'#eed3be';cx.lineWidth=(1.6+2*depth)*dpr;
+  cx.beginPath();cx.ellipse(spot[0],spot[1],rw,rh,0,0,Math.PI*2);cx.fill();cx.stroke();
+  cx.fillStyle='#826a63';cx.beginPath();cx.ellipse(spot[0],spot[1],rw*.42,rh*.65,0,0,Math.PI*2);cx.fill();
+  cx.fillStyle='#281d2b';cx.beginPath();cx.ellipse(spot[0],spot[1],rw*.22,rh*.32,0,0,Math.PI*2);cx.fill();
+  const aperture=lerp(.051,.104,(state.entryPoint-55)/33);
+  cx.strokeStyle=depth>.1?'#d5b1f0bb':'#7ae1cf8a';cx.lineWidth=1.2*dpr;cx.setLineDash([4*dpr,4*dpr]);
+  cx.beginPath();cx.ellipse(spot[0],spot[1],aperture*width,aperture*h,0,0,Math.PI*2);cx.stroke();cx.setLineDash([]);
+  cx.font=`${11*dpr}px system-ui`;cx.textAlign='center';cx.fillStyle='#edf3ef';
+  cx.fillText(i===0?'左耳':'右耳',spot[0],spot[1]+rh+14*dpr);
+ }
+ cx.textAlign='center';cx.font=`${11*dpr}px system-ui`;cx.fillStyle='#aec5d9';
+ cx.fillText('耳の円の内側＝接触・耳内',x0+width*.5,h*.93);
+}
+function drawMap(t){
+ const {w,h,dpr}=canvasSize(map);cx.clearRect(0,0,w,h);
+ cx.fillStyle='#0c1828';cx.fillRect(0,0,w,h);
+ if(dualTouch){
+  paintHead(0,w/2,h,dpr);paintHead(w/2,w/2,h,dpr);
+  cx.strokeStyle='#a4a8d188';cx.lineWidth=2*dpr;cx.setLineDash([5*dpr,5*dpr]);
+  cx.beginPath();cx.moveTo(w/2,0);cx.lineTo(w/2,h);cx.stroke();cx.setLineDash([]);
+ }else paintHead(0,w,h,dpr);
+ for(const slot of ['mouse','keyboard']){
+  const s=state[slot],isA=slot==='mouse',p=physicalFor(s,slot);
+  const x0=dualTouch?(isA?0:w/2):0,ww=dualTouch?w/2:w;
+  const x=x0+s.x*ww,y=(1-s.y)*h;
+  const anchor=x0+EAR_SPOTS[p.target].x*ww,ay=(1-EAR_SPOTS[p.target].y)*h;
+  const color=isA?'#64e8dd':'#e4b7fb';
+  cx.strokeStyle=color+'99';cx.lineWidth=1.8*dpr;cx.beginPath();cx.moveTo(anchor,ay);cx.lineTo(x,y);cx.stroke();
+  if(p.eligible){cx.beginPath();cx.arc(x,y,(11+5*p.insideDepth)*dpr,0,Math.PI*2);cx.strokeStyle=color+'a0';cx.lineWidth=2*dpr;cx.stroke();}
+  cx.beginPath();cx.arc(x,y,9*dpr,0,Math.PI*2);cx.fillStyle=color;cx.fill();cx.strokeStyle='#071323';cx.lineWidth=1.2*dpr;cx.stroke();
+  cx.textAlign='center';cx.font=`bold ${10*dpr}px system-ui`;cx.fillStyle='#172238';cx.fillText(isA?'A':'B',x,y+3.5*dpr);
+  cx.font=`${10*dpr}px system-ui`;cx.fillStyle=color;
+  const label=p.distanceCm<0?`耳内 ${(-p.distanceCm).toFixed(2)}cm`:`${p.distanceCm.toFixed(1)}cm`;
+  const labelY=dualTouch?25*dpr:(isA?22:43)*dpr;
+  cx.fillText(`${isA?'A':'B'}：${p.target===0?'左耳':'右耳'} ${label}`,x0+ww*.5,labelY);
+ }
+}
+function drawScope(){
+ const {w,h,dpr}=canvasSize(scope);sx.fillStyle='#0c1626';sx.fillRect(0,0,w,h);
+ sx.strokeStyle='#27465a';sx.beginPath();sx.moveTo(0,h/2);sx.lineTo(w,h/2);sx.stroke();
+ sx.beginPath();sx.strokeStyle='#75d6c9';sx.lineWidth=dpr*1.4;
+ if(engine&&engine.ctx.state==='running'){
+  const arr=new Float32Array(engine.analyser.fftSize);engine.analyser.getFloatTimeDomainData(arr);
+  for(let i=0;i<arr.length;i++){
+   const x=i/(arr.length-1)*w,y=h*.5-clamp(arr[i],-1,1)*h*.42;
+   if(i===0)sx.moveTo(x,y);else sx.lineTo(x,y);
+  }
+ }else{
+  for(let i=0;i<100;i++){
+   const x=i/99*w,y=h*.5+Math.sin(i*.4)*Math.sin(i*.17)*h*.03;
+   if(i===0)sx.moveTo(x,y);else sx.lineTo(x,y);
+  }
+ }sx.stroke();
+}
+function animation(now){
+ const delta=lastAnim?Math.min(.075,(now-lastAnim)/1000):.016;lastAnim=now;
+ const mouse=state.mouse,kb=state.keyboard;
+ if(mouse.auto){
+  const f=now/1000*(.45+state.rate/180);
+  mouse.x=clamp(.5+Math.sin(f*.8)*.42,.03,.97);
+  mouse.y=clamp(.54+Math.sin(f*.57+1.2)*.34,.05,.95);
+  mouse.speed=45+Math.abs(Math.cos(f*.8))*35;
+ }else if(!mouse.pressed)mouse.speed*=Math.exp(-delta*4);
+ let dx=0,dy=0;
+ for(const code of keys){const motion=keyMap[code];if(motion){dx+=motion[0];dy+=motion[1];}}
+ const move=Boolean(dx||dy),oldPressed=kb.pressed;
+ if(move&&kb.enabled&&!activePointers.keyboard){
+  const length=Math.hypot(dx,dy);
+  kb.x=clamp(kb.x+dx/length*delta*(.30+state.rate/200),.015,.985);
+  kb.y=clamp(kb.y+dy/length*delta*(.30+state.rate/200),.015,.985);
+  kb.speed=clamp(Math.hypot(dx,dy)*55,0,100);
+ }else if(!activePointers.keyboard)kb.speed*=Math.exp(-delta*5);
+ kb.pressed=kb.enabled&&(Boolean(activePointers.keyboard)||keys.has('Space')||kb.latch||(move&&!activePointers.keyboard));
+ // If a finger stops moving while still pressed, speed eases down rather than staying stuck.
+ for(const slot of ['mouse','keyboard']){
+  const active=activePointers[slot];
+  if(active&&now-active.timestamp>75)state[slot].speed*=Math.exp(-delta*6);
+ }
+ if(engine){
+  engine.position('mouse',mouse.x,mouse.y);engine.position('keyboard',kb.x,kb.y);
+  engine.tick();if(oldPressed!==kb.pressed)engine.updateParameters();
+ }
+ updateLabels();updateStatus();drawMap(now);drawScope();
+ for(let i=0;i<2;i++){
+  const d=engine?.closure?.[i]||0;
+  const nearAny=['mouse','keyboard'].some(slot=>{const p=physicalFor(state[slot],slot);return p.target===i&&p.distanceCm<3;});
+  const touching=['mouse','keyboard'].some(slot=>{const p=physicalFor(state[slot],slot);return p.target===i&&p.eligible&&p.rim>.35;});
+  const stage=d>.65?'耳内・密閉':d>.10?'耳内・移行':touching?'入口で接触':nearAny?'超近距離':'開放';
+  $(i===0?'leftStatus':'rightStatus').textContent=stage;
+  $(i===0?'leftOcclusion':'rightOcclusion').textContent='閉塞 '+Math.round(d*100)+'%';
+ }
+ requestAnimationFrame(animation);
+}
+// A single pad supports two simultaneous independent pointer streams on touch screens.
+// Touch X is normalized *inside its assigned half* so either hand can pan from left to right.
+function pointFromEvent(e,slot,split){
+ const r=stage.getBoundingClientRect();
+ const localX=split ? (e.clientX-r.left-(slot==='keyboard'?r.width/2:0))/(r.width/2)
+                    : (e.clientX-r.left)/r.width;
+ return{x:clamp(localX,.015,.985),y:clamp(1-(e.clientY-r.top)/r.height,.015,.985)};
+}
+function updatePointerSlot(e,slot){
+ const entry=activePointers[slot];if(!entry||entry.id!==e.pointerId)return;
+ const s=state[slot],{x,y}=pointFromEvent(e,slot,entry.split);
+ const now=performance.now(),dt=Math.max(.016,(now-entry.timestamp)/1000);
+ s.speed=clamp(Math.hypot(x-entry.x,y-entry.y)/dt*25,0,100);
+ s.x=x;s.y=y;entry.x=x;entry.y=y;entry.timestamp=now;
+ engine?.position(slot,x,y);
+}
+function syncTouchMode(){
+ $('dualTouchToggle').checked=dualTouch;
+ stage.classList.toggle('dualTouch',dualTouch);
+ $('touchTip').textContent=dualTouch
+  ? '左の頭の図でA、右の頭の図でBを操作。どちらの指も各図の左耳・右耳へ移動できます。頭・耳に接触すると、タップ・擦れ・心音などが鳴り、耳の中心で仮想密閉。'
+  : 'マウスAとWASDのBは、どちらも頭の左右へ自由移動できます。頭や耳の形に重なったときから接触音が鳴り、耳の中心で密閉効果が強くなります。';
+ $('touchModeA').value=state.mouse.mode;$('touchModeB').value=state.keyboard.mode;
+}
+function clearPointers(){
+ for(const slot of ['mouse','keyboard']){
+  const entry=activePointers[slot];
+  if(entry){try{if(stage.hasPointerCapture(entry.id))stage.releasePointerCapture(entry.id);}catch(e){}}
+  activePointers[slot]=null;state[slot].pressed=false;state[slot].speed=0;
+ }
+ engine?.updateParameters();updateStatus();
+}
+$('dualTouchToggle').addEventListener('change',e=>{
+ clearPointers();dualTouch=e.target.checked;syncTouchMode();
+});
+stage.addEventListener('pointerdown',e=>{
+ if(e.pointerType==='mouse'&&e.button!==0)return;
+ const split=dualTouch&&(e.pointerType==='touch'||e.pointerType==='pen');
+ const rect=stage.getBoundingClientRect();
+ const slot=split&&e.clientX>=rect.left+rect.width*.5?'keyboard':'mouse';
+ if(activePointers[slot])return; // keep the originally assigned finger, ignore extra ones in the same lane
+ if(slot==='keyboard'){
+  if(!state.keyboard.enabled){state.keyboard.enabled=true;$('keyboardEnabled').checked=true;}
+ }else{
+  state.mouse.auto=false;$('autoToggle').checked=false;
+ }
+ if(e.cancelable)e.preventDefault();
+ const p=pointFromEvent(e,slot,split);
+ activePointers[slot]={id:e.pointerId,split,x:p.x,y:p.y,timestamp:performance.now()};
+ const s=state[slot];s.x=p.x;s.y=p.y;s.speed=30;s.pressed=true;
+ try{stage.setPointerCapture(e.pointerId);}catch(err){}
+ engine?.position(slot,s.x,s.y);engine?.updateParameters();updateStatus();
+});
+stage.addEventListener('pointermove',e=>{
+ const slot=Object.keys(activePointers).find(k=>activePointers[k]?.id===e.pointerId);
+ if(slot){if(e.cancelable)e.preventDefault();updatePointerSlot(e,slot);return;}
+ // Keep v0.2 desktop hover behavior, while not letting touch hover steal either finger.
+ if(e.pointerType==='mouse'&&!activePointers.mouse&&!state.mouse.auto){
+  const p=pointFromEvent(e,'mouse',false);
+  const t=performance.now(),dt=Math.max(.016,(t-lastPointer)/1000);
+  if(lastPointer)state.mouse.speed=clamp(Math.hypot(p.x-lastMX,p.y-lastMY)/dt*25,0,100);
+  state.mouse.x=p.x;state.mouse.y=p.y;lastMX=p.x;lastMY=p.y;lastPointer=t;
+  engine?.position('mouse',p.x,p.y);
+ }
+});
+function releasePointer(e){
+ for(const slot of ['mouse','keyboard']){
+  if(activePointers[slot]?.id!==e.pointerId)continue;
+  activePointers[slot]=null;
+  state[slot].speed=0;
+  if(slot==='mouse')state.mouse.pressed=false;
+  else state.keyboard.pressed=state.keyboard.enabled&&(keys.has('Space')||state.keyboard.latch||[...keys].some(k=>keyMap[k]));
+  engine?.updateParameters();updateStatus();
+  return;
+ }
+}
+for(const event of ['pointerup','pointercancel','lostpointercapture'])stage.addEventListener(event,releasePointer);
+stage.addEventListener('wheel',e=>{
+ e.preventDefault();state.strength=clamp(state.strength-Math.sign(e.deltaY)*3,0,100);
+ $('strength').value=state.strength;engine?.updateParameters();updateLabels();
+},{passive:false});
+for(const id of ['boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub','strength','texture','rate','master','heartBpm','heartWarm','heartRumble','earTap','earScrape','gelSuction','pressure','insideBass','canalBassBoost','canalSealBoost','insideIsolation','proximityBoost','whiteLevel','brownLevel','mouseLevel','keyboardLevel','spatial','sampleBlend','startFade','stopFade','transientSoft','seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']){
+ $(id).addEventListener('input',e=>{
+  if(id==='mouseLevel')state.mouse.level=Number(e.target.value);
+  else if(id==='keyboardLevel')state.keyboard.level=Number(e.target.value);
+  else state[id]=Number(e.target.value);
+  updateLabels();engine?.updateParameters();
+ });
+}
+for(const kind of ['white','brown'])$(kind+'On').addEventListener('change',e=>{
+ state[kind+'On']=e.target.checked;engine?.updateParameters();
+});
+for(const id of ['sealOn','insideOn','boneOn','showBoneZones'])$(id).addEventListener('change',e=>{
+ state[id]=e.target.checked;engine?.updateParameters();
+});
+function syncEffects(){
+ for(const k of ['seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']){
+  $(k).value=state[k];$(k+'Value').textContent=k==='rangeCm'?state[k]+' cm':k==='insertionCm'?Number(state[k]).toFixed(1)+' cm':state[k]+'%';
+ }
+ for(const k of ['sealOn','insideOn','boneOn','showBoneZones'])$(k).checked=state[k];
+ engine?.updateParameters();
+}
+const bonePresets={
+ off:{boneOn:false},
+ natural:{boneOn:true,boneStrength:38,boneSoftness:48,boneCross:60,boneOcclusion:42,boneTap:48,boneRub:43},
+ asmr:{boneOn:true,boneStrength:65,boneSoftness:48,boneCross:67,boneOcclusion:68,boneTap:72,boneRub:67},
+ heavy:{boneOn:true,boneStrength:85,boneSoftness:62,boneCross:82,boneOcclusion:86,boneTap:78,boneRub:83}
+};
+document.querySelectorAll('.bonePreset').forEach(button=>button.addEventListener('click',()=>{
+ Object.assign(state,bonePresets[button.dataset.bone]);
+ for(const k of ['boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub'])$(k).value=state[k];
+ syncEffects();updateLabels();engine?.updateParameters();
+ setMessage('骨・組織伝導を「'+button.textContent+'」に設定しました。');
+}));
+document.querySelectorAll('.effectPreset').forEach(button=>button.addEventListener('click',()=>{
+ state.seal=Number(button.dataset.seal);state.inside=Number(button.dataset.inside);
+ state.sealKeep=Number(button.dataset.keep ?? 85);
+ state.sealOn=state.seal>0;state.insideOn=state.inside>0;
+ syncEffects();
+ setMessage('密閉 '+state.seal+'% ／ 音量維持 '+state.sealKeep+'% ／ 内部接触 '+state.inside+'% に変更しました。');
+}));
+const acousticPresets={
+ natural:{nearFocus:78,transition:58,surfaceFriction:72,canalResonance:55,sealDepth:46,seal:90,sealKeep:78,inside:85,bodyNoise:65,insideBass:72,canalBassBoost:30,canalSealBoost:35,insideIsolation:100,proximityBoost:48},
+ soft:{nearFocus:80,transition:92,surfaceFriction:46,canalResonance:40,sealDepth:62,seal:84,sealKeep:90,inside:72,bodyNoise:55,insideBass:68,canalBassBoost:35,canalSealBoost:30,insideIsolation:100,proximityBoost:48},
+ intense:{nearFocus:88,transition:48,surfaceFriction:96,canalResonance:82,sealDepth:34,seal:99,sealKeep:85,inside:98,bodyNoise:92,insideBass:100,canalBassBoost:92,canalSealBoost:96,insideIsolation:100,proximityBoost:76}
+};
+document.querySelectorAll('.acousticPreset').forEach(button=>button.addEventListener('click',()=>{
+ Object.assign(state,acousticPresets[button.dataset.preset]);
+ for(const k of Object.keys(acousticPresets.natural))$(k).value=state[k];
+ syncEffects();updateLabels();setMessage('音響プリセット「'+button.textContent+'」に変更しました。');
+}));
+document.querySelectorAll('.earBoostPreset').forEach(button=>button.addEventListener('click',()=>{
+ state.canalBassBoost=Number(button.dataset.bass);
+ state.canalSealBoost=Number(button.dataset.seal);
+ $('canalBassBoost').value=state.canalBassBoost;
+ $('canalSealBoost').value=state.canalSealBoost;
+ updateLabels();engine?.updateParameters();
+ setMessage('耳内低音ブースト '+state.canalBassBoost+'% ／ 密閉の追加強調 '+state.canalSealBoost+'% に設定しました。');
+}));
+$('tryGel').addEventListener('click',()=>{
+  setMode('mouse','gel');setMode('keyboard','ear');
+ setMessage('音源A=ゲル、B=耳かき。画面の入口ラインをゆっくりまたいで聴き比べてください。');
+});
+$('autoOptimize').addEventListener('change',e=>{
+ state.autoOptimize=e.target.checked;
+ if(state.autoOptimize){for(const slot of ['mouse','keyboard'])applyProfile(slot,true);}
+ for(const slot of ['mouse','keyboard'])$(slot+'Level').value=state[slot].level;
+ refreshModeUI();updateLabels();engine?.updateParameters();
+ setMessage(state.autoOptimize?'音源変更時の自動最適化をONにしました。':'自動最適化をOFFにしました。今の設定を維持します。');
+});
+for(const [slot,label] of [['mouse','Mouse'],['keyboard','Keyboard']]){
+ $('behavior'+label).addEventListener('change',e=>{
+  state[slot].behavior=e.target.value;
+  refreshModeUI();engine?.updateParameters();updateStatus();
+ });
+ $('optimize'+label).addEventListener('click',()=>{
+  applyProfile(slot,true);$(slot+'Level').value=state[slot].level;
+  refreshModeUI();updateLabels();engine?.updateParameters();
+  setMessage('音源'+(slot==='mouse'?'A':'B')+'のおすすめ発音タイプ・音量・反応速度を適用しました。');
+ });
+}
+document.querySelectorAll('.mode').forEach(button=>button.addEventListener('click',()=>{
+ state.mouse.pressed=Boolean(activePointers.mouse);setMode('mouse',button.dataset.mode);
+}));
+$('keyboardMode').addEventListener('change',e=>{
+  setMode('keyboard',e.target.value);
+});
+for(const [id,slot] of [['touchModeA','mouse'],['touchModeB','keyboard']]){
+ $(id).addEventListener('change',e=>{
+  if(!modes.includes(e.target.value))return;
+  setMode(slot,e.target.value);
+ });
+}
+$('keyboardEnabled').addEventListener('change',e=>{
+ state.keyboard.enabled=e.target.checked;keys.clear();state.keyboard.pressed=Boolean(activePointers.keyboard)&&state.keyboard.enabled;
+ engine?.updateParameters();updateStatus();
+});
+$('keyboardLatch').addEventListener('change',e=>{
+ state.keyboard.latch=e.target.checked;updateStatus();
+});
+$('autoToggle').addEventListener('change',e=>{
+ state.mouse.auto=e.target.checked;state.mouse.pressed=Boolean(activePointers.mouse);engine?.updateParameters();updateStatus();
+});
+$('centerBtn').addEventListener('click',()=>{
+ state.mouse.auto=false;$('autoToggle').checked=false;
+ state.mouse.x=.13;state.mouse.y=.80;state.mouse.speed=0;
+ state.keyboard.x=.87;state.keyboard.y=.80;state.keyboard.speed=0;
+ engine?.position('mouse',state.mouse.x,state.mouse.y);
+ engine?.position('keyboard',state.keyboard.x,state.keyboard.y);engine?.updateParameters();
+});
+function keyboardEditable(e){
+ const target=e.target;
+ return Boolean(target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target?.tagName));
+}
+window.addEventListener('keydown',e=>{
+ if(keyboardEditable(e)||e.ctrlKey||e.altKey||e.metaKey)return;
+ if(keyMap[e.code]||e.code==='Space'){
+  if(!state.keyboard.enabled)return;
+  e.preventDefault();keys.add(e.code);
+ }else if(e.code==='KeyK'&&!e.repeat){
+  state.keyboard.latch=!state.keyboard.latch;$('keyboardLatch').checked=state.keyboard.latch;
+  e.preventDefault();
+ }else if(/^Digit[1-8]$/.test(e.code)&&!e.repeat){
+  setMode('keyboard',modes[Number(e.code.slice(-1))-1]);e.preventDefault();
+ }
+});
+window.addEventListener('keyup',e=>{
+ if(keyMap[e.code]||e.code==='Space')keys.delete(e.code);
+});
+window.addEventListener('blur',()=>{keys.clear();clearPointers();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();clearPointers();}});
+$('startBtn').addEventListener('click',async()=>{
+ if(audioBusy)return;audioBusy=true;updateStatus();
+ try{
+  if(!window.AudioContext&&!window.webkitAudioContext)throw Error('Web Audioが使えないブラウザです。');
+  if(!engine)engine=new ASMRSystem();await engine.ctx.resume();await decodeAllSamples();engine.updateParameters();engine.fadeIn();
+  $('recordBtn').disabled=!window.MediaRecorder;updateStatus();
+  setMessage('2音源を開始しました。最初はヘッドホン音量を低くして調整してください。');
+ }catch(e){setMessage('音声開始エラー: '+e.message);}
+ finally{audioBusy=false;updateStatus();}
+});
+$('stopBtn').addEventListener('click',async()=>{
+ if(audioBusy)return;audioBusy=true;updateStatus();
+ try{
+  if(recorder&&recorder.state==='recording')recorder.stop();
+  if(engine){const old=engine;engine=null;await old.close();}
+  keys.clear();clearPointers();
+  $('recordBtn').disabled=true;updateStatus();setMessage('音声を停止しました。');
+ }catch(e){setMessage('停止時のエラー: '+e.message);}
+ finally{audioBusy=false;updateStatus();}
+});
+function downloadBlob(blob,filename){
+ const a=document.createElement('a'),url=URL.createObjectURL(blob);
+ a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),12000);
+}
+// Chappy Player bridge support. The source v1.4 sound engine remains unchanged.
+function makePreset(){
+ const settings=structuredClone(state);
+ settings.mouse.pressed=false;settings.mouse.speed=0;
+ settings.keyboard.pressed=false;settings.keyboard.speed=0;
+ return {format:'asmr-sound-lab-preset',version:14,settings};
+}
+function hasChappyStorage(){
+ return !!(window.Chappy && window.Chappy.storage && typeof window.Chappy.storage.set==='function');
+}
+async function saveChappyPreset(report=false){
+ if(!hasChappyStorage())return false;
+ try{
+  await window.Chappy.storage.set('preset-v14',makePreset());
+  if(report)setMessage('設定をChappy Player内に保存しました。次回起動時に復元されます。');
+  return true;
+ }catch(err){
+  if(report)setMessage('Chappy設定の保存に失敗しました: '+err.message);
+  return false;
+ }
+}
+function applyPreset(preset,quiet=false){
+  if(preset.format!=='asmr-sound-lab-preset'||![1,2,3,4,5,6,7,8,9,10,11,12,13,14].includes(preset.version)||!preset.settings)throw Error('非対応の設定ファイルです。');
+  const saved=preset.settings;
+  for(const k of ['boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub','strength','texture','rate','master','heartBpm','heartWarm','heartRumble','earTap','earScrape','gelSuction','pressure','insideBass','canalBassBoost','canalSealBoost','insideIsolation','proximityBoost','whiteLevel','brownLevel','spatial','sampleBlend','startFade','stopFade','transientSoft','seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']){
+   const n=Number(saved[k]);if(Number.isFinite(n))state[k]=k==='rangeCm'?clamp(n,8,80):k==='insertionCm'?clamp(n,.5,3):k==='heartBpm'?clamp(n,42,135):k==='startFade'?clamp(n,100,1000):k==='stopFade'?clamp(n,90,450):clamp(n,0,100);
+   $(k).value=state[k];
+  }
+  for(const k of ['whiteOn','brownOn','sealOn','insideOn','boneOn','showBoneZones']){state[k]=saved[k]===undefined?state[k]:Boolean(saved[k]);$(k).checked=state[k];}
+  state.preserveStereo=Boolean(saved.preserveStereo);$('preserveStereo').checked=state.preserveStereo;
+  state.autoOptimize=preset.version>=11?saved.autoOptimize!==false:true;
+  for(const slot of ['mouse','keyboard']){
+   const data=preset.version===1?(slot==='mouse'?saved:null):saved[slot];
+   if(!data)continue;
+   const s=state[slot];
+   if(modes.includes(data.mode))s.mode=data.mode;
+   if(preset.version>=11 && data.profile && typeof data.profile==='object'){
+    const p=soundProfiles[s.mode];s.profile={...p};
+    for(const k of ['level','attack','release','density','edge'])if(Number.isFinite(Number(data.profile[k])))s.profile[k]=clamp(Number(data.profile[k]),k==='density'?.2:0,k==='level'?100:k==='edge'?100:k==='density'?2:400);
+   }else s.profile={...soundProfiles[s.mode]};
+   s.behavior=preset.version>=11&&['auto','contact','free'].includes(data.behavior)?data.behavior:'auto';
+   for(const k of ['x','y'])if(Number.isFinite(Number(data[k])))s[k]=clamp(Number(data[k]),.015,.985);
+   const n=Number(data.level);if(Number.isFinite(n))s.level=clamp(n,0,100);
+   s.auto=slot==='mouse'&&Boolean(data.auto);
+   s.pressed=false;s.speed=0;
+   if(slot==='keyboard'){s.enabled=data.enabled!==false;s.latch=Boolean(data.latch);}
+  }
+  keys.clear();
+  for(const slot of ['mouse','keyboard'])$(slot+'Level').value=state[slot].level;
+  $('autoToggle').checked=state.mouse.auto;
+  syncEffects();
+  refreshModeUI();
+  if(engine){for(const slot of ['mouse','keyboard'])engine.changeMode(slot,state[slot].mode);engine.updateParameters();}
+  syncEffects();updateLabels();updateStatus();if(!quiet)setMessage('設定を読み込みました（旧バージョンのプリセットにも対応）。');
+}
+
+$('saveBtn').addEventListener('click',async()=>{
+ if(hasChappyStorage()){
+  await saveChappyPreset(true);
+ }else{
+  downloadBlob(new Blob([JSON.stringify(makePreset(),null,2)],{type:'application/json'}),'ASMR_Sound_Lab_v14_preset.json');
+  setMessage('2音源の設定をJSONファイルに保存しました。');
+ }
+});
+$('loadBtn').addEventListener('click',()=>$('loadInput').click());
+$('loadInput').addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ try{
+  const preset=JSON.parse(await file.text());
+  applyPreset(preset);
+  if(hasChappyStorage())await saveChappyPreset(false);
+ }catch(err){setMessage('読み込みエラー: '+err.message);}
+ finally{e.target.value='';}
+});
+// Native, app-private preset storage; no cross-app access or permissions required.
+let chappyAutoSaveTimer=null;
+function queueChappyAutoSave(){
+ if(!hasChappyStorage())return;
+ clearTimeout(chappyAutoSaveTimer);
+ chappyAutoSaveTimer=setTimeout(()=>{void saveChappyPreset(false);},650);
+}
+document.addEventListener('input',queueChappyAutoSave,true);
+document.addEventListener('change',queueChappyAutoSave,true);
+async function restoreChappyPreset(){
+ if(!hasChappyStorage())return;
+ try{
+  const value=await window.Chappy.storage.get('preset-v14');
+  if(value){
+   const preset=typeof value==='string'?JSON.parse(value):value;
+   applyPreset(preset,true);
+   setMessage('Chappy Playerに保存した設定を復元しました。');
+  }
+ }catch(err){setMessage('Chappy設定の復元に失敗しました: '+err.message);}
+}
+void restoreChappyPreset();
+$('recordBtn').addEventListener('click',()=>{
+ if(!engine||!window.MediaRecorder)return;
+ if(recorder&&recorder.state==='recording'){recorder.stop();return;}
+ try{
+  const options=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?{mimeType:'audio/webm;codecs=opus'}:{};
+  recordChunks=[];recorder=new MediaRecorder(engine.stream.stream,options);
+  recorder.ondataavailable=e=>{if(e.data.size)recordChunks.push(e.data);};
+  recorder.onerror=e=>setMessage('録音エラー: '+(e.error?.message||'不明なエラー'));
+  recorder.onstop=()=>{
+   if(recordChunks.length){
+    downloadBlob(new Blob(recordChunks,{type:recorder.mimeType||'audio/webm'}),'ASMR_Sound_Lab_v14_recording.webm');
+    setMessage('2音源＋環境ノイズの録音を保存しました（WebM）。');
+   }else setMessage('録音データがありませんでした。');
+   $('recordBtn').textContent='● 録音開始';
+  };
+  recorder.start();$('recordBtn').textContent='■ 録音終了';setMessage('ミックス音声を録音中です。');
+ }catch(e){setMessage('録音開始エラー: '+e.message);}
+});
+// Local sample import (WAV, OGG, MP3, M4A). No upload; retain bytes only in memory.
+function sampleSummary(){
+ const dest=$('sampleList');dest.replaceChildren();let found=false;
+ for(const mode of modes){
+  const arr=sampleFiles[mode];if(!arr.length)continue;found=true;
+  const d=document.createElement('div');d.textContent=`${modeHelp[mode].split('は')[0]} [${mode}]：`+arr.map(f=>f.name).join(' / ');
+  dest.appendChild(d);
+ }
+ if(!found)dest.textContent='まだ読み込まれていません。';
+}
+async function decodeSample(entry){
+ if(!engine||!entry.bytes)return;
+ const source=entry.bytes.slice(0);
+ const buf=await engine.ctx.decodeAudioData(source);
+ const c=engine.ctx;
+ // Combine stereo to mono for source position processing; true binaural preservation is a later feature.
+ const count=Math.min(buf.numberOfChannels,2),len=buf.length;
+ const out=c.createBuffer(1,len,buf.sampleRate),dst=out.getChannelData(0);
+ for(let ch=0;ch<count;ch++){
+  const input=buf.getChannelData(ch);
+  for(let i=0;i<len;i++)dst[i]+=input[i]/count;
+ }
+ let power=0,peak=0;
+ for(let i=0;i<len;i+=8){power+=dst[i]*dst[i];peak=Math.max(peak,Math.abs(dst[i]));}
+ const rms=Math.sqrt(power/Math.max(1,Math.ceil(len/8)));
+ const scale=Math.min(3.0,.19/Math.max(.03,rms),.92/Math.max(.001,peak));
+ for(let i=0;i<len;i++)dst[i]*=scale;
+ entry.buffer=out;entry.stereoBuffer=buf;
+}
+async function decodeAllSamples(){
+ if(!engine)return;
+ let decoded=0;
+ for(const mode of modes)for(const entry of sampleFiles[mode]){
+  try{await decodeSample(entry);decoded++;}catch(e){entry.buffer=null;setMessage('一部音声を読み込めません: '+entry.name+' ('+e.message+')');}
+ }
+ for(const slot of ['mouse','keyboard']){const v=engine.voices[slot];if(v)engine.attachContinuousSample(v);}
+ engine.updateParameters();sampleSummary();
+ return decoded;
+}
+$('preserveStereo').addEventListener('change',e=>{
+ state.preserveStereo=e.target.checked;
+ if(engine){for(const slot of ['mouse','keyboard'])engine.changeMode(slot,state[slot].mode);engine.updateParameters();}
+ setMessage(state.preserveStereo?'バイノーラル原音優先：元の左右を維持します（横方向の移動は録音側の定位優先）。':'通常の3D移動モード：サンプルをモノラル化し、左右の耳までの距離と頭部遮蔽で定位します。');
+});
+$('sampleFile').addEventListener('change',async e=>{
+ const files=[...(e.target.files||[])],mode=$('sampleTarget').value;
+ let count=0;
+ for(const file of files){
+  if(file.size>18*1024*1024){setMessage(file.name+' は18MB超のため読み込みを省略しました。');continue;}
+  if(sampleFiles[mode].length>=6){setMessage('各音種は最大6ファイルまでです。');break;}
+  try{
+   const entry={name:file.name,bytes:await file.arrayBuffer(),buffer:null};
+   sampleFiles[mode].push(entry);
+   if(engine)await decodeSample(entry);
+   count++;
+  }catch(err){setMessage('読み込み失敗: '+file.name+' '+err.message);sampleFiles[mode].pop();}
+ }
+ sampleSummary();
+ if(engine){for(const slot of ['mouse','keyboard']){const v=engine.voices[slot];if(v)engine.attachContinuousSample(v);}engine.updateParameters();}
+ if(count)setMessage(`${mode} に${count}ファイル追加しました。合成音との混合は${state.sampleBlend}%。`);
+ e.target.value='';
+});
+$('clearSamples').addEventListener('click',()=>{
+ for(const mode of modes)sampleFiles[mode].length=0;
+ if(engine){for(const slot of ['mouse','keyboard']){engine.changeMode(slot,state[slot].mode);}engine.updateParameters();}
+ sampleSummary();setMessage('読み込んだサンプルを解除しました。');
+});
+// Duplicate the B sound list for the two compact smartphone selectors.
+for(const id of ['touchModeA','touchModeB'])$(''+id).innerHTML=$('keyboardMode').innerHTML;
+for(const slot of ['mouse','keyboard'])$(slot+'Level').value=state[slot].level;
+syncTouchMode();refreshModeUI();updateLabels();updateStatus();requestAnimationFrame(animation);
+</script>
+</body></html>
