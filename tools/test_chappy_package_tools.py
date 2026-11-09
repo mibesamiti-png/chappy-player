@@ -3,6 +3,8 @@ import hashlib
 import json
 from pathlib import Path
 import tempfile
+import re
+import subprocess
 import zipfile
 
 from build_chappy_catalog import build_catalog
@@ -119,5 +121,29 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
         pass
     else:
         raise AssertionError("Overwriting package was allowed")
+
+
+    # The production ASMR v1.4.0 source is now tracked in this repo.
+    # Verify packaging, app identity, permission boundary and inline JS syntax.
+    asmr_source = Path(__file__).resolve().parent.parent / "sample_apps/asmr_sound_lab"
+    asmr_preview = root / "asmr-reconstructed-v1.4.0.chappy"
+    package_html(asmr_source, asmr_preview, "local.chappy.asmr",
+                 "ASMR Sound Lab", "1.4.0")
+    with zipfile.ZipFile(asmr_preview) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["id"] == "local.chappy.asmr"
+        assert manifest["version"] == "1.4.0"
+        assert manifest["permissions"] == []
+        assert archive.namelist() == ["manifest.json", "index.html"]
+        html_bytes = archive.read("index.html")
+        assert html_bytes == (asmr_source / "index.html").read_bytes()
+        for required in (b"AudioContext", b"Chappy.storage",
+                         b"pointerdown", b"boneOn", b"sampleFile"):
+            assert required in html_bytes, required
+        script = re.search(rb"<script>(.*?)</script>", html_bytes, re.DOTALL)
+        assert script is not None, "ASMR inline JavaScript not found"
+        js_path = root / "asmr-source-inline.js"
+        js_path.write_bytes(script.group(1))
+        subprocess.run(["node", "--check", str(js_path)], check=True)
 
 print("HTML-to-Chappy + Stable/Debug catalog generator smoke tests passed")
