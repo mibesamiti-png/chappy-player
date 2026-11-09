@@ -56,7 +56,9 @@ class TrafficExportTest(unittest.TestCase):
 
     def test_cli_requires_explicit_approval_and_never_starts_network(self):
         self.assertEqual(companion.main([]), 0)
-        self.assertEqual(companion.main(["--traffic-export", "--start"]), 2)
+        with self.assertRaises(SystemExit) as exit_info:
+            companion.main(["--traffic-export", "--start"])
+        self.assertEqual(exit_info.exception.code, 2)
         self.assertEqual(companion.main(["--traffic-export", "--pair"]), 2)
         self.assertEqual(companion.main(["--traffic-export",
                                          "--traffic-seconds", "31"]), 2)
