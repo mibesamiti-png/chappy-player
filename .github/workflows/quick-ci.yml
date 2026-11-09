@@ -30,6 +30,8 @@ jobs:
         run: |
           python3 tools/test_pc_traffic_export.py
           python3 -m py_compile examples/windows_companion/traffic_once.py examples/windows_companion/pairing_server.py examples/windows_companion/companion.py
+      - name: NETLAB-05 strict router HTTPS, per-device privacy and JS isolation preflight
+        run: python3 tools/test_router_connection_boundary.py
       - name: R7 host browser URL/security and private Browser Lab preflight
         run: |
           python3 tools/test_network_r7_boundary.py
