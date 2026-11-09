@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:chappy_player/core/pc_pairing_stage.dart';
+import 'package:chappy_player/core/pc_status_once.dart';
 import 'package:crypto/crypto.dart';
 
 /// Explicit, one-shot QR-v3 proof exchange. No trusted peer is saved.
@@ -142,6 +143,123 @@ class CompanionIdentityExchange {
         throw const FormatException('PC側の完了確認が不正です');
       }
       return true;
+    } finally {
+      _socket?.destroy();
+      _socket = null;
+      _busy = false;
+    }
+  }
+
+  /// R4C optional read-only retrieval, never automatic after QR-v3 identity.
+  /// Windows verifies the previous REAL QR-v3 Android key and requests another
+  /// console STATUS consent. Android independently re-verifies the new scoped
+  /// PC signature and asks for a fresh on-screen consent before signing.
+  Future<PcStatusOnceMetrics> readStatusOnce({
+    required String ip,
+    required int port,
+    required String tlsFingerprint,
+    required String pcFingerprint,
+    required String invitation,
+    required int qrExpires,
+    required Future<bool> Function() approvePhoneStatus,
+  }) async {
+    if (_busy || _cancelled) {
+      throw StateError('状態取得の前に新しいQR-v3の本人確認が必要です');
+    }
+    CompanionPairingClient.validateTarget(ip, port, tlsFingerprint);
+    if (!_hex64.hasMatch(pcFingerprint) ||
+        !_hex32.hasMatch(invitation)) {
+      throw const FormatException('PC状態取得のQRが不正です');
+    }
+    final current = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if (qrExpires <= current || qrExpires - current > 600) {
+      throw const FormatException('PC状態取得のQR期限が切れています');
+    }
+    _busy = true;
+    try {
+      final phoneStatus = await identity.status();
+      _ensureActive();
+      if (!phoneStatus.created || phoneStatus.fingerprint == null ||
+          !_hex64.hasMatch(phoneStatus.fingerprint!)) {
+        throw StateError('スマホ端末鍵が利用できません');
+      }
+      final phoneFp = phoneStatus.fingerprint!;
+      final phoneNonce = CompanionIdentityClient.newNonce();
+      final challenge = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/status-begin',
+        json: <String, Object>{
+          'protocol': 'pc-status-once-v1',
+          'invitation': invitation,
+          'phone_fp': phoneFp,
+          'phone_nonce': phoneNonce,
+        },
+      );
+      _ensureActive();
+      if (challenge.length != 5 ||
+          challenge['protocol'] != 'pc-status-once-v1' ||
+          challenge['status'] != 'challenge' ||
+          challenge['pc_nonce'] is! String ||
+          !_hex64.hasMatch(challenge['pc_nonce'] as String) ||
+          challenge['expires'] is! int ||
+          challenge['pc_proof'] is! Map) {
+        throw const FormatException('PC状態取得の認証応答が不正です');
+      }
+      final rawPcNonce = challenge['pc_nonce'] as String;
+      final expiry = challenge['expires'] as int;
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      if (expiry <= now || expiry > qrExpires || expiry - now > 90) {
+        throw const FormatException('PC状態取得の認証期限が不正です');
+      }
+      final validPc = await identity.verifyPcProof(
+        proof: CompanionIdentityClient.parseProof(
+          challenge['pc_proof'] as Map<dynamic, dynamic>,
+        ),
+        pcFingerprint: pcFingerprint,
+        invitation: invitation,
+        tlsFingerprint: tlsFingerprint,
+        phoneFingerprint: phoneFp,
+        phoneNonce: pcStatusScopedNonce(phoneNonce),
+        expiresUnix: expiry,
+      );
+      _ensureActive();
+      if (!validPc) {
+        throw StateError('状態取得用のPC署名が一致しません');
+      }
+      if (!await approvePhoneStatus()) {
+        throw StateError('スマホでPC状態取得を拒否しました');
+      }
+      _ensureActive();
+      if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expiry) {
+        throw const FormatException('状態取得の承認中に期限が切れました');
+      }
+      final phoneProof = await identity.signPhoneProof(
+        invitation: invitation,
+        tlsFingerprint: tlsFingerprint,
+        pcFingerprint: pcFingerprint,
+        pcNonce: pcStatusScopedNonce(rawPcNonce),
+        expiresUnix: expiry,
+      );
+      _ensureActive();
+      final result = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/status-finish',
+        json: <String, Object>{
+          'protocol': 'pc-status-once-v1',
+          'invitation': invitation,
+          'phone_fp': phoneFp,
+          'phone_proof': phoneProof,
+        },
+      );
+      _ensureActive();
+      if (result.length != 4 ||
+          result['protocol'] != 'pc-status-once-v1' ||
+          result['status'] != 'ok' ||
+          result['pc_nonce'] != rawPcNonce ||
+          result['metrics'] is! Map) {
+        throw const FormatException('PC状態の応答が不正です');
+      }
+      return PcStatusOnceMetrics.parse(result['metrics'] as Map);
     } finally {
       _socket?.destroy();
       _socket = null;

@@ -145,6 +145,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Explicit QR-v3 mutual device key proof (requires --start --pair --qr)",
     )
     parser.add_argument(
+        "--status-once", action="store_true",
+        help="Opt in to one separately approved read-only PC status after QR-v3",
+    )
+    parser.add_argument(
         "--compare-known-phone", action="store_true",
         help="Manually choose a saved DPAPI phone fingerprint BEFORE QR-v3; "
              "no auto-trust, still requires PC YES and mutual proof",
@@ -204,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.doctor:
         if (args.pair or args.qr or args.identity_pair or
-                args.compare_known_phone or args.ip or
+                args.compare_known_phone or args.status_once or args.ip or
                 args.minutes != DEFAULT_MINUTES):
             print("--doctor cannot be combined with network options",
                   file=sys.stderr)
@@ -214,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
     if (args.identity_create or args.identity_status or args.identity_revoke
             or args.verified_list or args.verified_forget is not None
             or args.verified_clear):
-        if (args.pair or args.qr or args.identity_pair or args.compare_known_phone or args.ip
+        if (args.pair or args.qr or args.identity_pair or args.compare_known_phone or args.status_once or args.ip
                 or args.minutes != DEFAULT_MINUTES):
             print("Identity commands cannot be combined with network options",
                   file=sys.stderr)
@@ -301,6 +305,10 @@ def main(argv: list[str] | None = None) -> int:
         print("--compare-known-phone requires --start --pair --qr --identity-pair",
               file=sys.stderr)
         return 2
+    if args.status_once and not (args.start and args.pair and args.qr and args.identity_pair):
+        print("--status-once requires --start --pair --qr --identity-pair",
+              file=sys.stderr)
+        return 2
     if args.identity_pair and not args.start:
         print("--identity-pair requires explicit --start", file=sys.stderr)
         return 2
@@ -329,17 +337,13 @@ def main(argv: list[str] | None = None) -> int:
         address = validate_lan_ipv4(args.ip) if args.ip else discover_local_ipv4()
         if args.pair:
             from pairing_server import run_pairing
-            if expected_phone is None:
-                run_pairing(
-                    address, args.minutes, qr=args.qr,
-                    identity_mode=args.identity_pair,
-                )
-            else:
-                run_pairing(
-                    address, args.minutes, qr=args.qr,
-                    identity_mode=args.identity_pair,
-                    expected_phone_fingerprint=expected_phone,
-                )
+            options = {"qr": args.qr, "identity_mode": args.identity_pair}
+            if expected_phone is not None:
+                options["expected_phone_fingerprint"] = expected_phone
+            # Preserve exact legacy invocation for existing owners and QA.
+            if args.status_once:
+                options["status_once"] = True
+            run_pairing(address, args.minutes, **options)
         else:
             run_beacon(address, args.minutes)
         return 0

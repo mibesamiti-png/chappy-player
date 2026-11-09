@@ -22,6 +22,8 @@ jobs:
         run: |
           python3 tools/test_pc_link_r4b.py
           python3 tools/test_pc_link_r4b_boundary.py
+      - name: R4C live status privacy and JavaScript isolation source gate
+        run: python3 tools/test_pc_status_boundary.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
