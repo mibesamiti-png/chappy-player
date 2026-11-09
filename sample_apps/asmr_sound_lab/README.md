@@ -18,12 +18,20 @@ python3 tools/pack_html_chappy.py \
   --source sample_apps/asmr_sound_lab \
   --id local.chappy.asmr \
   --name "ASMR Sound Lab" \
-  --version 1.4.3 \
-  --output /tmp/asmr-rumble-preview-v1.4.3.chappy
+  --version 1.4.4 \
+  --output /tmp/asmr-skin-preview-v1.4.4.chappy
 python3 tools/test_chappy_package_tools.py
 ```
 
 The packager adds a `manifest.json` with `entry: index.html`, `permissions: []` and the same ID. It may produce different ZIP bytes because archive timestamps/manifest encoding differ; the embedded source is preserved. **Do not publish a rebuilt package as the existing Stable 1.4.0 version.** For a change, bump the version, verify it, publish to a reviewed Debug channel first, test on an actual Android device, then separately approve Stable promotion. Do not publish an APK for a mini-app-only edit.
+
+## v1.4.4 candidate — independent head/face surface contact (not published)
+
+- **ASMR-SURF-01:** independent low-level, filtered-white-noise surface friction path for skin, separate from the preexisting bone/head internal vibration and ear-canal exclusive contact. Head/cheek/scalp sound differs by anatomical zone hardness presets.
+- **ASMR-SURF-02:** short, soft first-touch noise impulse; touching without movement produces a brief event, then near-silence, while rubbing is proportional to pointer speed. Existing bone transient and contact hysteresis remain untouched.
+- **ASMR-SURF-03:** dedicated 0–100% slider (“頭・顔表面の触感”) defaults to 65%, with zero disabling the new surface sound. Surface route is filtered through external ear occlusion, with L/R zone-dependent weighting. No external sample downloads.
+- **ASMR-QA:** pure-function checks cover no touch/stationary/air contact, material mode, cheek vs. forehead, L/R weighting, non-finite inputs, routing separation and max gain. Quick CI produces an **unpublished v1.4.4 .chappy + standalone HTML** preview.
+- **Settings:** keep app ID `local.chappy.asmr` and existing `preset-v14` key. Old presets without `skinSurface` use the 65% default. Audio quality and Android WebView headphone behavior still require real device testing.
 
 ## v1.4.3 candidate — bounded two-layer seal rumble (not published)
 

@@ -116,19 +116,25 @@ jobs:
         run: python3 tools/test_verify_signed_release.py
       - name: HTML package and mini-app catalog smoke test
         run: python3 tools/test_chappy_package_tools.py
-      - name: Package ASMR Sound Lab v1.4.3 mini-app preview (unpublished)
+      - name: Package ASMR Sound Lab v1.4.4 mini-app preview (unpublished)
         run: |
           python3 tools/pack_html_chappy.py \
             --source sample_apps/asmr_sound_lab \
             --id local.chappy.asmr \
             --name "ASMR Sound Lab" \
-            --version 1.4.3 \
-            --output build/asmr-sound-lab-v1.4.3.chappy
+            --version 1.4.4 \
+            --output build/asmr-sound-lab-v1.4.4.chappy
       - name: Upload ASMR mini-app preview (manual QA only)
         uses: actions/upload-artifact@v4
         with:
-          name: asmr-sound-lab-v1.4.3-preview
-          path: build/asmr-sound-lab-v1.4.3.chappy
+          name: asmr-sound-lab-v1.4.4-preview
+          path: build/asmr-sound-lab-v1.4.4.chappy
+          if-no-files-found: error
+      - name: Upload ASMR standalone HTML preview (manual QA only)
+        uses: actions/upload-artifact@v4
+        with:
+          name: asmr-sound-lab-v1.4.4-html-preview
+          path: sample_apps/asmr_sound_lab/index.html
           if-no-files-found: error
       - name: Update feed generator smoke test
         run: python3 tools/test_update_feed.py
