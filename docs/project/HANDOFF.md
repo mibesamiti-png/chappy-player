@@ -1,5 +1,15 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
+## 【最新】CAMREC-13-R1 スマート録画｜ソース/Androidビルド成功・実機録画未検証｜2026-11-10
+
+- ユーザー採用：「長時間録画は動きがないとき休止/終了、動いたら再開。静止時間と感度を調整」。**動き検知による録画制御R1はソース実装・CI完了**。Chappy Player [PR #136](https://github.com/mibesamiti-png/chappy-player/pull/136) → main `8c31a68e667799ef505393f621855e4a7f3d71db`。実装元HEAD `2619f911be81c8339be886439e397a17485b421c`、[Quick CI 74/74](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721111102)、[Android互換APKビルド 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721110750) **成功**（ARM64/ARM32/x86_64）。
+- `NativeMotionAnalyzer.kt`：CameraX ImageAnalysisのY平面16×12点/最大4Hz・一様な露出変化を補正・2サンプル連続の動き検出。`NativeVideoRecorder.kt` が映像を保存する `VideoCapture` と同時使用し、**通常／静止中pause→動いたらresume／静止時間で録画stop** を選べる。10〜300秒、感度0〜100。解析エラーでは勝手に静止と判断せず録画を継続。非対応カメラ構成は明示エラー。rawフレームの保存・外部送信なし。
+- Chappy Recorder `v0.1.4` を [Chappy Apps公開Debug PR #8](https://github.com/mibesamiti-png/chappy-apps/pull/8) で追加、公開main `f3dc66751239da98e382624daf594a84264e8c5d`、[カタログCI 7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42722599197) 成功。**Stable 2本・Debug 9本は維持**、Debug Recorderだけv0.1.3→v0.1.4。旧プレイヤー本体ではスマート録画ボタンを無効にし、通常録画は利用できる。本人がChappy Apps→Debug→更新して選択インストールする。
+- **R1はまだスマホ実機で動き検知録画していない**。Quick/Androidビルド成功と実機撮影成功は別。暗転のハード音量キー、既存MP4保存/復元を含めQAが必要。以前のユーザー報告「起動とHTTPS通信は成功」は別件であり、今回のカメラテストに流用しない。
+- **画面OFF・他アプリ利用中の録画は未実装**。R1は以前と同じく`Activity.onPause`で停止。次はCAMREC-14-R2でAndroid Camera Foreground Service/録画中通知/停止ボタンを設計。プリ録画・AIはR3/R4の候補。OSの緑色インジケーターの無効化はしない。詳細 [CAMREC-13仕様](https://github.com/mibesamiti-png/chappy-player/blob/main/docs/camrec-13-smart-recording.md)。
+- NETLAB-06Bの元タスク8本は `STATE.json.observations.deferredNetlab06B`、Game R8の延期事項も維持。署名Stable公開はユーザーの別途承認が必要。
+
+
 ## 【実機速報】起動・HTTPS通信はユーザー確認で成功｜2026-11-10 JST
 
 - ユーザー実機報告：「一旦起動はしたしHTTPS通信が出来た事だけ報告しとくー」。**アプリ起動 = ユーザー報告で成功、HTTPS通信 = ユーザー報告で成功**。コード・CIの成功とは独立した実機スモーク確認として記録。
