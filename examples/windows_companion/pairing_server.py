@@ -1037,6 +1037,10 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                         # terminate the user's short-lived invitation.
                         continue
             finally:
+                # PC operator Ctrl+C or listener expiry revokes a concurrent
+                # 5-30s worker before it can release the traffic report.
+                if traffic is not None:
+                    traffic.cancel()
                 try:
                     if registered:
                         zeroconf.unregister_service(info)
