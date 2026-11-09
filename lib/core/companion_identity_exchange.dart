@@ -371,6 +371,162 @@ class CompanionIdentityExchange {
           ready['pc_nonce'] != rawPcNonce ||
           ready['expires'] != expires ||
           ready['ticket'] is! String ||
+          !RegExp(r'^[0-9a-f]{32}$').hasMatch(ready['ticket'] as String) ||
+          ready['file'] is! Map ||
+          !offer.matches(PcFileOffer.parse(ready['file'] as Map))) {
+        throw const FormatException('PCファイル転送の開始情報が不正です');
+      }
+      final ticket = ready['ticket'] as String;
+      final bytes = BytesBuilder(copy: false);
+      var offset = 0;
+      onProgress?.call(0, offer.sizeBytes);
+      while (offset < offer.sizeBytes) {
+        _ensureActive();
+        if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expires) {
+          throw const FormatException('ファイル転送中に期限が切れました');
+        }
+        final answer = await _post(
+          ip: ip, port: port, tlsPin: tlsFingerprint,
+          path: '/v3/file-chunk',
+          json: <String, Object>{
+            'protocol': protocol, 'ticket': ticket, 'offset': offset,
+          },
+          maxResponseBytes: 25000,
+          maxPayloadBytes: 23000,
+        );
+        _ensureActive();
+        final chunk = parsePcFileChunk(
+          response: answer, expectedOffset: offset, fileSize: offer.sizeBytes,
+        );
+        bytes.add(chunk);
+        offset += chunk.length;
+        onProgress?.call(offset, offer.sizeBytes);
+      }
+      final received = Uint8List.fromList(bytes.takeBytes());
+      verifyPcReceivedFile(offer, received);
+      return PcReceivedFile(offer: offer, bytes: received);
+    } finally {
+      _socket?.destroy();
+      _socket = null;
+      _busy = false;
+    }
+  }
+
+  /// R5B Android -> Windows: a NEW scope, owner-chosen PC destination, and
+  /// separate PC RECEIVE and foreground Android consents. This method MUST
+  /// only be called after QR-v3 mutual device proof on the trusted host page.
+  Future<void> uploadPcFileOnce({
+    required String ip,
+    required int port,
+    required String tlsFingerprint,
+    required String pcFingerprint,
+    required String invitation,
+    required int qrExpires,
+    required PcUploadFile file,
+    required Future<bool> Function(PcUploadFile file) approvePhoneUpload,
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    if (_busy || _cancelled) {
+      throw StateError('新しいQR-v3認証が必要です');
+    }
+    CompanionPairingClient.validateTarget(ip, port, tlsFingerprint);
+    if (!_hex64.hasMatch(pcFingerprint) || !_hex32.hasMatch(invitation)) {
+      throw const FormatException('送信先PCのQR情報が不正です');
+    }
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if (qrExpires <= now || qrExpires - now > 600) {
+      throw const FormatException('送信用QRが期限切れです');
+    }
+    _busy = true;
+    String? activeTicket;
+    try {
+      final status = await identity.status();
+      _ensureActive();
+      if (!status.created || status.fingerprint == null ||
+          !_hex64.hasMatch(status.fingerprint!)) {
+        throw StateError('スマホのKeyStore署名鍵がありません');
+      }
+      final phoneFp = status.fingerprint!;
+      final phoneNonce = CompanionIdentityClient.newNonce();
+      final challenge = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/upload-begin',
+        json: <String, Object>{
+          'protocol': PcUploadFile.protocol,
+          'invitation': invitation,
+          'phone_fp': phoneFp,
+          'phone_nonce': phoneNonce,
+          'file_name': file.fileName,
+          'size_bytes': file.bytes.length,
+          'sha256': file.digest,
+        },
+      );
+      _ensureActive();
+      if (challenge.length != 6 ||
+          challenge['protocol'] != PcUploadFile.protocol ||
+          challenge['status'] != 'challenge' ||
+          challenge['pc_nonce'] is! String ||
+          !_hex64.hasMatch(challenge['pc_nonce'] as String) ||
+          challenge['expires'] is! int ||
+          challenge['pc_proof'] is! Map ||
+          challenge['file'] is! Map) {
+        throw const FormatException('Windowsの送信承認応答が不正です');
+      }
+      final offered = PcFileOffer.parse(challenge['file'] as Map);
+      if (offered.fileName != file.fileName ||
+          offered.sizeBytes != file.bytes.length ||
+          offered.sha256Hex != file.digest) {
+        throw const FormatException('PCが別ファイルを要求しました');
+      }
+      final rawPcNonce = challenge['pc_nonce'] as String;
+      final expiry = challenge['expires'] as int;
+      final current = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      if (expiry <= current || expiry > qrExpires || expiry - current > 240) {
+        throw const FormatException('PC送信承認の期限が不正です');
+      }
+      final pcVerified = await identity.verifyPcProof(
+        proof: CompanionIdentityClient.parseProof(
+          challenge['pc_proof'] as Map<dynamic, dynamic>,
+        ),
+        pcFingerprint: pcFingerprint,
+        invitation: invitation,
+        tlsFingerprint: tlsFingerprint,
+        phoneFingerprint: phoneFp,
+        phoneNonce: pcUploadScopedNonce(phoneNonce),
+        expiresUnix: expiry,
+      );
+      _ensureActive();
+      if (!pcVerified) {
+        throw StateError('Windowsの送信専用署名が一致しません');
+      }
+      if (!await approvePhoneUpload(file)) {
+        throw StateError('Androidでファイル送信を拒否しました');
+      }
+      _ensureActive();
+      if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expiry) {
+        throw const FormatException('送信の追加承認が期限切れです');
+      }
+      final phoneProof = await identity.signPhoneProof(
+        invitation: invitation, tlsFingerprint: tlsFingerprint,
+        pcFingerprint: pcFingerprint,
+        pcNonce: pcUploadScopedNonce(rawPcNonce), expiresUnix: expiry,
+      );
+      _ensureActive();
+      final ready = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/upload-finish',
+        json: <String, Object>{
+          'protocol': PcUploadFile.protocol, 'invitation': invitation,
+          'phone_fp': phoneFp, 'phone_proof': phoneProof,
+        },
+      );
+      _ensureActive();
+      if (ready.length != 5 ||
+          ready['protocol'] != PcUploadFile.protocol ||
+          ready['status'] != 'ready' ||
+          ready['pc_nonce'] != rawPcNonce ||
+          ready['expires'] != expiry ||
+          ready['ticket'] is! String ||
           !RegExp(r'^[0-9a-f]{32}$').hasMatch(ready['ticket'] as String)) {
         throw const FormatException('Windowsの送信開始情報が不正です');
       }
