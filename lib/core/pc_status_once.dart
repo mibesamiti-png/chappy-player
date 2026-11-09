@@ -19,6 +19,15 @@ class PcStatusOnceMetrics {
     this.uptimeSeconds,
   });
 
+  String get logicalCpusText => logicalCpus?.toString() ?? '取得不可';
+  String get memoryTotalText => _formatRam(memoryTotalBytes);
+  String get memoryAvailableText => _formatRam(memoryAvailableBytes);
+  String get uptimeText => uptimeSeconds == null
+      ? '取得不可' : '${uptimeSeconds! ~/ 3600} 時間';
+  static String _formatRam(int? bytes) {
+    if (bytes == null) return '取得不可';
+    return '${(bytes / 1073741824).toStringAsFixed(1)} GiB';
+  }
   static PcStatusOnceMetrics parse(Map<dynamic, dynamic> raw) {
     const keys = <String>{
       'available', 'logical_cpus', 'memory_total_bytes',

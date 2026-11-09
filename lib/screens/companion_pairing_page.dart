@@ -404,7 +404,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     if (_busy || !_verified || _statusAttempted ||
         invite == null || !invite.statusOnce ||
         invite.pcIdentityFingerprint == null ||
-        ModalRoute.of(context)?.isCurrent != true) return;
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
     final generation = ++_generation;
     setState(() {
       _busy = true;
@@ -422,7 +424,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         qrExpires: invite.expiresUnix,
         approvePhoneStatus: () async {
           if (!mounted || generation != _generation ||
-              ModalRoute.of(context)?.isCurrent != true) return false;
+              ModalRoute.of(context)?.isCurrent != true) {
+            return false;
+          }
           final approved = await showDialog<bool>(
             context: context,
             barrierDismissible: false,
@@ -710,23 +714,10 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('取得したPC状態（保存なし）'),
-                        Text('論理CPU: ' +
-                            (_statusMetrics!.logicalCpus?.toString() ?? '取得不可')),
-                        Text('メモリ合計: ' +
-                            (_statusMetrics!.memoryTotalBytes == null
-                                ? '取得不可'
-                                : (_statusMetrics!.memoryTotalBytes! / 1073741824)
-                                    .toStringAsFixed(1) + ' GiB')),
-                        Text('メモリ空き: ' +
-                            (_statusMetrics!.memoryAvailableBytes == null
-                                ? '取得不可'
-                                : (_statusMetrics!.memoryAvailableBytes! / 1073741824)
-                                    .toStringAsFixed(1) + ' GiB')),
-                        Text('起動時間: ' +
-                            (_statusMetrics!.uptimeSeconds == null
-                                ? '取得不可'
-                                : (_statusMetrics!.uptimeSeconds! ~/ 3600)
-                                    .toString() + ' 時間')),
+                        Text('論理CPU: ${_statusMetrics!.logicalCpusText}'),
+                        Text('メモリ合計: ${_statusMetrics!.memoryTotalText}'),
+                        Text('メモリ空き: ${_statusMetrics!.memoryAvailableText}'),
+                        Text('起動時間: ${_statusMetrics!.uptimeText}'),
                       ],
                     ),
                   ),

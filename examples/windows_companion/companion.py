@@ -337,19 +337,13 @@ def main(argv: list[str] | None = None) -> int:
         address = validate_lan_ipv4(args.ip) if args.ip else discover_local_ipv4()
         if args.pair:
             from pairing_server import run_pairing
-            if expected_phone is None:
-                run_pairing(
-                    address, args.minutes, qr=args.qr,
-                    identity_mode=args.identity_pair,
-                    status_once=args.status_once,
-                )
-            else:
-                run_pairing(
-                    address, args.minutes, qr=args.qr,
-                    identity_mode=args.identity_pair,
-                    expected_phone_fingerprint=expected_phone,
-                    status_once=args.status_once,
-                )
+            options = {"qr": args.qr, "identity_mode": args.identity_pair}
+            if expected_phone is not None:
+                options["expected_phone_fingerprint"] = expected_phone
+            # Preserve exact legacy invocation for existing owners and QA.
+            if args.status_once:
+                options["status_once"] = True
+            run_pairing(address, args.minutes, **options)
         else:
             run_beacon(address, args.minutes)
         return 0
