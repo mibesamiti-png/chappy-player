@@ -459,7 +459,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _error = null;
     });
     try {
-      if (!await widget.discoveryClient.pairingAllowed()) {
+      if (!await widget.discoveryClient.trafficPairingAllowed()) {
         throw StateError('本人PCとのWi-Fi接続がありません');
       }
       if (!mounted || generation != _generation) return;
@@ -473,7 +473,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         approvePhoneTraffic: (seconds) async {
           if (!mounted || generation != _generation ||
               ModalRoute.of(context)?.isCurrent != true ||
-              !await widget.discoveryClient.pairingAllowed()) {
+              !await widget.discoveryClient.trafficPairingAllowed()) {
             return false;
           }
           if (!mounted || generation != _generation) return false;
@@ -503,12 +503,12 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
           );
           return ok == true && mounted && generation == _generation &&
               ModalRoute.of(context)?.isCurrent == true &&
-              await widget.discoveryClient.pairingAllowed();
+              await widget.discoveryClient.trafficPairingAllowed();
         },
       );
       if (!mounted || generation != _generation ||
           ModalRoute.of(context)?.isCurrent != true) return;
-      if (!await widget.discoveryClient.pairingAllowed()) {
+      if (!await widget.discoveryClient.trafficPairingAllowed()) {
         throw StateError('ネットワーク経路が変わりました');
       }
       if (!mounted || generation != _generation) return;
