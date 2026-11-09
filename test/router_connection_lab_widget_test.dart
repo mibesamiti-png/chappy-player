@@ -37,6 +37,14 @@ void main() {
         wifiClient: LanDiscoveryClient(channel: channel),
       ),
     ));
+    await tester.scrollUntilVisible(
+      find.byType(CheckboxListTile), 300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('router_once_read')), 300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const Key('router_once_read')), findsOneWidget);
     final button = tester.widget<FilledButton>(
         find.byKey(const Key('router_once_read')));
@@ -63,7 +71,9 @@ void main() {
       ),
     ));
     final link = find.byKey(const Key('netlab_router_connections'));
-    await tester.ensureVisible(link);
+    await tester.scrollUntilVisible(
+      link, 300, scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(link);
     await tester.pumpAndSettle();
     expect(find.text('Router Connection Lab'), findsOneWidget);
