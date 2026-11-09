@@ -77,15 +77,14 @@ class OpenWrtRouterClient {
     final client = HttpClient(
       context: SecurityContext(withTrustedRoots: false),
     );
-    client
-      ..connectionTimeout = const Duration(seconds: 6)
-      ..idleTimeout = const Duration(seconds: 1)
-      ..autoUncompress = false
-      ..findProxy = (_) => 'DIRECT'
-      ..badCertificateCallback = (certificate, host, certificatePort) {
-        return host == routerIp && certificatePort == port &&
-            sha256.convert(certificate.der).toString() == tlsFingerprint;
-      };
+    client.connectionTimeout = const Duration(seconds: 6);
+    client.idleTimeout = const Duration(seconds: 1);
+    client.autoUncompress = false;
+    client.findProxy = (_) => 'DIRECT';
+    client.badCertificateCallback = (certificate, host, certificatePort) {
+      return host == routerIp && certificatePort == port &&
+          sha256.convert(certificate.der).toString() == tlsFingerprint;
+    };
     _active = client;
     try {
       final login = await _call(
