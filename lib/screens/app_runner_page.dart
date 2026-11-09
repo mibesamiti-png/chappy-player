@@ -338,16 +338,39 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     final lens = options['lens'];
     final quality = options['quality'];
     final storage = options['storage'];
+    final rawMotion = options['motion'];
+    if (rawMotion != null && rawMotion is! Map) {
+      throw const FormatException('Invalid motion recording options');
+    }
+    final motion = rawMotion == null
+        ? null : Map<String, dynamic>.from(rawMotion);
+    final motionMode = motion?['mode'] ?? 'normal';
+    final motionIdleSeconds = motion?['idleSeconds'] ?? 60;
+    final motionSensitivity = motion?['sensitivity'] ?? 40;
+    if (!{'normal', 'pause', 'stop'}.contains(motionMode) ||
+        motionIdleSeconds is! int || motionIdleSeconds < 10 ||
+        motionIdleSeconds > 300 ||
+        motionSensitivity is! int || motionSensitivity < 0 ||
+        motionSensitivity > 100) {
+      throw const FormatException('Unsupported motion recording options');
+    }
     if ((lens != 'back' && lens != 'front') ||
         (quality != '720' && quality != '1080') ||
         (storage != 'private' && storage != 'gallery')) {
       throw const FormatException('Invalid native video recording options');
     }
     final previous = _lastVideoOptions;
+    final previousMotion = previous?['motion'];
+    final sameMotion = (previousMotion == null && motion == null) ||
+        (previousMotion is Map && motion != null &&
+         previousMotion['mode'] == motionMode &&
+         previousMotion['idleSeconds'] == motionIdleSeconds &&
+         previousMotion['sensitivity'] == motionSensitivity);
     final canReuseDarkConsent = reuseDarkSessionConsent &&
         _darkSessionArmed && _videoDark && previous != null &&
         previous['lens'] == lens && previous['quality'] == quality &&
-        previous['storage'] == storage && previous['audio'] == audio;
+        previous['storage'] == storage && previous['audio'] == audio &&
+        sameMotion;
     if (reuseDarkSessionConsent && !canReuseDarkConsent) {
       throw StateError('Dark camera session approval expired or settings changed');
     }
@@ -363,7 +386,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
               '${audio ? '音声も録音します。' : '音声は録音しません。'}'
               '${storage == 'private' ? '動画はChappy Playerの非公開領域に保存します。'
                   'アンインストールすると動画は消えます。' : '動画はギャラリーに公開保存します。'}'
-              'この段階ではアプリを離れると録画を停止します。録画中はAndroidの'
+              '${motionMode == 'pause' ? '静止中は録画を一時停止し、動きが戻ると再開します。カメラは休止中も使用されます。' : motionMode == 'stop' ? '静止時間を超えると録画を自動終了します。' : ''}'
+               'この段階ではアプリを離れると録画を停止します。録画中はAndroidの'
               'カメラ使用表示が有効になります。'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialog, false),
@@ -397,6 +421,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         'startNativeVideo', {
           'owner': widget.app.id, 'lens': lens, 'quality': quality,
           'audio': audio, 'storage': storage,
+           'motionMode': motionMode,
+           'motionIdleSeconds': motionIdleSeconds,
+           'motionSensitivity': motionSensitivity,
         });
       if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
         await _mediaChannel.invokeMethod<dynamic>('stopNativeVideo');
