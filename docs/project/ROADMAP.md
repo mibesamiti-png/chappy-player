@@ -1,6 +1,6 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-10。**NETLAB-05A：OpenWrt管理ルーターの許可済み端末の接続先IP/ポート表示をソースmain統合。Quick CI 65/65・Android Debug CI 17/17成功。次はNETLAB-05Bのルーター機種別対応と実機QA準備。** Game R8は削除せず後に再開する。
+更新: 2026-11-10。**ルーターメーカーがBUFFALOと判明。NETLAB-05B手動端末一覧取込（未登録・未ペアリング機器も表示）はソースmain統合、Quick CI 66/66・Android Debug 17/17成功。自動API/通信先IP取得は型番・ファームウェア未確認のため未対応。** Game R8は8タスクを保持、Stable変更なし。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
@@ -13,11 +13,17 @@
 | 5a（開発段階完了） | NETLAB-04A | 管理Windows PCの全NIC交通量JSONを自分でスマホへ移して読込・可視化 | Windows Companion＋Androidホスト | **ソース/Quick/Windows/Android CI成功・実機未実施、Wi-Fiライブではない** |
 | 5b（開発段階完了） | NETLAB-04B | QR-v3双方向承認で管理PCの通信集計をWi-Fiから1回限定取得 | Windows Companion＋Androidホスト | **ソース/3 CI成功、物理実機未検証** |
 | 5c（開発段階完了） | NETLAB-05A | OpenWrtルーターのLuCI HTTPSから承認済み対象端末の接続先IP/ポート/通信方式を1回読み取る | Android本体Router Connection Lab | **ソース/Quick/Android Debug CI成功、実ルーター実機QAは未実施** |
-| 5d（次） | NETLAB-05B | 利用ルーターのメーカー・型番に応じた安全な接続先情報APIアダプター、許可済み端末選択、実機受入 | Android本体Router Connection Lab | **機種情報がないため対応先未確定。実機未検証** |
+| 5d（分割実装進行中） | NETLAB-05B | BUFFALOの管理画面から本人がコピーしたIP/MAC端末一覧を未登録端末も含め取込。次は機種別安全なAPIと接続先情報・実機QA | Android本体BUFFALO端末一覧 | **手動読込ソース/Quick66/Android17成功。型番未判明・自動ルーター読込と実機は未対応** |
 | 6（その後） | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張・private Game Room Lab候補 | 計画・未着手（延期、廃止しない） |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
+
+## 【進捗更新】NETLAB-05Bの第1分割：BUFFALO端末一覧（未登録/非ペアリング機器含む）
+
+- ユーザーからメーカー**BUFFALO**と追加要望「許可・登録していない端末も読み込む」を確認。ただし型番/ファームウェアはまだ不明。[実装PR #125](https://github.com/mibesamiti-png/chappy-player/pull/125)はmain `57e67f6252ebd105fa5712a1332f0db8f4636de7`に統合済み。最終HEAD `aa915e339e150bfd6e03e497f3bd747058e0fa85`で[Quick #42691745989](https://github.com/mibesamiti-png/chappy-player/actions/runs/42691745989) **66/66**、[Android Debug #42691746433](https://github.com/mibesamiti-png/chappy-player/actions/runs/42691746433) **17/17**成功、3 ABI APK成果物あり。
+- 新規Android本体`BUFFALO端末一覧`：本人が管理するルーターの公式管理UI「デバイスコントロール」または「クライアントモニター」からIP/MAC/名前をコピー・手動貼付。**他端末のChappy登録/ペアリングなしでも管理ルーターが表示する機器は一覧に出せる**。「未登録」は不審・無断接続の判定ではなくRAM内の確認状態。32KiB、256行、128台制限。無許可パケット監視、ルーターの自動認証、通信先IP/ドメイン/本文の取得はしない。
+- **今回まだない機能**：BUFFALOルーターへの自動接続・実端末の通信先IP抽出・機種別API。**未実施QA**：物理BUFFALOルーターの端末コピー・Android実機読込/Debug APK実インストール。NETLAB-05B全体は未完了、先に利用ルーター型番を確認。Game R8は8タスクを保持。Stable/公開カタログ更新なし。[詳細仕様](../netlab-05b-buffalo-inventory.md)。
 
 ## 【次】NETLAB-05B — ルーター機種別アダプターと実機互換性（8タスク）
 
