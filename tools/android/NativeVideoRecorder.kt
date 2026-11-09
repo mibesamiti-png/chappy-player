@@ -6,11 +6,14 @@ import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.Manifest
 import android.os.Build
+import android.os.SystemClock
+import android.util.Size
 import android.provider.MediaStore
 import android.view.WindowManager
 import android.widget.MediaController
 import android.widget.VideoView
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FileOutputOptions
 import androidx.camera.video.MediaStoreOutputOptions
@@ -31,6 +34,8 @@ import android.os.StatFs
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * Phase 1: user-consented, foreground-only CameraX video capture.
@@ -59,6 +64,79 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
     private var dimmed = false
     private var originalBrightness: Float? = null
     private var originalKeepOn = false
+    // Active motion configuration is scoped to one user-approved session.
+    private var motionMode = "normal"
+    private var motionIdleSeconds = 60
+    private var motionSensitivity = 40
+    private var motionStatus = "off"
+    private var motionScore = 0
+    private var motionFrames = 0
+    private var motionLastMovementMs = 0L
+    private var motionStreak = 0
+    private var motionPaused = false
+    private var motionFailed = false
+    private var motionAutoStopped = false
+    private var motionAnalysis: ImageAnalysis? = null
+    private var motionExecutor: ExecutorService? = null
+
+    private fun releaseMotionAnalysis() {
+        motionAnalysis?.clearAnalyzer()
+        motionAnalysis = null
+        motionExecutor?.shutdownNow()
+        motionExecutor = null
+    }
+
+    private fun motionSample(
+        sessionToken: Int, score: Int, moving: Boolean, baseline: Boolean
+    ) {
+        // This callback is always dispatched to the Android UI thread.
+        if (sessionToken != token || motionFailed || motionMode == "normal" ||
+            state != "recording" || registry.currentState != Lifecycle.State.RESUMED) return
+        val now = SystemClock.elapsedRealtime()
+        motionScore = score
+        if (!baseline) {
+            motionLastMovementMs = now
+            motionStatus = "monitoring"
+            return
+        }
+        motionFrames++
+        motionStreak = if (moving) (motionStreak + 1).coerceAtMost(3) else 0
+        if (motionStreak >= 2) {
+            motionLastMovementMs = now
+            if (motionPaused) {
+                try {
+                    recording?.resume()
+                    motionPaused = false
+                    motionStatus = "recording"
+                } catch (_: Exception) {
+                    motionFailed = true
+                    motionStatus = "error"
+                }
+            } else {
+                motionStatus = "movement"
+            }
+        } else if (!motionPaused) {
+            motionStatus = "quiet"
+        }
+        // No frame stream or analyzer fault: fail open (keep recording).
+        if (motionFailed || motionFrames < 3 || motionPaused) return
+        if (now - motionLastMovementMs < motionIdleSeconds * 1000L) return
+        if (motionMode == "pause") {
+            try {
+                recording?.pause()
+                motionPaused = true
+                motionStatus = "paused"
+            } catch (_: Exception) {
+                motionFailed = true
+                motionStatus = "error"
+            }
+        } else if (motionMode == "stop") {
+            motionAutoStopped = true
+            motionStatus = "auto_stopped"
+            stop()
+        }
+    }
+
     private val ownerPattern = Regex("^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$")
 
     fun onCreate() { registry.currentState = Lifecycle.State.CREATED }
@@ -87,7 +165,10 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
 
     fun start(
         appId: String, lens: String, quality: String, audio: Boolean,
-        visibility: String, result: MethodChannel.Result
+        visibility: String, result: MethodChannel.Result,
+        requestedMotionMode: String = "normal",
+        requestedIdleSeconds: Int = 60,
+        requestedSensitivity: Int = 40,
     ) {
         if (registry.currentState != Lifecycle.State.RESUMED ||
             ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) !=
@@ -106,7 +187,10 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         }
         if (lens !in listOf("back", "front") ||
             quality !in listOf("720", "1080") ||
-            visibility !in listOf("private", "gallery")) {
+            visibility !in listOf("private", "gallery") ||
+            requestedMotionMode !in listOf("normal", "pause", "stop") ||
+            requestedIdleSeconds !in 10..300 ||
+            requestedSensitivity !in 0..100) {
             result.error("VIDEO_SETTINGS", "Unsupported recording options", null)
             return
         }
@@ -131,6 +215,18 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             elapsedMs = 0L
             lastError = null
             lastFileName = null
+            motionMode = requestedMotionMode
+            motionIdleSeconds = requestedIdleSeconds
+            motionSensitivity = requestedSensitivity
+            motionStatus = if (motionMode == "normal") "off" else "starting"
+            motionScore = 0
+            motionFrames = 0
+            motionLastMovementMs = 0L
+            motionStreak = 0
+            motionPaused = false
+            motionFailed = false
+            motionAutoStopped = false
+            releaseMotionAnalysis()
             pendingFile = temp
             completeFile = file
             val future = ProcessCameraProvider.getInstance(activity)
@@ -154,10 +250,39 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
                         .build()
                     val capture = VideoCapture.withOutput(recorder)
                     camera.unbindAll()
-                    camera.bindToLifecycle(this,
-                        if (lens == "front") CameraSelector.DEFAULT_FRONT_CAMERA
-                        else CameraSelector.DEFAULT_BACK_CAMERA,
-                        capture)
+                    val selector = if (lens == "front")
+                        CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
+                    if (motionMode != "normal") {
+                        // CameraX may reject VideoCapture+ImageAnalysis on some
+                        // devices/qualities. Fail explicitly; never silently
+                        // record the user's whole session as normal mode.
+                        val executor = Executors.newSingleThreadExecutor()
+                        motionExecutor = executor
+                        val analysis = ImageAnalysis.Builder()
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .setTargetResolution(Size(320, 240))
+                            .build()
+                        motionAnalysis = analysis
+                        analysis.setAnalyzer(executor, NativeMotionAnalyzer(
+                            motionSensitivity,
+                            { score, moving, baseline ->
+                                activity.runOnUiThread {
+                                    motionSample(requestToken, score, moving, baseline)
+                                }
+                            },
+                            {
+                                activity.runOnUiThread {
+                                    if (requestToken == token && state == "recording") {
+                                        motionFailed = true
+                                        motionStatus = "error"
+                                    }
+                                }
+                            },
+                        ))
+                        camera.bindToLifecycle(this, selector, capture, analysis)
+                    } else {
+                        camera.bindToLifecycle(this, selector, capture)
+                    }
                     val prepared = if (visibility == "private") {
                         val destination = temp ?: throw IllegalStateException("VIDEO_PATH_MISSING")
                         capture.output.prepareRecording(activity,
@@ -194,11 +319,13 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
                     }
                     state = "starting"
                     result.success(mapOf("state" to state, "storage" to storage,
-                        "audio" to audio, "quality" to quality, "lens" to lens))
+                        "audio" to audio, "quality" to quality, "lens" to lens,
+                        "motionMode" to motionMode))
                 } catch (error: Exception) {
                     temp?.delete()
                     recording?.close()
                     recording = null
+                    releaseMotionAnalysis()
                     provider?.unbindAll()
                     provider = null
                     state = "idle"
@@ -210,6 +337,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             pendingFile?.delete()
             pendingFile = null
             completeFile = null
+            releaseMotionAnalysis()
             state = "idle"
             result.error("VIDEO_SETUP_FAILED", error.message ?: "Video setup failed", null)
         }
@@ -221,6 +349,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         // The host shows green once finalization reaches idle.
         recording?.close()
         recording = null
+        releaseMotionAnalysis()
         provider?.unbindAll()
         provider = null
         elapsedMs = event.recordingStats.recordedDurationNanos / 1000000L
@@ -271,12 +400,14 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
     fun stop(): Map<String, Any> {
         if (state == "initializing") {
             token += 1
+            releaseMotionAnalysis()
             state = "idle"
             pendingFile?.delete()
             pendingFile = null
             completeFile = null
         } else if (state == "recording" || state == "starting") {
             state = "stopping"
+            releaseMotionAnalysis()
             recording?.stop()
         }
         // Stopping via volume-down keeps the black overlay/brightness active.
@@ -287,7 +418,10 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
     fun status(): Map<String, Any> = mapOf(
         "state" to state, "storage" to storage, "elapsedMs" to elapsedMs,
         "bytes" to bytes, "fileName" to (lastFileName ?: ""),
-        "error" to (lastError ?: "")
+        "error" to (lastError ?: ""),
+        "motionMode" to motionMode, "motionStatus" to motionStatus,
+        "motionScore" to motionScore, "motionFrames" to motionFrames,
+        "motionPaused" to motionPaused, "motionAutoStopped" to motionAutoStopped
     )
 
     fun isRecording(): Boolean = state == "starting" || state == "recording"
