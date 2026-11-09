@@ -3,7 +3,7 @@ import 'package:chappy_player/core/router_connection_snapshot.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const pin = 'a' * 64;
+  final pin = 'a' * 64;
 
   test('router credentials require IPv4 LAN and pinned HTTPS', () {
     OpenWrtRouterClient.validateRouter(
