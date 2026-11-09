@@ -50,7 +50,7 @@ class HandoffContractTest(unittest.TestCase):
         self.assertTrue((ROOT / qa["source"]).is_file())
         self.assertIn(state["observations"]["debugAndroidColdLaunch"]["status"],
                       ("user_reported_pass", "not_run", "failed"))
-        self.assertEqual(state["observations"]["publicMiniappCatalog"]["debug"], 8)
+        self.assertEqual(state["observations"]["publicMiniappCatalog"]["debug"], 9)
         self.assertEqual(state["observations"]["publicMiniappCatalog"]["stable"], 2)
         self.assertEqual(state["policy"]["stableRelease"],
                          "manual, separately approved; no automatic release")
