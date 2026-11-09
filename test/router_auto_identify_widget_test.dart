@@ -95,7 +95,12 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.byKey(const Key('router_id_clear')));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('router_id_start')),
+      -160,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       tester.widget<FilledButton>(find.byKey(const Key('router_id_start')))
           .onPressed,
