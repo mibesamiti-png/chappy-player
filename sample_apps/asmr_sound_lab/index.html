@@ -904,7 +904,7 @@ class ASMRSystem {
   v.strokeDragGain.gain.setTargetAtTime(stroke.drag,t,.06);
   v.strokeHairFilter.frequency.setTargetAtTime(stroke.hairHz,t,.065);
   v.strokeDragLow.frequency.setTargetAtTime(stroke.dragHz,t,.07);
-  for(let i=0;i<2;i>v.skinEarGains[i].gain.setTargetAtTime(i===0?surface.left:surface.right,t,.035);
+  for(let i=0;i<2;i++)v.skinEarGains[i].gain.setTargetAtTime(i===0?surface.left:surface.right,t,.035);
   const boneKind=boneModeWeight[v.mode]||0;
   const faceGain=state.boneOn&&!zone.isCanal?emission.gate*boneKind*zone.touch:0;
   const softness=state.boneSoftness/100;
