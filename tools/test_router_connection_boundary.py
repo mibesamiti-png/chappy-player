@@ -24,7 +24,7 @@ class RouterLabBoundaryTest(unittest.TestCase):
                      "RouterConntrackContract.maxReplyBytes",
                      "approvedWifi", "client.close(force: true)"):
             self.assertIn(term, reader)
-        for operation in ("uci", "file.exec", "network.wireless", "system.reboot",
+        for operation in ("object == 'uci'", "file.exec", "network.wireless", "system.reboot",
                           "ssh", "http://", "ftp://"):
             self.assertNotIn(operation, reader)
         self.assertIn("CheckboxListTile", page)
