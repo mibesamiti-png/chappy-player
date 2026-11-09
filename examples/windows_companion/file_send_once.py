@@ -242,6 +242,17 @@ class FileSendOnceAttempt:
                 self.cancel()
             return response
 
+    def cancel_by_ticket(self, ticket: str) -> bool:
+        """Only the active owner of the TLS-held one-time ticket can cancel."""
+        with self._lock:
+            if (self._phase != "sending" or type(ticket) is not str
+                    or _HEX16.fullmatch(ticket) is None
+                    or self._ticket is None
+                    or not hmac.compare_digest(ticket, self._ticket)):
+                return False
+            self.cancel()
+            return True
+
     def cancel(self) -> None:
         with self._lock:
             self._phase = "closed"
