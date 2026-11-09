@@ -29,6 +29,10 @@ Only RFC1918 private IPv4 addresses (10/8, 172.16/12 and 192.168/16) are accepte
 
 Use the opt-in `Start-ChappyFileOnceV3.cmd` script to select ONE existing 1-byte-to-4MiB regular local file BEFORE the PC starts a listener. With a fresh QR-v3 proof, PC must type `SEND` and Android must separately consent, verify SHA-256, and choose the save destination via the native picker. No PC directory listing, arbitrary path requests, remote control or automatic sync. This is a **Debug preview**; Windows↔Android physical test is pending. [Details](../../docs/pc-link-r5a-file-receive.md).
 
+## R5B Android → Windows one-file upload preview
+
+Use `Start-ChappyUploadOnceV3.cmd`: Windows owner selects a NEW local full destination path before starting the listener, then shares a fresh QR-v3 with Android's Network Lab. Windows requires normal QR-v3 YES **plus separate RECEIVE**. Android picks a file with a matching basename, validates a new upload-only P-256 signature, and separately consents. Strict 4 MiB limit, SHA-256, no overwrite, no shell, no directory listing or trust persistence. This remains **source/CI only**; two-device QA outstanding. See [R5B notes](../../docs/pc-link-r5b-upload-once.md).
+
 ## R4C opt-in real PC status preview
 
 Use `Start-ChappyStatusOnceV3.cmd` only if you want a **single** read-only PC status inspection after a real QR-v3 mutual proof. PC must approve identity with YES, then independently type STATUS after Android requests the PC status. Android must separately consent again. CPU count, memory totals, uptime only; no file, remote control, traffic contents or persistent pairing. See [R4C notes](../../docs/pc-link-r4c-status-once.md). Actual physical Windows↔Android QA is still outstanding.

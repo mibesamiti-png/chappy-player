@@ -37,9 +37,9 @@
   </style>
 </head>
 <body>
-  <span class="tag">Debug / R5A / 説明・手動QA</span>
+  <span class="tag">Debug / R5A・R5B / 説明・手動QA</span>
   <h1>PC Transfer Lab</h1>
-  <p>Windows → Android の<strong>本人が選んだ1ファイル</strong>を安全に転送する機能のテスト補助画面。</p>
+  <p>Windows ↔ Android の<strong>本人が選んだ1ファイル</strong>を安全に転送する機能のテスト補助画面。</p>
   <div class="notice">
     <strong>このミニアプリ自体は転送・PC接続を行いません。</strong>
     ファイルは Chappy Player本体の「Network Lab → PC連携」で送受信します。
@@ -57,6 +57,29 @@
       <li>Androidでファイル名と容量を確認して受信を許可。100％の転送とSHA-256照合後、Androidの標準保存画面で保存先を選ぶ。</li>
     </ol>
     <p><small>1回限り・転送量上限4MiB・16KiBチャンク・途中再開は未対応。期限切れ・中断後は新しいQRが必要。</small></p>
+  </section>
+
+  <section>
+    <h2>Android → Windows（R5B）手動確認</h2>
+    <ol>
+      <li>PCで <code>Start-ChappyUploadOnceV3.cmd</code> を起動し、まだ存在しないローカル保存先をフルパスで指定。</li>
+      <li>スマホのNetwork Lab → PC連携で新しいQR-v3（upload=1）を読み、本人確認。PCでは <code>YES</code>。</li>
+      <li>Androidの「Windowsへ1ファイルを送信」を押し、選択ファイル名がPC保存先と同じことを確認（最大4MiB）。</li>
+      <li>PCで別の <code>RECEIVE</code> を入力し、Androidでも独立して送信を承認。</li>
+      <li>転送100％、SHA-256検証後にWindowsの新規ファイルが作成されたか確認。</li>
+      <li>途中キャンセル、期限切れ、既存ファイル上書き、二度目の転送の拒否も確認。</li>
+    </ol>
+    <p><small>このLabは手順案内と手動QA記録のみ。mini-app JSへのファイル転送・PCアクセスAPIはありません。実機未確認をPASSと誤記しないでください。</small></p>
+    <div id="uploadChecks">
+      <label class="check"><input type="checkbox" data-uploadqa="dest">PCで新規保存先を事前選択できた</label>
+      <label class="check"><input type="checkbox" data-uploadqa="qr">新しいQR-v3と両端の本人確認完了</label>
+      <label class="check"><input type="checkbox" data-uploadqa="file">同名のAndroidファイルだけ選択できた</label>
+      <label class="check"><input type="checkbox" data-uploadqa="consent">PC RECEIVE・Android追加承認の確認</label>
+      <label class="check"><input type="checkbox" data-uploadqa="saved">SHA-256と新規ファイル保存の確認</label>
+      <label class="check"><input type="checkbox" data-uploadqa="deny">上書き・再使用が拒否された</label>
+    </div>
+    <progress id="uploadProgress" max="6" value="0" aria-label="R5B手動確認"></progress>
+    <p id="uploadProgressText" role="status">R5B手動確認 0/6（実機未確認）</p>
   </section>
 
   <section>
@@ -83,20 +106,31 @@
       const meter = document.getElementById('progress');
       const label = document.getElementById('progressText');
       const output = document.getElementById('output');
+      const uploadChecks = Array.from(document.querySelectorAll('[data-uploadqa]'));
+      const uploadMeter = document.getElementById('uploadProgress');
+      const uploadLabel = document.getElementById('uploadProgressText');
       function update() {
         const passed = inputs.filter(item => item.checked).length;
         meter.value = passed;
+        const uploadPassed = uploadChecks.filter(item => item.checked).length;
+        uploadMeter.value = uploadPassed;
+        uploadLabel.textContent = 'R5B手動確認 ' + uploadPassed + '/6（自己報告・自動QAではありません）';
         label.textContent = '手動確認 ' + passed + '/5（自己報告・自動QAではありません）';
       }
       inputs.forEach(item => item.addEventListener('change', update));
+      uploadChecks.forEach(item => item.addEventListener('change', update));
       document.getElementById('report').addEventListener('click', () => {
-        output.value = 'PC Transfer Lab R5A 手動確認（自動検証ではない）\n' +
+        output.value = 'PC Transfer Lab R5A / R5B 手動確認（自動検証ではない）\n' +
           inputs.map(item => (item.checked ? '[x] ' : '[ ] ') +
+            item.parentElement.textContent.trim()).join('\n') +
+          '\n[R5B Android → PC]\n' +
+          uploadChecks.map(item => (item.checked ? '[x] ' : '[ ] ') +
             item.parentElement.textContent.trim()).join('\n') +
           '\n未確認・実機動作の成否は別途開発ログに記録。';
       });
       document.getElementById('clear').addEventListener('click', () => {
         inputs.forEach(item => { item.checked = false; });
+        uploadChecks.forEach(item => { item.checked = false; });
         output.value = '';
         update();
       });

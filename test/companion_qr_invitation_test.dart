@@ -82,6 +82,26 @@ void main() {
     }
   });
 
+  test('QR-v3 Android upload never inherits file download or status permission', () {
+    final pc = List<String>.filled(64, 'c').join();
+    final modern = '${encoded.replaceFirst('://v2', '://v3')}&pc=$pc';
+    final upload = CompanionQrInvitation.parse('$modern&upload=1', now: knownNow);
+    expect(upload.uploadOnce, isTrue);
+    expect(upload.fileOnce, isFalse);
+    expect(upload.statusOnce, isFalse);
+    expect(CompanionQrInvitation.parse(modern, now: knownNow).uploadOnce, isFalse);
+    for (final malformed in <String>[
+      '$encoded&upload=1',
+      '$modern&upload=0',
+      '$modern&upload=1&upload=1',
+      '$modern&upload=1&file=1',
+      '$modern&upload=1&status=1',
+      '$modern&upload=true',
+    ]) {
+      expect(() => CompanionQrInvitation.parse(malformed, now: knownNow),
+          throwsFormatException);
+    }
+  });
   test('expired and too-far invitations are rejected', () {
     expect(
       () => CompanionQrInvitation.parse(
