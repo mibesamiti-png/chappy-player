@@ -1,13 +1,14 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-09。**R5AのWindows→Androidソース・Quick/Windows CIは完了。次はR5BのAndroid→Windows転送**。物理2台QAは0/15、未実施。
+更新: 2026-11-09。**R5A Windows→AndroidとR5B Android→Windowsのソース/CIは双方完了。次はR5C**。物理2台QAは0/15、未実施。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
 | 1 | PC Link R4B | 期限/双方同意/権限分離、Python/Dart合同の127.0.0.1通信テスト | WindowsとDartの**テスト専用**モデル。新規Debugミニアプリなし | **ソース統合・CI成功（実PC接続なし）** |
 | 2 | PC Link R4C | QR-v3署名/TLSピン＋双方別承認の1回限定PC状態取得（CPU/RAM/起動時間） | 本体ホスト画面＋Windows Companion。新規Debug Labなし | **ソース統合・CI成功、実機QA未実施** |
 | 3 | PC Link R5A | Windowsで選んだ1ファイルを4MiB・16KiB分割でAndroidへ、安全な承認とSHA-256後に保存 | 本体＋Companion、PC Transfer Lab新規（非公開Debug QA） | **ソース/CI成功・実機QA未実施** |
-| 3b | PC Link R5B | AndroidからPCへの本人選択ファイル送信・PC保存先選択・安全な一時ファイル処理 | 本体＋Companion、PC Transfer Lab拡張 | **次・未着手** |
+| 3b | PC Link R5B | Android本人選択の単一ファイルをPC新規指定保存先へ、RECEIVE/別署名/SHA-256/no-clobber | 本体＋Companion、PC Transfer Lab v0.2.0 | **ソース/CI成功・実機QA未実施** |
+| 3c | PC Link R5C | 4MiB超を見据えたストリーム・停止・再開・速度/進捗 | 本体＋Companion、PC Transfer Lab拡張 | **次・未着手** |
 | 4 | PC Link R6 | 明示的承認を伴う限定リモート操作（まず音量・メディア操作、次に入力系を個別設計） | 本体＋Companion、**PC Control Lab 新規** | 未着手 |
 | 5 | Network R7 | Browser/LAN診断、ブラウザUI、通信診断 | 本体API、**Browser Lab 新規**、Game Server Lab拡張 | 未着手 |
 | 6 | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張 | 未着手 |
@@ -15,19 +16,24 @@
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
 
-## 次バッチ：PC Link R5B の8タスク（未着手）
+## 次バッチ：PC Link R5C（未着手）
 
-1. Android→PCの独立署名スコープpc.file.send、両側の別同意（本人確認/R5A/R4Cの権限から独立）。
-2. Androidの本人選択SAFファイルだけを扱い、容量・名前・内容の境界を守る。
-3. Windows側も保存先を本人が明示指定。遠隔指定したPCパスやフォルダ閲覧は拒否。
-4. 転送チャンク・順序・サイズ・SHA-256・リプレイの検証。
-5. 断線・拒否・キャンセル・ハッシュ不一致で一時ファイルを削除し、不完全データを公開しない。
-6. PC Transfer Lab 0.1.0を双方向QAへ拡張（ミニアプリJSへ特権は直接公開しない）。
-7. 不正パス・誤署名・過大ファイル・並行要求・期限切れの自動テスト。
-8. Quick/Windows CI、Android Debug APK・実機QAを別判定、GitHub/Notion節目更新。
+1. R5A/Bの性能・上限・メモリ使用・エラーを数値化する。
+2. 大容量を見据えてAndroid SAFとWindowsファイルI/Oを制限付きストリーム化。
+3. 総量、期限、転送レート、正確な速度・進捗表示。
+4. 明示キャンセル/断線時の部分ファイル清掃と隔離。
+5. 新しいQR-v3、両側再承認、オフセットとSHA-256による安全な再開。
+6. PC Transfer Labの双方向/長時間/断線/再開の手動QA拡張。
+7. 機種・ファイルシステム差とセキュリティ障害注入の自動回帰。
+8. Quick CI/Windows CI、Debug/実機/署名公開の別管理と引き継ぎ更新。
 
-大容量・途中再開・フォルダ同期は次の拡張。現状のR5AはWindows→Android限定で4MiB上限。
+**R5A/R5Bの現状は4MiB・1ファイル・途中再開なし。** R5C機能は計画であって実装済みではない。
 
+## R5B 完了（ソース/CIのみ、実機未検証）
+
+- PR #103をmain 1ed1f7d2186148e4ba8fd2dcedb2cf909767ef1b に統合。Quick CI: https://github.com/mibesamiti-png/chappy-player/actions/runs/42599611400、Windows CI: https://github.com/mibesamiti-png/chappy-player/actions/runs/42599611377 ともに成功。
+- Android→Windowsの独立upload=1 QR-v3・追加PC RECEIVE/Android承認・同名ファイル・SHA-256/new-only保存とprivate PC Transfer Lab v0.2.0。
+- 物理2台QA 0/15未実施。署名済みStable/公開カタログ未変更。
 ## R5A完了（ソース・CI、実機未確認）
 
 - [PR #101](https://github.com/mibesamiti-png/chappy-player/pull/101) 統合。main: ae130dfbc3e1ca2a47abe29f43447e837ecf103f。
