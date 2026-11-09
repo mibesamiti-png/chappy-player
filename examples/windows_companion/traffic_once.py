@@ -1,6 +1,6 @@
 """Single-use, separately consented PC traffic read after a real QR-v3 proof.
 
-Only used when the PC user explicitly selects --traffic-once. A matching
+Only used when the PC user explicitly selects --traffic-read-once. A matching
 public fingerprint, QR alone, or the earlier two-sided identity verification
 does NOT provide access. The Android key must sign a fresh, scope-separated
 challenge, and the PC user separately types TRAFFIC. No reusable token, files,
@@ -125,7 +125,7 @@ class TrafficOnceAttempt:
                 self._expires = expires
                 self._state = "awaiting_phone_proof"
             return {
-                "protocol": PROTOCOL, "traffic": "challenge",
+                "protocol": PROTOCOL, "status": "challenge",
                 "pc_nonce": pc_nonce, "expires": expires,
                 "pc_proof": pc_proof, "seconds": self.seconds,
             }
