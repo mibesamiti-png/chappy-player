@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/pc_status_once.dart';
+import 'package:chappy_player/core/pc_file_upload.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:chappy_player/core/verified_pc_history_client.dart';
 import 'package:chappy_player/core/companion_qr_invitation.dart';
@@ -52,6 +53,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
   bool _fileSaving = false;
   double _fileProgress = 0;
   String? _fileMessage;
+  bool _uploadAttempted = false;
+  double _uploadProgress = 0;
+  String? _uploadMessage;
   // A QR invitation can be submitted at most once, even after failure.
   bool _qrConsumed = false;
   String? _code;
@@ -85,6 +89,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
           _fileAttempted = false;
           _fileProgress = 0;
           _fileMessage = null;
+          _uploadAttempted = false;
+          _uploadProgress = 0;
+          _uploadMessage = null;
           _savedHistory = false;
           _code = null;
           _progressStage = null;
@@ -265,6 +272,9 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       _fingerprint.text = invite.fingerprint;
       _invite = invite;
       _qrConsumed = false;
+      _uploadAttempted = false;
+      _uploadProgress = 0;
+      _uploadMessage = null;
       _statusMetrics = null;
       _statusAttempted = false;
       _fileAttempted = false;
@@ -579,6 +589,100 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
     }
   }
 
+  /// Trusted host-only file selection, never a mini-app JS capability.
+  Future<void> _uploadFileOnce() async {
+    final invite = _invite;
+    if (_busy || _savingHistory || !_verified || _uploadAttempted ||
+        invite == null || !invite.uploadOnce ||
+        invite.pcIdentityFingerprint == null ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _uploadAttempted = true;
+      _uploadProgress = 0;
+      _uploadMessage = null;
+      _error = null;
+    });
+    try {
+      final selection = await FilePicker.platform.pickFiles(
+        dialogTitle: 'Windowsに送信する1ファイル（最大4MiB）',
+        type: FileType.any,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (!mounted || generation != _generation) return;
+      if (selection == null || selection.files.length != 1) {
+        setState(() => _uploadMessage = '選択をキャンセルしました。次は新しいQRを発行してください。');
+        return;
+      }
+      final selected = selection.files.single;
+      if (selected.bytes == null) {
+        throw StateError('選択ファイルを読み取れません');
+      }
+      final file = PcUploadFile(fileName: selected.name, bytes: selected.bytes!);
+      await _identityExchange.uploadPcFileOnce(
+        ip: widget.service.address,
+        port: widget.service.port,
+        tlsFingerprint: invite.fingerprint,
+        pcFingerprint: invite.pcIdentityFingerprint!,
+        invitation: invite.invitation,
+        qrExpires: invite.expiresUnix,
+        file: file,
+        approvePhoneUpload: (offered) async {
+          if (!mounted || generation != _generation ||
+              ModalRoute.of(context)?.isCurrent != true) {
+            return false;
+          }
+          final approved = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('1ファイルをWindowsに送信'),
+              content: Text(
+                'PCのQR-v3 YESと追加のRECEIVEが済み、'
+                '送信専用署名が確認できました。\n\n'
+                'ファイル名: ${offered.fileName}\n'
+                '容量: ${offered.bytes.length} バイト\n\n'
+                'Windowsで事前指定された同名の新規ファイルにだけ保存します。'
+                '既存ファイルへの上書きは禁止。最大4MiB、1回限りです。',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('拒否する'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('この1ファイルを送信'),
+                ),
+              ],
+            ),
+          );
+          return approved == true && mounted && generation == _generation;
+        },
+        onProgress: (sent, total) {
+          if (mounted && generation == _generation) {
+            setState(() => _uploadProgress = sent / total);
+          }
+        },
+      );
+      if (!mounted || generation != _generation) return;
+      setState(() => _uploadMessage = 'Windowsで新規保存とSHA-256の照合が完了しました。');
+    } catch (_) {
+      if (mounted && generation == _generation) {
+        setState(() => _error = 'PCファイル送信に失敗しました [UPLOAD-ONCE]。'
+            'ファイル名・容量・承認・接続を確認し、Windowsで新しいQRを発行してください。');
+      }
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   Future<void> _rememberPc() async {
     final fp = _invite?.pcIdentityFingerprint;
     if (_busy || _savingHistory || _savedHistory || !_verified ||
@@ -813,6 +917,19 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                   ),
                 ),
               ),
+            if (_verified && _invite?.uploadOnce == true) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const Key('pair_upload_once'),
+                onPressed: _busy || _uploadAttempted ? null : _uploadFileOnce,
+                icon: const Icon(Icons.upload_file_outlined),
+                label: const Text('Windowsへ1ファイルを送信（追加承認）'),
+              ),
+              if (_busy && _uploadAttempted)
+                LinearProgressIndicator(value: _uploadProgress),
+              if (_uploadMessage != null)
+                Text(_uploadMessage!, key: const Key('pair_upload_result')),
+            ],
             if (_verified && _invite?.fileOnce == true) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(
