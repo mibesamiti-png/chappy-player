@@ -1,8 +1,19 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
-更新: 2026-11-10。NETLAB-05B（BUFFALO接続端末一覧の手動読込）実装ソースmainスナップショット 57e67f6252ebd105fa5712a1332f0db8f4636de7。実ルーターモデル未確認。再開時は必ず最新main・PR・CIを再取得。
+更新: 2026-11-10。NETLAB-05C（ルーターのIP・UPnP型番候補の自動識別）実装ソースmainスナップショット 53aa672000364c31cab4986524f649e33fdfb3e1。BUFFALOの実機型番/ファームウェアは未確認。再開時は必ず最新main・PR・CIを再取得。
 
-## 【最新】NETLAB-05B BUFFALOルーター端末一覧、未登録機器もオフライン読込｜ソース/2CI統合・自動APIは型番待ち｜2026-11-10
+## 【最新】NETLAB-05C ルーター自動識別（Wi-Fi Gateway + UPnP公開モデル候補）ソース/CI統合済み・実機未検証｜2026-11-10
+
+- ユーザーはルーターメーカーを**BUFFALO**と申告。ただし型番が分からないため**型番なしで自動識別する機能**を追加。[実装PR #127](https://github.com/mibesamiti-png/chappy-player/pull/127) をmain `53aa672000364c31cab4986524f649e33fdfb3e1`へ統合済み。**最終実装HEAD `ac064f571e93a9592f12e2519a4c7e3e67ab6599`の[Quick CI #42697064380](https://github.com/mibesamiti-png/chappy-player/actions/runs/42697064380) 67/67と[Android Debug #42697064416](https://github.com/mibesamiti-png/chappy-player/actions/runs/42697064416) 17/17成功、ARM64/ARM32/x86-64 APK＋互換性レポート生成。**
+- **UI**：Android本体Network Lab→「接続中のルーターを自動識別（型番候補）」。管理するWi-Fiの本人承認 + **毎回の確認ダイアログ**で1回だけ実行。Android OSの現在のWi-FiデフォルトゲートウェイRFC1918 IPv4を読み出す（VPN/セルラー拒否）。
+- **UPnPモデル候補**：限定SSDP `M-SEARCH upnp:rootdevice` 1送信、最大2.4秒/8応答/各2KiBで**ゲートウェイ送信元の応答だけ**を受理。同じゲートウェイIPのLOCATIONに限り公開説明XMLを認証なしHTTP GET 1回（16KiB、リダイレクト/Proxy禁止、タイムアウト1.2秒）。メーカー/モデル名/型番/機器名は**UPnP自己申告なので候補にすぎない**。UPnP不可でも**ゲートウェイIPのみ「型番不明」**として表示する。BUFFALOがAP/ブリッジなら上流機器を指しうる。
+- **安全境界**：資格情報/管理画面の自動ログイン/設定変更/他端末の一覧や通信先/URL/本文取得は一切しない。結果はRAMのみで背景化/画面終了/削除で破棄。Android本体専用、.chappy JSへ特権なし、広範な新Androidローカルネットワーク権限も追加なし。
+- **物理QAは未実施**：Debug APKの実端末インストール、実BUFFALOのUPnP応答・経路/型番照合は未確認。ユーザーが新画面を実機で使って返ったIP/UPnPモデル候補を公式AirStationアプリ/本体ラベルなどで照合し、**機種特定後にのみBUFFALOの公式読取API・端末一覧自動取得可能性**を検証する。既存NETLAB-05Bの未登録/非ペアリング端末一覧は引き続き**手動コピー方式**。他端末の通信先IPは今回未実装。
+- [仕様/限界](../netlab-05c-router-auto-identification.md) / [STATE](STATE.json) / [ROADMAP](ROADMAP.md)。Game R8の8タスク、NETLAB-04A/04B、OpenWrt 05A、ASMR、Stable/公開カタログは保持。
+
+---
+
+## 【履歴：05Cより前】NETLAB-05B BUFFALOルーター端末一覧、未登録機器もオフライン読込｜ソース/2CI統合・自動APIは型番待ち｜2026-11-10
 
 - ユーザー確認：ルーターメーカーは**BUFFALO**。「まだ登録・許可していない端末も読み込みたい」。**型番とファームウェアは未確認**なので、一般BUFFALOの自動APIや通信先IP取得は未実装と明示。
 - [実装PR #125](https://github.com/mibesamiti-png/chappy-player/pull/125)をmain `57e67f6252ebd105fa5712a1332f0db8f4636de7`へ統合。実装最終HEAD `aa915e339e150bfd6e03e497f3bd747058e0fa85` で [Quick #42691745989](https://github.com/mibesamiti-png/chappy-player/actions/runs/42691745989) **66/66**、[Android Debug #42691746433](https://github.com/mibesamiti-png/chappy-player/actions/runs/42691746433) **17/17**成功。3ABI Debug APK ARM64/ARM32/x86-64、互換性レポートあり。Windows変更なし。

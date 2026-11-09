@@ -1,6 +1,6 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-10。**ルーターメーカーがBUFFALOと判明。NETLAB-05B手動端末一覧取込（未登録・未ペアリング機器も表示）はソースmain統合、Quick CI 66/66・Android Debug 17/17成功。自動API/通信先IP取得は型番・ファームウェア未確認のため未対応。** Game R8は8タスクを保持、Stable変更なし。
+更新: 2026-11-10。**NETLAB-05C「型番を知らなくても接続中Wi-FiからゲートウェイとUPnPメーカー/型番候補を自動識別」をmain統合：Quick CI 67/67、Android Debug 17/17、3ABI Debug APK成功。実BUFFALO端末は未検証。NETLAB-05B未登録機器の一覧は手動読込済み、管理API/通信先情報の自動取得は型番・実機能力待ち。** Game R8は8タスク保持、Stable変更なし。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
@@ -14,10 +14,17 @@
 | 5b（開発段階完了） | NETLAB-04B | QR-v3双方向承認で管理PCの通信集計をWi-Fiから1回限定取得 | Windows Companion＋Androidホスト | **ソース/3 CI成功、物理実機未検証** |
 | 5c（開発段階完了） | NETLAB-05A | OpenWrtルーターのLuCI HTTPSから承認済み対象端末の接続先IP/ポート/通信方式を1回読み取る | Android本体Router Connection Lab | **ソース/Quick/Android Debug CI成功、実ルーター実機QAは未実施** |
 | 5d（分割実装進行中） | NETLAB-05B | BUFFALOの管理画面から本人がコピーしたIP/MAC端末一覧を未登録端末も含め取込。次は機種別安全なAPIと接続先情報・実機QA | Android本体BUFFALO端末一覧 | **手動読込ソース/Quick66/Android17成功。型番未判明・自動ルーター読込と実機は未対応** |
+| 5e（開発段階完了） | NETLAB-05C | 端末側でWi-FiのデフォルトゲートウェイIPを取得し、UPnPから任意のメーカー/型番候補を受け取る（見つからなければIPのみ） | Android本体Router Auto Identify | **ソース/Quick67/Android Debug17成功、実機BUFFALO未検証、型番は自己申告の候補** |
 | 6（その後） | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張・private Game Room Lab候補 | 計画・未着手（延期、廃止しない） |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
+
+## 【最新】NETLAB-05C — 型番入力なしでルーター候補を自動識別（実装/CI完了、実機未検証）
+
+- [PR #127](https://github.com/mibesamiti-png/chappy-player/pull/127)をmain `53aa672000364c31cab4986524f649e33fdfb3e1` に統合。最終実装HEAD `ac064f571e93a9592f12e2519a4c7e3e67ab6599` で[Quick #42697064380](https://github.com/mibesamiti-png/chappy-player/actions/runs/42697064380) **67/67**、[Android Debug #42697064416](https://github.com/mibesamiti-png/chappy-player/actions/runs/42697064416) **17/17**、3ABI APK成果物あり。Windows変更なし。
+- Android本体Network Labへ**「接続中のルーターを自動識別（型番候補）」**を追加。本人が管理するWi-Fiで二重承認後、Android OS現在のWi-FiデフォルトゲートウェイRFC1918 IPv4を取得。VPN/セルラーは拒否。SSDP `M-SEARCH` 一回のみ送信し、ゲートウェイと一致した応答のUPnP機器紹介XMLを16KiB/タイムアウト/同一IPに制限して任意取得。**モデル名・メーカーはUPnP自己申告の候補**で確定値ではなく、未応答ならゲートウェイIPのみ表示。AP/ブリッジでは上流ルーターが見えることがある。
+- **未実装/未実機**：本物のBUFFALOによる型番自動検出成功やAndroid実機APKインストールは未テスト。モデル情報を正式な型番と照合してから機種別の**公開かつ安全な管理APIの有無**を検証する。自動ログイン、他端末の接続先IPやサイト追跡は05Cに含まない。Game R8の8タスクは保持。Stable/publicカタログ変えず。[詳細](../netlab-05c-router-auto-identification.md)。
 
 ## 【進捗更新】NETLAB-05Bの第1分割：BUFFALO端末一覧（未登録/非ペアリング機器含む）
 
@@ -27,7 +34,7 @@
 
 ## 【次】NETLAB-05B — ルーター機種別アダプターと実機互換性（8タスク）
 
-前提：利用ルーターのメーカー・型番・ファームウェア、管理APIの有無がまだ分からない。**NETLAB-05Aのソース成功は、すべてのルーターへの対応を意味しない。** 自分が管理するルーターで、本人が管理・許可を得た端末のみを対象にする。
+前提：ユーザー申告のメーカーはBUFFALO。型番・ファームウェアと管理APIはまだ未確認で、NETLAB-05CのUPnP識別候補は実機ラベル/公式AirStationアプリと照合が必要。**NETLAB-05Aのソース成功は、すべてのルーターへの対応を意味しない。** 自分が管理するルーターで、本人が管理・許可を得た端末のみを対象にする。
 
 1. 実際のルーターの型番・ファームウェアと対応APIを確認して機能別互換性表を作る。
 2. HTTPS/TLSピンとread-onlyアクセスを維持した機種別アダプターを設計。
