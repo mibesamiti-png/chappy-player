@@ -1,21 +1,40 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-09。**R5AのWindows→Androidソース・Quick/Windows CIは完了。次はR5BのAndroid→Windows転送**。物理2台QAは0/15、未実施。
+更新: 2026-11-09。**R5A・R5Bともソースmain統合/CI成功。次はR6（計画段階）**。PC Link物理2台QAは0/15・未実施。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
 | 1 | PC Link R4B | 期限/双方同意/権限分離、Python/Dart合同の127.0.0.1通信テスト | WindowsとDartの**テスト専用**モデル。新規Debugミニアプリなし | **ソース統合・CI成功（実PC接続なし）** |
 | 2 | PC Link R4C | QR-v3署名/TLSピン＋双方別承認の1回限定PC状態取得（CPU/RAM/起動時間） | 本体ホスト画面＋Windows Companion。新規Debug Labなし | **ソース統合・CI成功、実機QA未実施** |
 | 3 | PC Link R5A | Windowsで選んだ1ファイルを4MiB・16KiB分割でAndroidへ、安全な承認とSHA-256後に保存 | 本体＋Companion、PC Transfer Lab新規（非公開Debug QA） | **ソース/CI成功・実機QA未実施** |
-| 3b | PC Link R5B | AndroidからPCへの本人選択ファイル送信・PC保存先選択・安全な一時ファイル処理 | 本体＋Companion、PC Transfer Lab拡張 | **次・未着手** |
-| 4 | PC Link R6 | 明示的承認を伴う限定リモート操作（まず音量・メディア操作、次に入力系を個別設計） | 本体＋Companion、**PC Control Lab 新規** | 未着手 |
+| 3b | PC Link R5B | AndroidからPCへの本人選択ファイル送信・PC保存先選択・安全な一時ファイル処理 | 本体＋Companion、PC Transfer Lab拡張 | **ソース統合・Quick/Windows CI成功、実機QA未実施** |
+| 4（次） | PC Link R6 | 明示的承認を伴う限定リモート操作（まず音量・メディア操作、次に入力系を個別設計） | 本体＋Companion、**PC Control Lab 新規** | 未着手 |
 | 5 | Network R7 | Browser/LAN診断、ブラウザUI、通信診断 | 本体API、**Browser Lab 新規**、Game Server Lab拡張 | 未着手 |
 | 6 | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張 | 未着手 |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
 
-## 次バッチ：PC Link R5B の8タスク（未着手）
+## 【次】PC Link R6 — 独立承認の限定メディア操作（予定・未着手）
+
+R5A/R5Bのファイル権限やR4Cの状態取得権限とは分離した新しい一回限りの承認を追加する。最初の対象は音量・ミュート・再生/一時停止の最小ホワイトリストに限定。PCの任意コマンド、キーボード/マウス全般、永続制御、バックグラウンド接続は含めない。
+
+1. `pc.media.control` の独立した署名/権限、期限と再利用拒否の設計。
+2. Windows Companionを本人が明示起動し、別途操作許可を確認。
+3. Android側でも操作前の独立同意・キャンセル・短命許可を設計。
+4. 操作ホワイトリストと値の境界、デフォルト拒否を実装。
+5. QR-v3 P-256/TLSピンとスコープの整合、不正入力/リプレイ検査。
+6. 期限、切断、背景化時に権限破棄。診断は秘密を記録しない。
+7. Dart/Pythonの隔離テストとミニアプリJSへの特権不公開を検証。
+8. Quick CI/Windows CI、Debug APK、15項目の物理2台QAを区別して進捗記録。
+
+## 【R5B完了記録】Android→Windowsファイル転送（ソース/CI成功・実機未検証）
+
+- [PR #103](https://github.com/mibesamiti-png/chappy-player/pull/103) main統合 `1ed1f7d21861`。PR最終HEAD `b1e3e81603f8`。
+- [Quick CI #42599611400](https://github.com/mibesamiti-png/chappy-player/actions/runs/42599611400) / [Windows CI #42599611377](https://github.com/mibesamiti-png/chappy-player/actions/runs/42599611377) ともに成功。Private PC Transfer Lab 0.2.0の成果物とWindows Preview EXEあり。
+- Android本人選択の単一ファイル（上限4MiB）→PC本人が起動前に選んだ新規保存先。QR-v3相互認証、別Windows RECEIVE/Android確認、`pc.file.upload` P-256署名、16KiB順序/サイズ、SHA-256、一時ファイル隔離＋上書き拒否。実機QA 0/15は未実施、公開カタログ・署名Stableは不変。[詳説](../pc-link-r5b-upload-once.md)。
+
+### R5B実装時の8つのチェック観点（履歴）
 
 1. Android→PCの独立署名スコープpc.file.send、両側の別同意（本人確認/R5A/R4Cの権限から独立）。
 2. Androidの本人選択SAFファイルだけを扱い、容量・名前・内容の境界を守る。
@@ -26,7 +45,7 @@
 7. 不正パス・誤署名・過大ファイル・並行要求・期限切れの自動テスト。
 8. Quick/Windows CI、Android Debug APK・実機QAを別判定、GitHub/Notion節目更新。
 
-大容量・途中再開・フォルダ同期は次の拡張。現状のR5AはWindows→Android限定で4MiB上限。
+大容量・途中再開・フォルダ同期は次の拡張。R5AがPC→Android、R5BがAndroid→PC。どちらも1ファイル4MiB上限、ソース/CI完了・実機未確認。
 
 ## R5A完了（ソース・CI、実機未確認）
 
