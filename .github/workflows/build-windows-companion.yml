@@ -16,6 +16,7 @@ on:
       - "tools/test_pc_status_once.py"
       - "tools/test_pc_file_once.py"
       - "tools/test_pc_file_upload.py"
+      - "tools/test_pc_traffic_export.py"
       - "tools/test_pc_media_once.py"
       - "tools/test_pc_media_vectors.py"
       - "tools/test_pc_media_http.py"
@@ -90,6 +91,8 @@ jobs:
         run: python tools/test_mutual_proof_session.py
       - name: Verify QR-v3 one-time challenge, mutual ECDSA and replay denial
         run: python tools/test_identity_pairing_v3.py
+      - name: NETLAB-04 owned-PC traffic local export tests
+        run: python tools/test_pc_traffic_export.py
       - name: Test DPAPI-encrypted verification history and local-only CLI consent
         run: python tools/test_windows_verified_history.py
       - name: Build console-only, user-invoked Windows preview
@@ -121,6 +124,7 @@ jobs:
           Copy-Item examples/windows_companion/Start-ChappyKnownPhoneV3.cmd dist/Start-ChappyKnownPhoneV3.cmd
           Copy-Item examples/windows_companion/Start-ChappyIdentitySetup.cmd dist/Start-ChappyIdentitySetup.cmd
           Copy-Item examples/windows_companion/Start-ChappyStatusOnceV3.cmd dist/Start-ChappyStatusOnceV3.cmd
+          Copy-Item examples/windows_companion/Start-ChappyTrafficExport.cmd dist/Start-ChappyTrafficExport.cmd
           Copy-Item examples/windows_companion/Start-ChappyFileOnceV3.cmd dist/Start-ChappyFileOnceV3.cmd
           Copy-Item examples/windows_companion/Start-ChappyUploadOnceV3.cmd dist/Start-ChappyUploadOnceV3.cmd
           Copy-Item examples/windows_companion/Start-ChappyMediaOnceV3.cmd dist/Start-ChappyMediaOnceV3.cmd
@@ -136,6 +140,7 @@ jobs:
             dist/Start-ChappyKnownPhoneV3.cmd
             dist/Start-ChappyIdentitySetup.cmd
             dist/Start-ChappyStatusOnceV3.cmd
+            dist/Start-ChappyTrafficExport.cmd
             dist/Start-ChappyFileOnceV3.cmd
             dist/Start-ChappyUploadOnceV3.cmd
             dist/Start-ChappyMediaOnceV3.cmd

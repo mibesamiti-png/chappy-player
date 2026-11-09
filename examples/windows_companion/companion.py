@@ -98,6 +98,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
+        "--traffic-export", action="store_true",
+        help="Export approved local PC traffic counters to a NEW JSON; no listener",
+    )
+    mode.add_argument(
         "--doctor", action="store_true",
         help="Offline QR-v3 preflight: no listener, no key creation, no secrets",
     )
@@ -166,6 +170,13 @@ def build_parser() -> argparse.ArgumentParser:
              "no auto-trust, still requires PC YES and mutual proof",
     )
     parser.add_argument(
+        "--traffic-seconds", type=int, default=10,
+        help="With --traffic-export: 5-30 seconds (default 10)",
+    )
+    parser.add_argument(
+        "--traffic-out", help="With --traffic-export: new JSON file path",
+    )
+    parser.add_argument(
         "--minutes", type=int, default=DEFAULT_MINUTES,
         help="Automatic stop after 1–30 minutes (default: 10)",
     )
@@ -218,6 +229,38 @@ def run_beacon(ip: str, minutes: int) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.traffic_export:
+        if (args.start or args.pair or args.qr or args.identity_pair or args.ip
+                or args.compare_known_phone or args.status_once
+                or args.media_once or args.receive_file_once or args.send_file_once
+                or args.minutes != DEFAULT_MINUTES
+                or not 5 <= args.traffic_seconds <= 30):
+            print("Traffic export is separate from PC Link; 5-30s only",
+                  file=sys.stderr)
+            return 2
+        from pathlib import Path
+        from pc_traffic_export import capture, suggested_filename, write_report
+        print("This PC only: aggregate traffic for ALL interfaces, not just Wi-Fi.")
+        print("No network listener, no other devices and no packet contents.")
+        try:
+            answer = input("Type TRAFFIC to capture THIS PC now: ").strip()
+            if answer != "TRAFFIC":
+                print("Cancelled without capture.")
+                return 2
+            output = (Path(args.traffic_out) if args.traffic_out
+                      else Path.cwd() / suggested_filename())
+            report = capture(samples=args.traffic_seconds)
+            write_report(report, output)
+            print("Saved local report: " + str(output))
+            print("Manually copy it to Android, then import in Network Lab.")
+            return 0
+        except (OSError, ValueError, RuntimeError, EOFError, ImportError):
+            print("Traffic export failed; no data uploaded.", file=sys.stderr)
+            return 1
+    if args.traffic_out is not None or args.traffic_seconds != 10:
+        print("Traffic output options require --traffic-export",
+              file=sys.stderr)
+        return 2
     if args.doctor:
         if (args.pair or args.qr or args.identity_pair or
                 args.compare_known_phone or args.status_once or args.send_file_once or args.receive_file_once or args.media_once or args.ip or

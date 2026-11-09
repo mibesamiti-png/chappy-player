@@ -164,3 +164,10 @@ record is a history note only, not a paired or trusted device.
 
 Full security boundaries and real-device QA to do:
 [NETLAB-03B-6B Windows known-phone comparison](../../docs/pc-link-windows-known-phone-comparison.md).
+
+
+## NETLAB-04A: 自分のWindows PCの通信量をAndroidで読み込む
+
+Windows CompanionのDebug ZIPから`Start-ChappyTrafficExport.cmd`を実行し、PC上で`TRAFFIC`と入力すると、1秒単位で10秒間のWindows端末全インターフェース送受信バイト数を計測する。新規のローカルJSONファイルに保存し、既存データは上書きしない。`ChappyCompanion.exe --traffic-export --traffic-seconds 10`（5〜30秒）でも使用可能。本人が選んだPCだけを計測する。Wi-Fiだけとは限らず、Ethernet/VPN等を含む。他端末の通信内容は取得しない。通信待受・mDNS・PC Linkは一切起動しない。
+
+生成JSONを自分でAndroidへコピーし、Chappy Player → Network Lab → **ほかの端末の通信レポートを読み込む** から取り込む。ファイル経由なのでリアルタイムではない。今後のWi-Fi経由の直接通信は、既存QR-v3で独立承認された認証済み接続を新たに設計するまでは使えない。
