@@ -120,7 +120,7 @@
     ],
     "publicMiniappCatalog": {
       "stable": 2,
-      "debug": 8,
+      "debug": 9,
       "debugLatest": {
         "deviceLab": "0.2.1",
         "fileLab": "0.2.3",
