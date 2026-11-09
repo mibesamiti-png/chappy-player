@@ -191,8 +191,26 @@ jobs:
         run: node tools/test_media_lab_diagnostics.js
       - name: Media Lab camera recording and private video library smoke test
         run: node tools/test_media_lab_video.js
+      - name: CAMREC-13 smart recording native source and privacy checks
+        run: python3 tools/test_motion_recorder_contract.py
       - name: Chappy Recorder mini-app smoke test
         run: node tools/test_chappy_recorder.js
+      - name: Package motion-aware Chappy Recorder v0.1.4 private Debug preview
+        run: |
+          python3 tools/pack_html_chappy.py \
+            --source sample_apps/video_recorder \
+            --id local.chappy.recorder \
+            --name "Chappy Recorder" \
+            --version 0.1.4 \
+            --permission camera --permission microphone \
+            --output build/chappy-recorder-motion-v0.1.4.chappy
+          python3 -c "import json,zipfile; z=zipfile.ZipFile('build/chappy-recorder-motion-v0.1.4.chappy'); m=json.loads(z.read('manifest.json')); assert m['id']=='local.chappy.recorder' and m['version']=='0.1.4' and m['permissions']==['camera','microphone']"
+      - name: Upload Recorder v0.1.4 private Debug QA preview (not public)
+        uses: actions/upload-artifact@v4
+        with:
+          name: chappy-recorder-motion-v0.1.4-private-preview
+          path: build/chappy-recorder-motion-v0.1.4.chappy
+          if-no-files-found: error
       - name: Device Lab motion and haptics smoke test
         run: node tools/test_device_lab.js
       - name: Game Server Lab HTTPS and WSS smoke test

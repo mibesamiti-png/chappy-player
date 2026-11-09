@@ -168,7 +168,11 @@ video_target = native_target.with_name('NativeVideoRecorder.kt')
 if not video_source.is_file():
     raise SystemExit('Missing native CameraX video recorder')
 video_target.write_bytes(video_source.read_bytes())
-print('Installed foreground-only native video recorder (private by default)')
+motion_source = Path('tools/android/NativeMotionAnalyzer.kt')
+if not motion_source.is_file():
+    raise SystemExit('Missing offline CameraX motion analyzer source')
+native_target.with_name('NativeMotionAnalyzer.kt').write_bytes(motion_source.read_bytes())
+print('Installed foreground-only native video recorder and offline motion analyzer')
 
 # These privileged capabilities are mediated by the Flutter .chappy manifest
 # policy and first-use user approval. Motion sampling is single-shot only and

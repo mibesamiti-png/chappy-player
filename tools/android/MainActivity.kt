@@ -452,11 +452,15 @@ class MainActivity : FlutterActivity() {
                         val quality = call.argument<String>("quality") ?: "720"
                         val sound = call.argument<Boolean>("audio") ?: false
                         val visibility = call.argument<String>("storage") ?: "private"
+                        val motionMode = call.argument<String>("motionMode") ?: "normal"
+                        val idleSeconds = call.argument<Int>("motionIdleSeconds") ?: 60
+                        val sensitivity = call.argument<Int>("motionSensitivity") ?: 40
                         if (!micActivityVisible) {
                             result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
                         } else {
                             nativeMic.stop()
-                            nativeVideo.start(owner, lens, quality, sound, visibility, result)
+                            nativeVideo.start(owner, lens, quality, sound, visibility, result,
+                                motionMode, idleSeconds, sensitivity)
                         }
                     }
                     "stopNativeVideo" -> result.success(nativeVideo.stop())

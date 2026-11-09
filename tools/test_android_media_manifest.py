@@ -36,6 +36,7 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     templates.mkdir(parents=True)
     for name in ["MainActivity.kt", "chappy_update_paths.xml",
                  "NativeMicCapture.kt", "NativeVideoRecorder.kt",
+                 "NativeMotionAnalyzer.kt",
                  "NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
                  "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt",
@@ -58,6 +59,10 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     video_class = native_class.with_name("NativeVideoRecorder.kt")
     assert video_class.read_bytes() == (
         PROJECT / "tools/android/NativeVideoRecorder.kt"
+    ).read_bytes()
+    motion_class = native_class.with_name("NativeMotionAnalyzer.kt")
+    assert motion_class.read_bytes() == (
+        PROJECT / "tools/android/NativeMotionAnalyzer.kt"
     ).read_bytes()
     for name in ("NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
