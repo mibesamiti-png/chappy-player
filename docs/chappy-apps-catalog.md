@@ -1,5 +1,12 @@
 # Chappy Apps 公開カタログ (Stable / Debug)
 
+## 2026-11-10：Chappy Recorder スマート録画 v0.1.4（Debug専用）
+
+Chappy Player [実装PR #136](https://github.com/mibesamiti-png/chappy-player/pull/136) でCAMREC-13-R1を実装、[Quick CI 74/74](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721111102)、[Android 3ABIビルド17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721110750)成功。公開 Chappy Apps [PR #8](https://github.com/mibesamiti-png/chappy-apps/pull/8)で `local.chappy.recorder` の**Debug**を `0.1.4` に更新、[カタログ検証7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42722599197)。公開Stableは変更なし。**Stable 2・Debug 9**のまま。
+
+配布実バイトは `debug/chappy-recorder-motion-v0.1.4.chappy`、SHA-256 `b6ea14d27fda2140c96dbd511075dc6e5f097b0c5a00b12e98af45285b1c0324`、25,850 bytes。宣言権限は従来の`camera`+`microphone`。Android本体も新しくしないとスマートモードは使えない。旧本体では通常録画だけを選択できる。Android実機で録画が成功したと断言するものではない。本人が Chappy Apps → Debug → 更新 → Chappy Recorder を選択追加。既存の保存データ・Stableのバックアップに注意。
+
+
 ## 2026-11-10：実機デバッグ用チェックリスト追加
 
 新規 `Chappy QA Checklist v0.1.0`（`local.chappy.qa_checklist`）を **公開Debug** に登録。現時点で**Stable 2本・Debug 9本**（従来8＋新規1）。ソース `sample_apps/debug_checklist/`、[実装PR #133](https://github.com/mibesamiti-png/chappy-player/pull/133)、[公開登録PR #7](https://github.com/mibesamiti-png/chappy-apps/pull/7)。実機の操作手順 `docs/qa/NETLAB_DEBUG_2026-11-10.md` の9件を手動判定し、レポートをコピーできる。追加権限 `[]`、判定のみ端末内に保存、メモや通信内容を外部に送らない。
