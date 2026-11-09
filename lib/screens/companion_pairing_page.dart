@@ -1036,6 +1036,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                   _invite = null;
                   _qrConsumed = false;
                   _verified = false;
+                  _trafficReport = null;
+                  _trafficAttempted = false;
                   _savedHistory = false;
                   _code = null;
                 });
