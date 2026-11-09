@@ -2,29 +2,29 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-09",
-  "sourceMainAtCapture": "cc4a692b0d4c3e687e2344f399ff7111811f9e34",
+  "sourceMainAtCapture": "ae130dfbc3e1ca2a47abe29f43447e837ecf103f",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "PC-LINK-R5",
-    "name": "本人の選択したファイルだけを安全に送受信するPC Transfer基盤",
+    "id": "PC-LINK-R5B",
+    "name": "Android→Windows転送、本人選択の保存先と安全な部分転送の実装",
     "status": "planned_not_started",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "PC-LINK-R4C",
-    "pr": 99,
-    "mergedCommit": "cc4a692b0d4c3e687e2344f399ff7111811f9e34",
+    "id": "PC-LINK-R5A",
+    "pr": 101,
+    "mergedCommit": "ae130dfbc3e1ca2a47abe29f43447e837ecf103f",
     "sourceStatus": "merged_source_ci_passed_device_unverified",
     "quickCi": {
       "status": "success",
-      "run": 42587043221
+      "run": 42595700596
     },
     "windowsCi": {
       "status": "success",
-      "run": 42587042801
+      "run": 42595700748
     },
-    "qualification": "実PCのCPU/RAM/uptimeを返す1回限りのQR-v3署名付きread-only PC状態取得をソース実装。CI証明あり、実Android↔Windows QAは未実施で0/15。"
+    "qualification": "Windows→Androidの1ファイル4MiB受信と16KiBチャンク、別SEND/Android同意・新署名・SHA-256/Save Asをソース統合・CI成功。Android↔Windows物理QA未実施。"
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -47,7 +47,8 @@
         "検証済みPC鍵履歴",
         "失敗段階・安全な診断",
         "R4Bオフラインセッション/権限モデル（実PC通信には未接続）",
-        "R4C QR-v3署名＋専用status=1のread-only状態取得・追加Android承認UI（コード/CI成功、実機未検証）"
+        "R4C QR-v3署名＋専用status=1のread-only状態取得・追加Android承認UI（コード/CI成功、実機未検証）",
+        "R5A 本体Network LabでPCの1ファイル受信・別許可・進捗・SHA-256・OS Save As（コード/CI PASS、実機未確認）"
       ]
     },
     "windowsSource": {
@@ -60,15 +61,18 @@
         "検証済みスマホ履歴",
         "R4A --doctor と専用ランチャー",
         "R4Bオフラインセッション/権限モデル（実PC通信には未接続）",
-        "R4C --status-once・STATUS別承認・実Windows CPU/RAM/uptime 1回取得（コード/CI成功、実機未検証）"
+        "R4C --status-once・STATUS別承認・実Windows CPU/RAM/uptime 1回取得（コード/CI成功、実機未検証）",
+        "R5A --send-file-once 明示起動・SEND別許可・4MiB/16KiB限定送信（コード/CI PASS、実機未確認）"
       ]
     },
     "unimplemented": [
       "永続的な再利用可能認証済みセッション",
-      "PCファイル転送",
       "PCリモート操作",
       "自動再接続/遠隔失効",
-      "PC Link R4Cの物理Android↔Windows実機QA（0/15）"
+      "PC Link R4Cの物理Android↔Windows実機QA（0/15）",
+      "R5B Android→Windowsの本人選択ファイル送信・安全なWindows保存先選択",
+      "R5B 大容量・中断再開と不完全ファイルの安全な除去",
+      "R5A 実機転送検証（未実施）"
     ],
     "publicMiniappCatalog": {
       "stable": 2,
@@ -101,51 +105,76 @@
       "windowsCiRun": 42587042801,
       "realDeviceQa": "not_run",
       "noStableRelease": true
+    },
+    "pcFileReceiveOnce": {
+      "sourceStatus": "merged_ci_passed",
+      "direction": "Windows_to_Android_only",
+      "protocol": "pc-file-receive-v1",
+      "scope": "pc.file.receive",
+      "maxFileBytes": 4194304,
+      "chunkBytes": 16384,
+      "lifetime": "single file, max 240 sec, QR expiration",
+      "windowsLauncher": "Start-ChappyFileOnceV3.cmd",
+      "consent": "PC YES + Android QR proof + separate Windows SEND + Android file approval",
+      "hash": "SHA-256 verified before Android Save As",
+      "quickCiRun": 42595700596,
+      "windowsCiRun": 42595700748,
+      "physicalTwoDeviceQa": "not_run",
+      "privateDebugLab": {
+        "id": "local.chappy.pc_transfer_lab",
+        "version": "0.1.0",
+        "source": "sample_apps/pc_transfer_lab",
+        "permissions": [],
+        "ciArtifactRun": 42595700596,
+        "status": "private CI preview only; manual QA checklist, no PC/network API"
+      },
+      "windowsArtifactRun": 42595700748,
+      "noPublicCatalogOrSignedStable": true
     }
   },
   "nextBatch": {
-    "id": "PC-LINK-R5",
+    "id": "PC-LINK-R5B",
     "targetTasks": 8,
-    "implementationScope": "実機テスト前に安全なファイル転送コンポーネントを実装。ホスト＋Windowsで承認範囲と選択ファイルのみ許可。PC Transfer Labは検証用として新規（公開は実機検証後）。",
+    "implementationScope": "本人が選んだAndroidファイルだけをPCの本人承認保存先に安全に送る。R5Aのpc.file.receive・R4Cのpc.status.readとは独立した権限。部分ファイルは検証完了まで非公開。",
     "tasks": [
       {
-        "id": "PC-R5-01",
-        "name": "転送セッションをQR-v3の新しい署名・明示的なファイル権限へ分離（status権限とは絶対共有しない）",
+        "id": "PC-R5B-01",
+        "name": "Android→PC独立pc.file.send署名スコープと双方追加同意",
         "status": "todo"
       },
       {
-        "id": "PC-R5-02",
-        "name": "Windowsで利用者が明示選択したファイル/保存先以外を拒否するファイル境界設計",
+        "id": "PC-R5B-02",
+        "name": "Android側のSAF本人選択単一ファイル・上限検証",
         "status": "todo"
       },
       {
-        "id": "PC-R5-03",
-        "name": "単一ファイルのチャンク送受信、上限、SHA-256照合、サイズ検証",
+        "id": "PC-R5B-03",
+        "name": "Windows側の本人指定保存先・任意パス拒否・一時領域隔離",
         "status": "todo"
       },
       {
-        "id": "PC-R5-04",
-        "name": "キャンセル、期限切れ、切断・途中転送時の一時ファイル安全処理",
+        "id": "PC-R5B-04",
+        "name": "チャンク送信・長さ・順序・SHA-256・再使用防止",
         "status": "todo"
       },
       {
-        "id": "PC-R5-05",
-        "name": "Androidホスト側の許可付きファイル選択・保存・進捗UI",
+        "id": "PC-R5B-05",
+        "name": "切断/キャンセル/不一致時の一時ファイル削除と安全な最終保存",
         "status": "todo"
       },
       {
-        "id": "PC-R5-06",
-        "name": "PC Transfer Lab Debugミニアプリを新規作成（ホストの安全な承認経路のみ使用）",
+        "id": "PC-R5B-06",
+        "name": "PC Transfer Labの双方向QA追加（JSへの特権APIは非公開）",
         "status": "todo"
       },
       {
-        "id": "PC-R5-07",
-        "name": "リプレイ・パストラバーサル・過大サイズ・署名改ざん・JS隔離テスト",
+        "id": "PC-R5B-07",
+        "name": "不正パス・容量超過・誤署名・リプレイ・多重要求の回帰テスト",
         "status": "todo"
       },
       {
-        "id": "PC-R5-08",
-        "name": "Quick/Windows CI・プレビュー成果物・GitHub/Notion引き継ぎとR4C実機QA別記録",
+        "id": "PC-R5B-08",
+        "name": "Quick/Windows CI・Android Debug成果物・R5A実機QA別記録・Notion更新",
         "status": "todo"
       }
     ],
@@ -176,7 +205,7 @@
     "repository": "https://github.com/mibesamiti-png/chappy-player",
     "pcLinkSpec": "docs/pc-link-mutual-qr-v3.md",
     "qa": "docs/pc-link-two-device-qa-matrix.md",
-    "latestBatch": "docs/pc-link-r4c-status-once.md",
+    "latestBatch": "docs/pc-link-r5a-file-receive.md",
     "ci": "docs/ci-quick-and-manual-debug.md",
     "publicLibrary": "https://github.com/mibesamiti-png/chappy-apps",
     "notion": "https://app.notion.com/p/410948b74937819d92efc11defb9a7c7"
