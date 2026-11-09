@@ -1,0 +1,26 @@
+{
+  "protocol": "pc-media-once-v1",
+  "scope": "pc.media.control",
+  "domain": "CHAPPY-PC-MEDIA-CONTROL-V1",
+  "qa_kind": "deterministic_test_vectors_not_signed_proofs",
+  "vectors": [
+    {
+      "raw_nonce_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "commands": {
+        "volume_up": "16758a118a39f504eb2daebb3ee77acfe2f118868991ce39b504b4025f3ec358",
+        "volume_down": "2b7fd7bea290876c07d6b3b41331f4793893475f51a7e0d7c5c657b35a1ac395",
+        "toggle_mute": "9950c7e2cc25a6cf107d6552cf209cdffd5dfde69dddc68f879bdc1130811322",
+        "play_pause": "82469ea6372d38e3e47dee2074d7a850df818195cd9d4a0bf434ddace3c387ea"
+      }
+    },
+    {
+      "raw_nonce_hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "commands": {
+        "volume_up": "f13816653ef6b51a69fb4077f2daa5e038c85d295079dd1abc98fafe829b660e",
+        "volume_down": "2b4c2b5809bea5fc36be9de7c3f4aa96679638fbaf969a762d13caaa495e4c49",
+        "toggle_mute": "2aeaf71a48b1fd7d6a4293e4ec9fc6d93b02f30f316948b6095c03b7cc0457e6",
+        "play_pause": "f2bd790d821e384994d4edde7c58e39383b0a915f7bbf5504cdcda9391e0ad02"
+      }
+    }
+  ]
+}

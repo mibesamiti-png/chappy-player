@@ -111,6 +111,33 @@ class MediaOnceTests(unittest.TestCase):
                               phone_proof=self.phone_proof(challenge, scoped=False))
         self.assertEqual([], self.executed)
 
+    def test_executor_failure_is_irreversible_and_never_replays(self):
+        self.authenticate()
+        challenge = self.begin()
+        def failing_key(_):
+            raise OSError("Simulated Windows media-driver failure")
+        self.media._execute = failing_key
+        with self.assertRaises(OSError):
+            self.media.finish(
+                invitation=INV, phone_fp=self.phone_fp,
+                phone_proof=self.phone_proof(challenge))
+        self.assertTrue(self.media.finished.is_set())
+        self.assertEqual([], self.executed)
+        with self.assertRaises(PermissionError):
+            self.media.finish(
+                invitation=INV, phone_fp=self.phone_fp,
+                phone_proof=self.phone_proof(challenge))
+
+    def test_owner_cancellation_invalidates_signed_challenge(self):
+        self.authenticate()
+        challenge = self.begin(command="toggle_mute")
+        self.media.cancel()
+        with self.assertRaises(PermissionError):
+            self.media.finish(
+                invitation=INV, phone_fp=self.phone_fp,
+                phone_proof=self.phone_proof(challenge, "toggle_mute"))
+        self.assertEqual([], self.executed)
+
     def test_arbitrary_key_never_executes(self):
         self.assertEqual(4, len(COMMAND_KEYS))
         with self.assertRaises(ValueError):

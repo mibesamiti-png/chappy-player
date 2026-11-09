@@ -17,6 +17,10 @@ on:
       - "tools/test_pc_file_once.py"
       - "tools/test_pc_file_upload.py"
       - "tools/test_pc_media_once.py"
+      - "tools/test_pc_media_vectors.py"
+      - "tools/test_pc_media_http.py"
+      - "tools/test_pc_media_executor.py"
+      - "docs/pc-link-r6b-media-vectors.json"
       - "lib/core/pc_media_once.dart"
       - "test/pc_media_once_test.dart"
       - "lib/core/pc_file_upload.dart"
@@ -73,6 +77,11 @@ jobs:
         run: python tools/test_pc_file_upload.py
       - name: R6A one-shot media P-256 and replay tests (mock executor)
         run: python tools/test_pc_media_once.py
+      - name: R6B shared Python-Dart vectors and signed localhost HTTP tests
+        run: |
+          python tools/test_pc_media_vectors.py
+          python tools/test_pc_media_http.py
+          python tools/test_pc_media_executor.py
       - name: Exercise real Windows current-user DPAPI P-256 identity lifecycle
         run: python tools/test_windows_identity.py
       - name: Verify P-256 signed challenge is context-bound and never auto-pairs
