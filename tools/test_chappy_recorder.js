@@ -7,6 +7,8 @@ assert(source.includes('Chappy Recorder'));
 assert(source.includes('id="lensBack"') && source.includes('id="lensFront"'));
 assert(source.includes('id="freeSpace"') && source.includes('id="totalSpace"'));
 assert(source.includes('id="recordDark"') && source.includes('id="toggleLibrary"'));
+assert(source.includes('id="motionMode"') && source.includes('id="motionIdle"') &&
+       source.includes('id="motionSensitivity"') && source.includes('id="motionFeedback"'));
 assert(!/<script[^>]+src=|https:\/\/.*\.js/.test(source), 'mini app must be offline');
 const match = source.match(/<script>([\s\S]*?)<\/script>/);
 assert(match, 'Recorder script is missing');
@@ -38,16 +40,21 @@ const get = id => {
 get('videoQuality').value = '720';
 get('videoStorage').value = 'private';
 get('videoAudio').checked = true;
+get('motionMode').value = 'normal';
+get('motionIdle').value = '60';
+get('motionSensitivity').value = '40';
 get('libraryPanel').hidden = true;
 const docCallbacks = new Map();
 const winCallbacks = new Map();
 const log = {start:[],stop:0,dark:[],list:0,open:[],export:[],backup:0,restore:0,delete:[],storage:0};
 let current='idle', removed=false;
+let motionStatus='monitoring';
 const video = {
   async storageInfo(){log.storage++;return {totalBytes:128000000000,availableBytes:32000000000}},
   async start(options){log.start.push({...options});current='recording';return {state:'starting'}},
   async status(){return {state:current,elapsedMs:4500,storage:'private',
-    fileName:current==='idle'?'Chappy_20261106_123456_001.mp4':'',bytes:150000}},
+    fileName:current==='idle'?'Chappy_20261106_123456_001.mp4':'',bytes:150000,
+    motionMode:'normal', motionStatus, motionScore:12}},
   async dark(value){log.dark.push(value);return true},
   async stop(){log.stop++;current='idle';return {state:'stopping'}},
   async list(){log.list++;return removed?[]:[{
@@ -86,8 +93,9 @@ const click = async id => {
   get('videoQuality').value='1080';
   get('videoStorage').value='gallery';
   await click('recordDark');
-  assert.deepEqual(log.start[0],
-    {lens:'front',quality:'1080',storage:'gallery',audio:true});
+  assert.deepEqual(JSON.parse(JSON.stringify(log.start[0])),
+    {lens:'front',quality:'1080',storage:'gallery',audio:true,
+      motion:{mode:'normal',idleSeconds:60,sensitivity:40}});
   assert.deepEqual(log.dark,[true]);
   assert.equal(get('recordDark').disabled,true);
   assert.equal(get('recordStop').disabled,false);
@@ -122,11 +130,32 @@ const click = async id => {
   get('videoStorage').value='private';
   get('videoAudio').checked=false;
   await click('recordDark');
-  assert.deepEqual(log.start[1],
-    {lens:'front',quality:'1080',storage:'private',audio:false});
+  assert.deepEqual(JSON.parse(JSON.stringify(log.start[1])),
+    {lens:'front',quality:'1080',storage:'private',audio:false,
+      motion:{mode:'normal',idleSeconds:60,sensitivity:40}});
   await winCallbacks.get('chappy-native-video-started')();
   await settle();
   assert.equal(get('recordStop').disabled,false);
   assert.ok(log.storage>=2);
-  console.log('Chappy Recorder test passed: lens toggle, capacity, dark capture, file list/play/delete, host restart');
+  await click('recordStop');
+  get('motionMode').value='pause';
+  get('motionMode').callback('change')();
+  assert.equal(get('motionSettings').hidden,false);
+  get('motionIdle').value='30';
+  get('motionSensitivity').value='70';
+  get('motionSensitivity').callback('input')();
+  assert.equal(get('motionSensitivityValue').textContent,'70%');
+  await click('recordDark');
+  assert.deepEqual(JSON.parse(JSON.stringify(log.start[2].motion)),
+    {mode:'pause',idleSeconds:30,sensitivity:70});
+  motionStatus='paused';
+  poll();await settle();
+  assert.match(get('captureStatus').textContent,/録画一時停止/);
+  assert.match(get('motionFeedback').textContent,/カメラは監視継続/);
+  await click('recordStop');
+  get('motionMode').value='stop';
+  get('motionMode').callback('change')();
+  await click('recordDark');
+  assert.equal(log.start[3].motion.mode,'stop');
+  console.log('Chappy Recorder passed: existing recording, smart pause/stop options, status and offline controls');
 })().catch(e=>{console.error(e);process.exit(1)});
