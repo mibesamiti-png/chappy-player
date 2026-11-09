@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ASMR Sound Lab v1.4.2 — Chappy Edition</title>
+<title>ASMR Sound Lab v1.4.3 — Chappy Edition</title>
 <style>
 :root{color-scheme:dark;--bg:#0b1020;--surface:#141c2e;--line:#2a3650;--text:#eaf0fb;--muted:#a4b3c9;--a:#76dbd0;--a2:#b7a3ff}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,"Yu Gothic","Meiryo",sans-serif;background:radial-gradient(ellipse at 70% -15%,#213453 0%,#0b1020 55%);color:var(--text);min-height:100vh}
@@ -76,7 +76,7 @@
 </head>
 <body>
 <div class="page">
- <header class="top"><div><div class="eyebrow">SPATIAL AUDIO · CONTACT ACOUSTICS · 1.4.2</div><h1>ASMR Sound Lab <span style="font-size:15px;color:#9db0ca;font-weight:400">/ 合成音実験室</span></h1><div class="sub">指で音源を動かし、接近→接触→密閉を連続表現。v1.4は、音が耳に入ったときだけ低音と密閉感を追加強調。心音・耳かき・ゲルの接触挙動、音源A・Bの独立操作、音源ごとの自動最適化にも対応します。スマホは2本指、PCはマウス＋WASDで操作。録音素材の読み込みも継続。</div></div><div class="topActions"><span class="pill">完全オフライン</span><button class="button primary" id="startBtn">▶ 音声を開始</button><button class="button" id="stopBtn" disabled>■ 停止</button></div></header>
+ <header class="top"><div><div class="eyebrow">SPATIAL AUDIO · CONTACT ACOUSTICS · 1.4.3</div><h1>ASMR Sound Lab <span style="font-size:15px;color:#9db0ca;font-weight:400">/ 合成音実験室</span></h1><div class="sub">指で音源を動かし、接近→接触→密閉を連続表現。v1.4は、音が耳に入ったときだけ低音と密閉感を追加強調。心音・耳かき・ゲルの接触挙動、音源A・Bの独立操作、音源ごとの自動最適化にも対応します。スマホは2本指、PCはマウス＋WASDで操作。録音素材の読み込みも継続。</div></div><div class="topActions"><span class="pill">完全オフライン</span><button class="button primary" id="startBtn">▶ 音声を開始</button><button class="button" id="stopBtn" disabled>■ 停止</button></div></header>
  <div class="layout"><main class="stack">
   <section class="panel"><div class="stageHeader"><h2 style="margin:0">1. 音源Aを選択</h2><span class="minor">8種類 · 合成＋外部サンプル</span></div><div class="modes" id="modes">
   <button class="mode active" data-mode="bee"><span class="emoji">🐝</span><span>蜂の飛行</span><small>自発</small></button>
@@ -235,7 +235,7 @@
   <section class="panel"><h2>8. 環境ノイズ（重ねられる）</h2><div class="noiseRow"><label class="switch"><input type="checkbox" id="whiteOn"> ホワイト</label><input type="range" min="0" max="100" value="24" id="whiteLevel"><output id="whiteLevelValue">24%</output></div><div class="noiseRow"><label class="switch"><input type="checkbox" id="brownOn"> ブラウン</label><input type="range" min="0" max="100" value="32" id="brownLevel"><output id="brownLevelValue">46%</output></div><div class="hint">この2つは背景用の独立音源。蜂・耳かき・心音などと同時に再生でき、前方のマウス位置には連動しません。</div></section>
   <section class="panel"><h2>9. 設定と録音</h2><div class="bottomBar"><button class="button" id="saveBtn">↓ 設定を保存</button><button class="button" id="loadBtn">↑ 設定を読込</button><input id="loadInput" type="file" accept="application/json,.json" hidden></div><div class="bottomBar"><button class="button" id="recordBtn" disabled>● 録音開始</button><span class="minor">WebM/Opus · ブラウザ対応時のみ</span></div><div class="message" id="message" aria-live="polite"></div><div class="divider"></div><div class="miniTitle">v1.4の骨・組織伝導と試作の限界</div><div class="hint">v1.4は従来の心音・タップ・吸着音、耳内低音・密閉エンジンを維持し、頭・顔を触ったときの骨・組織伝導風の第3経路を追加。低周波の体内振動風ノイズ、耳かきの小さなタップと連続摩擦、ゲルの吸着・解除音にも対応。音源ごとのおすすめ設定を自動で適用。2音源とも左耳・右耳を自由に選んで移動できるダミーヘッド型の操作図を追加。耳への接近→接触→耳内の低域強調を連続して計算します。完全な耳内では外側への音の経路を閉じ、接触音を対象の耳へ限定します。これは<strong>主観的な密閉感を作る音響近似</strong>で、実測HRTFや耳道の精密シミュレーションではありません。サンプル音声はユーザーが読み込んだものだけを使います。急な大音量を避けるため再生前に端末の音量を下げてください。</div></section>
  </aside></div>
- <p class="footer">ASMR Sound Lab v1.4.2 · ダミーヘッド＋独立3経路（空気・頭部振動・耳内）＋左右自由配置 · スマホ2本指＋PCキーボード操作 · 合成音はオフライン。取り込んだ音源はブラウザ内だけで再生し外部送信しません。ブラウザの「音声を開始」操作が必要です。音量と低音の圧迫感が強くなっています。ヘッドホンの音量を低く設定してから開始し、不快な場合はすぐ停止してください。</p>
+ <p class="footer">ASMR Sound Lab v1.4.3 · ダミーヘッド＋独立3経路（空気・頭部振動・耳内）＋左右自由配置 · スマホ2本指＋PCキーボード操作 · 合成音はオフライン。取り込んだ音源はブラウザ内だけで再生し外部送信しません。ブラウザの「音声を開始」操作が必要です。音量と低音の圧迫感が強くなっています。ヘッドホンの音量を低く設定してから開始し、不快な場合はすぐ停止してください。</p>
 </div>
 <script>
 'use strict';
@@ -256,6 +256,19 @@ function earEntryBlend(depth){
 function contactLatch(wasTouching,strength,engage,release){
  if(!Number.isFinite(strength))return false;
  return strength >= (wasTouching ? release : engage);
+}
+// Bounded independently per-ear rumble levels; never react to invalid inputs.
+function bodyRumbleTargets(closure,near,rim,sealBoost,bassBoost,bodyGain,insideGain){
+ const unit=v=>Number.isFinite(v)?clamp(v,0,1):0;
+ const d=unit(closure),n=unit(near),r=unit(rim);
+ const seal=unit(sealBoost)*d,bass=unit(bassBoost);
+ const audible=unit(bodyGain)*unit(insideGain);
+ const base=.003*n+.014*r+.16*Math.pow(d,1.55);
+ const extra=.105*seal*Math.pow(d,1.2)+.045*bass*Math.pow(d,1.7);
+ const airy=clamp(audible*(base+extra),0,.26);
+ const deep=clamp(airy*.48*smoothstep((d-.14)/.72),0,.125);
+ const cutoff=lerp(9200,320,clamp(.13*n+.23*r+.87*d+.16*seal,0,1));
+ return {airy,deep,cutoff};
 }
 // Shared head-space coordinates (0..1). Both A/B can reach either ear.
 // View: frontal dummy-head, left ear at x=.20 and right ear at x=.80.
@@ -572,7 +585,16 @@ class ASMRSystem {
    high.type='highpass';high.frequency.value=55;
    gain.gain.value=0;
    src.connect(low);low.connect(high);high.connect(gain);gain.connect(merged,0,i);
-   src.start(0,i*.19);arr.push({src,low,high,gain});
+   // Deep tissue-like noise is a separate 48-180 Hz band, not subsonic DC.
+   const bassSrc=this.source(this.noise.monoBrown),bassHigh=c.createBiquadFilter(),
+         bassLow=c.createBiquadFilter(),bassGain=c.createGain();
+   bassHigh.type='highpass';bassHigh.frequency.value=48;bassHigh.Q.value=.707;
+   bassLow.type='lowpass';bassLow.frequency.value=180;bassLow.Q.value=.65;
+   bassGain.gain.value=0; // both layers start silent until contact is evaluated
+   bassSrc.connect(bassHigh);bassHigh.connect(bassLow);bassLow.connect(bassGain);
+   bassGain.connect(merged,0,i);
+   src.start(0,i*.19);bassSrc.start(0,.37+i*.23);
+   arr.push({src,low,high,gain,bassSrc,bassHigh,bassLow,bassGain,lastAiry:0,lastDeep:0});
   }
   merged.connect(this.mix);return arr;
  }
@@ -917,15 +939,17 @@ class ASMRSystem {
    ear.warm.gain.setTargetAtTime((2+6*state.canalResonance/100)*d*keep+2*sealExtra,t,tau);
    ear.direct.gain.setTargetAtTime(dry,t,tau);
    ear.wet.gain.setTargetAtTime(wet,t,tau);
-   // Near-contact noise shifts from faint airy noise to low muffled rumble.
-   const body=state.insideOn?(state.bodyNoise/100):0;
+   // Crossfade bounded airy surface texture into a deeper seal-only noise layer.
    const node=this.bodyNoiseNodes[i];
-   const near=proximity[i],rim=totalRim[i];
-   node.low.frequency.setTargetAtTime(lerp(9200,360,clamp(.13*near+.23*rim+.87*d+.16*sealExtra,0,1)),t,tau*1.4);
-   // Body-noise low-end increases only with actual ear closure; high-pass is fixed at 55 Hz.
-   const baseRumble=.003*near+.014*rim+.16*Math.pow(d,1.55);
-   const extraRumble=.105*sealExtra*Math.pow(d,1.2)+.045*(state.canalBassBoost/100)*Math.pow(d,1.7);
-   node.gain.gain.setTargetAtTime((near+rim+d>0.001)?body*(state.insideBass/100)*(baseRumble+extraRumble):0,t,tau*1.3);
+   const target=bodyRumbleTargets(d,proximity[i],totalRim[i],
+     state.canalSealBoost/100,state.canalBassBoost/100,
+     state.insideOn?state.bodyNoise/100:0,state.insideBass/100);
+   node.low.frequency.setTargetAtTime(target.cutoff,t,tau*1.4);
+   // Slow attack and release avoid abrupt low-frequency pressure jumps.
+   const attack=Math.max(.075,tau*1.5),release=Math.max(.15,tau*2);
+   node.gain.gain.setTargetAtTime(target.airy,t,target.airy>node.lastAiry?attack:release);
+   node.bassGain.gain.setTargetAtTime(target.deep,t,target.deep>node.lastDeep?attack*1.4:release);
+   node.lastAiry=target.airy;node.lastDeep=target.deep;
   }
   for(const kind of ['white','brown']){
    this.background[kind].gain.gain.setTargetAtTime(state[kind+'On']?Math.pow(state[kind+'Level']/100,2)*(kind==='brown'?.72:.23):0,t,.06);
