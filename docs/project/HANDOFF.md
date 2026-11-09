@@ -1,8 +1,19 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
-更新: 2026-11-10。NETLAB-05A OpenWrt限定Router Connection Labソース統合mainスナップショット ffdeebd7fda5c867db56917e711a37b655d84951。再開時は必ず最新main・PR・CIを再取得。
+更新: 2026-11-10。NETLAB-05B（BUFFALO接続端末一覧の手動読込）実装ソースmainスナップショット 57e67f6252ebd105fa5712a1332f0db8f4636de7。実ルーターモデル未確認。再開時は必ず最新main・PR・CIを再取得。
 
-## 【最新】NETLAB-05A管理ルーター接続先情報：OpenWrt版ソース/2CI統合 → 次は機種別対応 NETLAB-05B｜2026-11-10
+## 【最新】NETLAB-05B BUFFALOルーター端末一覧、未登録機器もオフライン読込｜ソース/2CI統合・自動APIは型番待ち｜2026-11-10
+
+- ユーザー確認：ルーターメーカーは**BUFFALO**。「まだ登録・許可していない端末も読み込みたい」。**型番とファームウェアは未確認**なので、一般BUFFALOの自動APIや通信先IP取得は未実装と明示。
+- [実装PR #125](https://github.com/mibesamiti-png/chappy-player/pull/125)をmain `57e67f6252ebd105fa5712a1332f0db8f4636de7`へ統合。実装最終HEAD `aa915e339e150bfd6e03e497f3bd747058e0fa85` で [Quick #42691745989](https://github.com/mibesamiti-png/chappy-player/actions/runs/42691745989) **66/66**、[Android Debug #42691746433](https://github.com/mibesamiti-png/chappy-player/actions/runs/42691746433) **17/17**成功。3ABI Debug APK ARM64/ARM32/x86-64、互換性レポートあり。Windows変更なし。
+- **実装内容**：Android本体Network Lab→BUFFALOの接続端末一覧。自分が管理するBUFFALO設定画面（デバイスコントロール/クライアントモニター）から**ユーザーがIP/MAC/端末名の行を自分でコピーして貼り付ける**。ほかの端末のChappyインストールやペアリング不要。すべての有効行を一覧に出し、端末をRAMだけで「未登録・要確認」「既知」に分類。未登録≠無断侵入。上限32KiB/256行/128台、重複と外部IPを除去、背景化/終了/手動消去で破棄。admin資格情報・自動LANスキャン・mini-app JS特権・通信先情報の追跡をしない。
+- **実機QAは未実施**：BUFFALOの実際の管理画面からコピーした一覧をAndroidで解析・実機APKインストールは未確認。ルーターへ**自動接続する仕組みはまだない**。接続端末一覧だけから、その端末がどのWebサイトやIPへ通信中かは分からない。
+- **次のNETLAB-05B**：ユーザーの型番とファームウェアを取得し、管理UI/APIで機器一覧と接続先情報のうち何を自動取得できるか監査・実機QA。先行OpenWrt NETLAB-05AとPC Link 04A/04B/ASMRは維持し、Game R8の8タスクもSTATE内で延期保持。Stable/公開カタログ未更新。
+- [BUFFALO仕様](../netlab-05b-buffalo-inventory.md) / [BUFFALO公式接続機器手順](https://www.buffalo.jp/support/faq/detail/15741.html) / [STATE](STATE.json) / [ROADMAP](ROADMAP.md)。Notionは手動ミラー。正本はGitHub main/CI。
+
+---
+
+## 【履歴：05B手動版より前】NETLAB-05A管理ルーター接続先情報：OpenWrt版ソース/2CI統合 → 次は機種別対応 NETLAB-05B｜2026-11-10
 
 - **[PR #123](https://github.com/mibesamiti-png/chappy-player/pull/123) をmain `ffdeebd7fda5c867db56917e711a37b655d84951`に統合。** 最終実装HEAD `b0de4215c1541cd831bfbbdc32a56b969ed4bf78` で [Quick #42685427286](https://github.com/mibesamiti-png/chappy-player/actions/runs/42685427286) **65/65**、[Android Debug #42685427387](https://github.com/mibesamiti-png/chappy-player/actions/runs/42685427387) **17/17**成功。ARM64/ARM32/x86-64 APKと互換性レポートあり。Windowsコード変更なし。
 - **本体Network LabにRouter Connection Labを追加**。現時点の対応は**OpenWrt LuCI HTTPS /ubusのみ**。本人管理ルーターのプライベートIPv4・HTTPSポート・独立確認済み証明書指紋SHA-256・LuCI管理資格情報と、情報取得を許可された対象端末のプライベートIPv4を自分で入力。前景Wi-Fi・VPNなし・新しい明示同意を要求。
