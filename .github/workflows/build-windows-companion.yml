@@ -125,6 +125,7 @@ jobs:
           Copy-Item examples/windows_companion/Start-ChappyIdentitySetup.cmd dist/Start-ChappyIdentitySetup.cmd
           Copy-Item examples/windows_companion/Start-ChappyStatusOnceV3.cmd dist/Start-ChappyStatusOnceV3.cmd
           Copy-Item examples/windows_companion/Start-ChappyTrafficExport.cmd dist/Start-ChappyTrafficExport.cmd
+          Copy-Item examples/windows_companion/Start-ChappyTrafficReadOnceV3.cmd dist/Start-ChappyTrafficReadOnceV3.cmd
           Copy-Item examples/windows_companion/Start-ChappyFileOnceV3.cmd dist/Start-ChappyFileOnceV3.cmd
           Copy-Item examples/windows_companion/Start-ChappyUploadOnceV3.cmd dist/Start-ChappyUploadOnceV3.cmd
           Copy-Item examples/windows_companion/Start-ChappyMediaOnceV3.cmd dist/Start-ChappyMediaOnceV3.cmd
@@ -141,6 +142,7 @@ jobs:
             dist/Start-ChappyIdentitySetup.cmd
             dist/Start-ChappyStatusOnceV3.cmd
             dist/Start-ChappyTrafficExport.cmd
+            dist/Start-ChappyTrafficReadOnceV3.cmd
             dist/Start-ChappyFileOnceV3.cmd
             dist/Start-ChappyUploadOnceV3.cmd
             dist/Start-ChappyMediaOnceV3.cmd
