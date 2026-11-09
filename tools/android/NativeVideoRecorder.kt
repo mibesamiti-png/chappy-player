@@ -308,6 +308,10 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
                             is VideoRecordEvent.Start -> {
                                 if (state == "starting" || state == "initializing") {
                                     state = "recording"
+                                    if (motionMode != "normal" && motionLastMovementMs == 0L) {
+                                        motionLastMovementMs = SystemClock.elapsedRealtime()
+                                        motionStatus = "monitoring"
+                                    }
                                 }
                             }
                             is VideoRecordEvent.Status -> {
