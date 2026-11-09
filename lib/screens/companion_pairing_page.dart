@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:chappy_player/core/companion_identity_client.dart';
 import 'package:chappy_player/core/companion_identity_exchange.dart';
 import 'package:chappy_player/core/pc_status_once.dart';
-import 'package:chappy_player/core/pc_file_receive.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:chappy_player/core/verified_pc_history_client.dart';
 import 'package:chappy_player/core/companion_qr_invitation.dart';
