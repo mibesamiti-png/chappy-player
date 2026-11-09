@@ -1,6 +1,6 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-10。**NETLAB-05C「型番を知らなくても接続中Wi-FiからゲートウェイとUPnPメーカー/型番候補を自動識別」をmain統合：Quick CI 67/67、Android Debug 17/17、3ABI Debug APK成功。実BUFFALO端末は未検証。NETLAB-05B未登録機器の一覧は手動読込済み、管理API/通信先情報の自動取得は型番・実機能力待ち。** Game R8は8タスク保持、Stable変更なし。
+更新: 2026-11-10。**NETLAB-06A（許可を得たPCAPの宛先IP/port・DNS名・TLS SNI候補・平文HTTP内容解析）ソースmain統合。Quick CI 68/68・Android Debug 17/17・3ABI Debug APK成功。あくまでオフライン手動取込であり、BUFFALOから他端末の通信先/暗号化本文をライブ自動取得するものではない。実機未検証。次NETLAB-06Bで本人PC/端末側の許可付きライブメタデータと機種別公式APIを検証。** 05B残件とGame R8の8タスクを保持、Stable未更新。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
@@ -15,12 +15,27 @@
 | 5c（開発段階完了） | NETLAB-05A | OpenWrtルーターのLuCI HTTPSから承認済み対象端末の接続先IP/ポート/通信方式を1回読み取る | Android本体Router Connection Lab | **ソース/Quick/Android Debug CI成功、実ルーター実機QAは未実施** |
 | 5d（分割実装進行中） | NETLAB-05B | BUFFALOの管理画面から本人がコピーしたIP/MAC端末一覧を未登録端末も含め取込。次は機種別安全なAPIと接続先情報・実機QA | Android本体BUFFALO端末一覧 | **手動読込ソース/Quick66/Android17成功。型番未判明・自動ルーター読込と実機は未対応** |
 | 5e（開発段階完了） | NETLAB-05C | 端末側でWi-FiのデフォルトゲートウェイIPを取得し、UPnPから任意のメーカー/型番候補を受け取る（見つからなければIPのみ） | Android本体Router Auto Identify | **ソース/Quick67/Android Debug17成功、実機BUFFALO未検証、型番は自己申告の候補** |
+| 5f（開発段階完了） | NETLAB-06A | 許可済みPCAPファイルを手動読み取り、IPv4宛先/port・DNS問い合わせ・TLS SNI候補・平文HTTP method/path/Hostおよび本文冒頭（初期OFF）を表示 | Android本体Traffic Inspection Lab | **ソース/Quick68/Android Debug17成功、3ABI APK。PCAPNG/IPv6/HTTPS本文復号/ライブ監視は非対応、実機QAなし** |
+| 5g（次） | NETLAB-06B | BUFFALOモデル/公式APIの現物確認と、本人PC・本人許可済み端末の通信先メタデータ単発ライブ表示の設計/検証 | Android host / Windows Companion（必要時） | **未着手。モデルと実機QAが必要。無断パケット傍受・MITMしない** |
 | 6（その後） | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張・private Game Room Lab候補 | 計画・未着手（延期、廃止しない） |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
 
-## 【最新】NETLAB-05C — 型番入力なしでルーター候補を自動識別（実装/CI完了、実機未検証）
+## 【最新】NETLAB-06A — 許可済みPCAPから通信先・DNS/TLS/平文HTTPをオフラインで解析
+
+- [実装PR #129](https://github.com/mibesamiti-png/chappy-player/pull/129) をmain `3efe4caa0536c5dedec5a51dd7add364efd93b5e`へ統合済み。最終実装HEAD `f5c2ce5a04bcacd6e96319f355311d07605d31ef`の[Quick #42702059765](https://github.com/mibesamiti-png/chappy-player/actions/runs/42702059765) **68/68**と[Android Debug #42702059838](https://github.com/mibesamiti-png/chappy-player/actions/runs/42702059838) **17/17**成功、ARM64/ARM32/x86-64 APK成果物あり。
+- **Android本体Network Lab →「通信先・平文内容をPCAPから解析（本人許可）」**で、明示同意を得た本人/対象端末許諾済みclassic PCAPをファイルピッカーから手動読込。2MiB/2500パケット/最大160表示、Raw IPv4とEthernetを解析。送信元/宛先IP:ポート・TCP/UDP・DNS問い合わせ名・TLS SNI候補・HTTPのメソッド/クエリを除いたパス/Host、初期OFFの本人明示ONで平文HTTP text/plain/JSONの本文冒頭120文字を表示。機微ワード含む本文は表示抑止（完全な個人情報除去は保証できない）。
+- **まだない機能**：BUFFALO経由の他端末ライブ通信先情報取得、ルーター設定や見知らぬ機種の非公開APIアクセス、HTTPS暗号化本文の復号、PCAPNG/IPv6/TCP再組立、他端末への無断導入/監視。PCAP解析データは端末RAMのみ、画面終了/背景化/消去で破棄、JS権限なし。
+- **実機QA未実施**：自宅BUFFALOの機種/公式API、PCAPファイル実端末インポート、Android Debug APKインストールはまだ確認していない。テストは架空の合成パケットを使用。ユーザーに検証用サンプルPCAPを会話内で渡したが、GitHubには実ユーザーデータを含めない。詳細は[NETLAB-06A仕様](../netlab-06a-offline-traffic-inspection.md)。
+
+## 【次】NETLAB-06B — 本人管理端末の通信先を許可付きで読み取る方法と機種別API
+
+- 型番が分からないBUFFALOは[NETLAB-05C](../netlab-05c-router-auto-identification.md)の新画面でゲートウェイIP+UPnP型番候補を実機確認し、正式モデル/ファームと照合する。メーカーの端末一覧が存在することは、通信先IP一覧のAPIやHTTPS本文の提供を意味しない。**無いAPIを作り話しない**。
+- 最初のライブ接続先機能は、本人PCの接続情報を既存PC Link相互承認/TLSピンで1回だけ渡す設計、または本人がOSで個別に承認する端末側の安全な計測を評価。どちらも無許可端末のネットワーク傍受と混同しない。HTTPS本文を復号したふりをしない。
+- 現行05Bの機種別調査/実機QAを含む8タスクはSTATE`observations.deferredRouter05B.tasks`に、Game R8の8タスクは`observations.deferredGameR8.tasks`に**削除せず保存**。Release Stable/Chappy Appsカタログは別承認。
+
+## 【履歴：06Aより前】NETLAB-05C — 型番入力なしでルーター候補を自動識別（実装/CI完了、実機未検証）
 
 - [PR #127](https://github.com/mibesamiti-png/chappy-player/pull/127)をmain `53aa672000364c31cab4986524f649e33fdfb3e1` に統合。最終実装HEAD `ac064f571e93a9592f12e2519a4c7e3e67ab6599` で[Quick #42697064380](https://github.com/mibesamiti-png/chappy-player/actions/runs/42697064380) **67/67**、[Android Debug #42697064416](https://github.com/mibesamiti-png/chappy-player/actions/runs/42697064416) **17/17**、3ABI APK成果物あり。Windows変更なし。
 - Android本体Network Labへ**「接続中のルーターを自動識別（型番候補）」**を追加。本人が管理するWi-Fiで二重承認後、Android OS現在のWi-FiデフォルトゲートウェイRFC1918 IPv4を取得。VPN/セルラーは拒否。SSDP `M-SEARCH` 一回のみ送信し、ゲートウェイと一致した応答のUPnP機器紹介XMLを16KiB/タイムアウト/同一IPに制限して任意取得。**モデル名・メーカーはUPnP自己申告の候補**で確定値ではなく、未応答ならゲートウェイIPのみ表示。AP/ブリッジでは上流ルーターが見えることがある。
