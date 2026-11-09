@@ -151,6 +151,19 @@ class TrafficOnceTests(unittest.TestCase):
                                 phone_proof=self.sign(challenge))
         self.assertTrue(self.traffic.finished.is_set())
 
+    def test_pc_stop_during_capture_does_not_return_traffic(self):
+        self.authenticate()
+        challenge = self.begin()
+        def interrupted(seconds):
+            self.traffic.cancel()
+            return report(seconds)
+        self.traffic._traffic_reader = interrupted
+        with self.assertRaises(PermissionError):
+            self.traffic.finish(
+                invitation=INV, phone_fp=self.phone_fp,
+                phone_proof=self.sign(challenge))
+        self.assertTrue(self.traffic.finished.is_set())
+
     def test_qr_and_cli_are_opt_in_not_reusable_other_permissions(self):
         qr = server.invite_payload("192.168.1.5", 40000, TLS, INV,
             self.exp, identity_fingerprint=self.pc_fp, traffic_once=True)
