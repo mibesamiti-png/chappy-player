@@ -499,6 +499,8 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
         raise ValueError("Create PC identity explicitly before v3 enrollment")
     if identity_mode:
         from identity_pairing_v3 import IdentityPairingAttempt
+    if status_once:
+        from status_once import StatusOnceAttempt
     pem, key, fingerprint = create_ephemeral_certificate(address)
 
     with tempfile.TemporaryDirectory(prefix="chappy-pair-session-") as folder:
