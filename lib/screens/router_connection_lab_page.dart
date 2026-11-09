@@ -57,6 +57,12 @@ class _RouterConnectionLabPageState extends State<RouterConnectionLabPage>
     if (state != AppLifecycleState.resumed) {
       _foreground = false;
       _wipe();
+      // Forget router/target identifiers and account on background/lock.
+      _routerIp.clear();
+      _routerPort.text = '443';
+      _certificatePin.clear();
+      _deviceIp.clear();
+      _username.clear();
       if (mounted) {
         setState(() => _error = '背景化したため、認証情報と結果を破棄しました');
       }
@@ -152,7 +158,7 @@ class _RouterConnectionLabPageState extends State<RouterConnectionLabPage>
         routerIp: routerIp, port: port, tlsFingerprint: fp,
         deviceIp: deviceIp, username: username, password: password,
         approvedWifi: _wifiAllowed,
-      );
+      ).timeout(const Duration(seconds: 60));
       if (!mounted || request != _generation || !_foreground ||
           ModalRoute.of(context)?.isCurrent != true) {
         return;
