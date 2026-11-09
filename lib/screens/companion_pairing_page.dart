@@ -540,8 +540,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
               content: Text(
                 'PC側で本人確認と別のCONTROL承認を行い、'
                 '操作を限定したPC署名を検証しました。\n\n'
-                '操作: ' + PcMediaOnce.label(exactCommand) +
-                '\n\nこの1キーだけ実行します。任意のキー入力、'
+                '操作: ${PcMediaOnce.label(exactCommand)}\n\n'
+                'この1キーだけ実行します。任意のキー入力、'
                 'ファイルアクセスや継続的なPC制御は許可しません。',
               ),
               actions: [
@@ -561,7 +561,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
       );
       if (!mounted || generation != _generation) return;
       setState(() => _mediaMessage =
-          PcMediaOnce.label(command) + '：PC側から実行応答を受信しました。');
+          '${PcMediaOnce.label(command)}：PC側から実行応答を受信しました。');
     } catch (_) {
       if (mounted && generation == _generation) {
         setState(() => _error = 'PCメディア操作に失敗しました [MEDIA-ONCE]。'
@@ -1008,7 +1008,7 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
                   onPressed: _busy || _mediaAttempted
                       ? null : () => _executeMediaOnce(command),
                   icon: const Icon(Icons.music_note_outlined),
-                  label: Text('PCの' + PcMediaOnce.label(command)),
+                  label: Text('PCの${PcMediaOnce.label(command)}'),
                 ),
               if (_mediaMessage != null)
                 Text(_mediaMessage!, key: const Key('pair_media_result')),
