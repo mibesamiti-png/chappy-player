@@ -30,11 +30,13 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage>
     ++_epoch;
     _active?.cancel();
     _active = null;
-    if (mounted) setState(() {
+    if (mounted) {
+      setState(() {
       _busy = false;
       _result = null;
       _message = '診断を中止しました。結果は保存していません。';
-    });
+      });
+    }
   }
 
   @override
@@ -137,7 +139,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage>
             ListTile(
               key: const Key('r7_diag_interfaces'),
               title: const Text('ネットワーク接続数'),
-              trailing: Text(result.interfaceCount.toString() + ' 件')),
+              trailing: Text('${result.interfaceCount} 件')),
             ListTile(
               key: const Key('r7_diag_dns'),
               title: const Text('example.comのDNS'),
@@ -146,7 +148,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage>
               key: const Key('r7_diag_https'),
               title: const Text('example.comのHTTPS'),
               trailing: Text(result.httpsStatus == null
-                  ? '失敗/未実施' : 'HTTP ' + result.httpsStatus.toString())),
+                  ? '失敗/未実施' : 'HTTP ${result.httpsStatus}')),
             if (result.stoppedAt != null)
               ListTile(
                 title: const Text('停止した段階'),

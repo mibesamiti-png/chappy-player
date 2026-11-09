@@ -12,7 +12,7 @@ class BrowserUrlPolicy {
       throw const FormatException('URLを確認してください');
     }
     final absolute = RegExp(r'^[A-Za-z][A-Za-z0-9+.-]*:').hasMatch(value);
-    return fromNavigation(absolute ? value : 'https://' + value);
+    return fromNavigation(absolute ? value : 'https://$value');
   }
 
   /// Reject a blocked navigation instead of converting it to a different URL.

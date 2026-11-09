@@ -56,7 +56,9 @@ class _BrowserPageState extends State<BrowserPage>
         },
         onPageStarted: (url) {
           if (!mounted || !_foreground || generation != _generation ||
-              !BrowserUrlPolicy.allowsNavigation(url)) return;
+              !BrowserUrlPolicy.allowsNavigation(url)) {
+            return;
+          }
           setState(() {
             _loading = true;
             _hasPage = true;
@@ -65,13 +67,17 @@ class _BrowserPageState extends State<BrowserPage>
           });
         },
         onPageFinished: (_) {
-          if (!mounted || !_foreground || generation != _generation) return;
+          if (!mounted || !_foreground || generation != _generation) {
+            return;
+          }
           setState(() => _loading = false);
           unawaited(_refreshHistory(controller, generation));
         },
         onWebResourceError: (error) {
           if (!mounted || !_foreground || generation != _generation ||
-              error.isForMainFrame == false) return;
+              error.isForMainFrame == false) {
+            return;
+          }
           setState(() {
             _loading = false;
             _notice = '読み込みに失敗しました。URLか接続状態を確認してください。';
@@ -208,7 +214,6 @@ class _BrowserPageState extends State<BrowserPage>
     );
     if (!mounted || !_foreground || approved != true) return;
     try {
-      await controller.stopLoading();
       await controller.clearCache();
       await controller.clearLocalStorage();
       await WebViewCookieManager().clearCookies();
@@ -234,7 +239,6 @@ class _BrowserPageState extends State<BrowserPage>
     ++_generation;
     final old = _controller;
     if (old != null) {
-      unawaited(old.stopLoading().catchError((Object _) {}));
       unawaited(old.loadRequest(Uri.parse('about:blank'))
           .catchError((Object _) {}));
       unawaited(old.setJavaScriptMode(JavaScriptMode.disabled)
@@ -274,7 +278,6 @@ class _BrowserPageState extends State<BrowserPage>
     _address.dispose();
     final old = _controller;
     if (old != null) {
-      unawaited(old.stopLoading().catchError((Object _) {}));
       unawaited(old.loadRequest(Uri.parse('about:blank'))
           .catchError((Object _) {}));
     }
