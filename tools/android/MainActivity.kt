@@ -240,6 +240,10 @@ class MainActivity : FlutterActivity() {
                         result.success(micActivityVisible &&
                             networkDiscovery.pairingAllowed())
                     }
+                    "trafficPairingAllowed" -> {
+                        result.success(micActivityVisible &&
+                            networkDiscovery.trafficPairingAllowed())
+                    }
                     "pcIdentityStatus", "pcIdentityCreate", "pcIdentityRevoke" -> {
                         if (!micActivityVisible) {
                             result.error("NETLAB_NOT_FOREGROUND",

@@ -34,6 +34,10 @@ class LanDiscoveryClient {
   Future<bool> pairingAllowed() async =>
       await _channel.invokeMethod<bool>('pairingAllowed') == true;
 
+  /// Host-only NETLAB-04B gate: require active Wi-Fi without VPN/cellular.
+  Future<bool> trafficPairingAllowed() async =>
+      await _channel.invokeMethod<bool>('trafficPairingAllowed') == true;
+
   Future<LanDiscoverySnapshot> stop() async {
     final result = await _channel.invokeMapMethod<String, dynamic>('stop');
     return LanDiscoverySnapshot.fromWire(result);

@@ -9,6 +9,8 @@ import 'package:chappy_player/core/pc_status_once.dart';
 import 'package:chappy_player/core/pc_file_receive.dart';
 import 'package:chappy_player/core/pc_file_upload.dart';
 import 'package:chappy_player/core/pc_media_once.dart';
+import 'package:chappy_player/core/pc_traffic_once.dart';
+import 'package:chappy_player/core/remote_traffic_report.dart';
 import 'package:crypto/crypto.dart';
 
 /// Explicit, one-shot QR-v3 proof exchange. No trusted peer is saved.
@@ -697,6 +699,126 @@ class CompanionIdentityExchange {
     } finally {
       // If a chunk timed out, the owner can stop the server, and its memory
       // buffer is zeroed. The cancellable one-time ticket is never persisted.
+      _socket?.destroy();
+      _socket = null;
+      _busy = false;
+    }
+  }
+
+  /// NETLAB-04B: one host-only, owner-approved PC traffic-counter snapshot.
+  /// An earlier QR-v3 identity proof alone is NOT permission for this read.
+  /// There is no mini-app API, persistent token, or background capture.
+  Future<RemoteTrafficReport> readPcTrafficOnce({
+    required String ip,
+    required int port,
+    required String tlsFingerprint,
+    required String pcFingerprint,
+    required String invitation,
+    required int qrExpires,
+    required Future<bool> Function(int seconds) approvePhoneTraffic,
+  }) async {
+    if (_busy || _cancelled) {
+      throw StateError('通信量取得には新しいQR-v3本人確認が必要です');
+    }
+    CompanionPairingClient.validateTarget(ip, port, tlsFingerprint);
+    if (!_hex64.hasMatch(pcFingerprint) || !_hex32.hasMatch(invitation)) {
+      throw const FormatException('通信量取得の認証情報が不正です');
+    }
+    final started = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if (qrExpires <= started || qrExpires - started > 600) {
+      throw const FormatException('通信量取得のQR期限が不正です');
+    }
+    _busy = true;
+    try {
+      final key = await identity.status();
+      _ensureActive();
+      if (!key.created || key.fingerprint == null ||
+          !_hex64.hasMatch(key.fingerprint!)) {
+        throw StateError('Android端末の署名鍵が利用できません');
+      }
+      final phoneFp = key.fingerprint!;
+      final phoneNonce = CompanionIdentityClient.newNonce();
+      const protocol = 'pc-traffic-once-v1';
+      final challenge = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/traffic-begin',
+        json: <String, Object>{
+          'protocol': protocol, 'invitation': invitation,
+          'phone_fp': phoneFp, 'phone_nonce': phoneNonce,
+        },
+      );
+      _ensureActive();
+      if (challenge.length != 6 || challenge['protocol'] != protocol ||
+          challenge['status'] != 'challenge' ||
+          challenge['pc_nonce'] is! String ||
+          !_hex64.hasMatch(challenge['pc_nonce'] as String) ||
+          challenge['expires'] is! int ||
+          challenge['pc_proof'] is! Map ||
+          challenge['seconds'] is! int) {
+        throw const FormatException('PC通信量の署名チャレンジが不正です');
+      }
+      final rawPcNonce = challenge['pc_nonce'] as String;
+      final expires = challenge['expires'] as int;
+      final seconds = challenge['seconds'] as int;
+      if (seconds < 5 || seconds > 30) {
+        throw const FormatException('PCの計測期間が範囲外です');
+      }
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      if (expires <= now || expires > qrExpires || expires - now > 90) {
+        throw const FormatException('PC通信量の承認期限が不正です');
+      }
+      final verified = await identity.verifyPcProof(
+        proof: CompanionIdentityClient.parseProof(
+          challenge['pc_proof'] as Map<dynamic, dynamic>,
+        ),
+        pcFingerprint: pcFingerprint, invitation: invitation,
+        tlsFingerprint: tlsFingerprint, phoneFingerprint: phoneFp,
+        phoneNonce: pcTrafficScopedNonce(phoneNonce, seconds),
+        expiresUnix: expires,
+      );
+      _ensureActive();
+      if (!verified) {
+        throw StateError('通信量のPC専用署名が一致しません');
+      }
+      if (!await approvePhoneTraffic(seconds)) {
+        throw StateError('Android側で通信量取得を拒否しました');
+      }
+      _ensureActive();
+      if (DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expires) {
+        throw const FormatException('通信量取得の承認が期限切れです');
+      }
+      final phoneProof = await identity.signPhoneProof(
+        invitation: invitation, tlsFingerprint: tlsFingerprint,
+        pcFingerprint: pcFingerprint,
+        pcNonce: pcTrafficScopedNonce(rawPcNonce, seconds),
+        expiresUnix: expires,
+      );
+      _ensureActive();
+      final answer = await _post(
+        ip: ip, port: port, tlsPin: tlsFingerprint,
+        path: '/v3/traffic-finish',
+        json: <String, Object>{
+          'protocol': protocol, 'invitation': invitation,
+          'phone_fp': phoneFp, 'phone_proof': phoneProof,
+        },
+        maxResponseBytes: 18000,
+        maxPayloadBytes: 17000,
+      );
+      _ensureActive();
+      if (answer.length != 4 || answer['protocol'] != protocol ||
+          answer['status'] != 'ok' ||
+          answer['pc_nonce'] != rawPcNonce ||
+          answer['report'] is! Map) {
+        throw const FormatException('PCの通信量応答が不正です');
+      }
+      final report = RemoteTrafficReport.parseBytes(
+        Uint8List.fromList(utf8.encode(jsonEncode(answer['report']))),
+      );
+      if (report.seconds != seconds) {
+        throw const FormatException('PC通信量の計測時間が認証内容と一致しません');
+      }
+      return report;
+    } finally {
       _socket?.destroy();
       _socket = null;
       _busy = false;
