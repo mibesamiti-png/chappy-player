@@ -1,5 +1,15 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
+## 【実機速報】起動・HTTPS通信はユーザー確認で成功｜2026-11-10 JST
+
+- ユーザー実機報告：「一旦起動はしたしHTTPS通信が出来た事だけ報告しとくー」。**アプリ起動 = ユーザー報告で成功、HTTPS通信 = ユーザー報告で成功**。コード・CIの成功とは独立した実機スモーク確認として記録。
+- **使用したAPKバージョン、Debug/Stable、HTTPSの実行画面/URL、ミニアプリか本体かは未確認**。記録上は推測しない。実URL・個人の通信データ・端末固有情報をGitHubへ記載しない。
+- 従来のNETLAB実機チェックリスト **QA-01～QA-09については完了判定0/9** のまま。QA-01は起動のほかセルフチェック4項目実行・レポートコピーが必要。HTTPS通信成功だけではNetwork Labの他の操作やルーター識別/PCAP解析がPASSにならない。
+- [Chappy QA Checklist v0.1.0](https://github.com/mibesamiti-png/chappy-apps/blob/main/debug/chappy-qa-checklist-v0.1.0.chappy) は公開Debugライブラリに登録済み。ユーザーが利用する場合、今回の起動/HTTPSは速報として残し、残りのチェック結果は本人の実際の操作に基づいて入力する。
+- 新機能開発は実機デバッグ優先で一時停止中。実機操作は今後、確認できた順にGitHub STATE/HANDOFFとNotionへ記録する。
+
+
+
 ## 【最新】DEBUG-QA-CHECKLIST-01｜Android実機QAミニアプリ・公開Debugライブラリ9本｜2026-11-10
 
 - 要望：「デバッグ内容のチェックリストをミニアプリに追加」「今後のミニアプリ系はDebugライブラリへ」。**Chappy QA Checklist v0.1.0**を `sample_apps/debug_checklist/` として実装し、公開Chappy Appsの**Debugだけ**に追加。[プレイヤー実装PR #133](https://github.com/mibesamiti-png/chappy-player/pull/133) → main `f8e239abff214fb77bee352a7248067d685470e6`、[Quick CI 71/71](https://github.com/mibesamiti-png/chappy-player/actions/runs/42712257849)。
