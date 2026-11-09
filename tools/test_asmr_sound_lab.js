@@ -125,4 +125,46 @@ assert.ok(html.includes('node.lastAiry=target.airy;node.lastDeep=target.deep;'),
   'each ear requires independent attack/release state');
 assert.ok(html.includes('this.limiter.connect(this.safety)'),
   'existing output peak limiter and soft-clipping safety route must remain');
-console.log('ASMR ear-entry + contact + bounded dual-layer rumble regressions passed');
+// SURF-01/02: surface contact is a separate, bounded route independent of the bone bus.
+const skinDecl=html.match(/function skinContactTargets\(mode,zone,gate,speed,strength,texture,amount\)\s*\{[\s\S]*?\n\}/);
+assert.ok(skinDecl,'testable skin contact function must exist');
+const skin=vm.runInNewContext('(' + skinDecl[0] + ')',
+  {clamp:clampUnit,smoothstep:stepUnit});
+const forehead={touch:1,isCanal:false,settings:{hardness:.95},side:-1};
+const cheek={touch:1,isCanal:false,settings:{hardness:.48},side:0};
+const canal={touch:1,isCanal:true,settings:{hardness:.38},side:0};
+almost(skin('ear',forehead,0,70,.5,.5,1).level,0,'no air-generated skin texture');
+almost(skin('ear',forehead,1,0,.5,.5,1).level,0,'stationary touch stays quiet');
+almost(skin('ear',forehead,1,60,.5,.5,0).level,0,'user can switch surface texture off');
+almost(skin('ear',canal,1,80,.5,.5,1).level,0,'canal is not facial skin');
+almost(skin('bee',forehead,1,80,.5,.5,1).level,0,'self-producing bee does not rub facial skin');
+almost(skin('heart',forehead,1,80,.5,.5,1).level,0,'heart pulse does not make contact scrape');
+const fore=skin('ear',forehead,1,65,.65,.5,1);
+const soft=skin('ear',cheek,1,65,.65,.5,1);
+assert.ok(fore.level>0 && soft.level>0);
+assert.ok(fore.cutoff>soft.cutoff,'hard forehead should sound brighter than cheek');
+assert.ok(soft.left>soft.right,'left cheek contact should localize left');
+assert.ok(fore.left===fore.right,'forehead should be approximately centered');
+assert.ok(skin('ear',{...cheek,side:1},1,65,.65,.5,1).right>soft.right,
+  'right cheek needs mirrored stereo weighting');
+for(let i=0;i<=100;i++){
+  const g=skin('gel',{touch:i/100,isCanal:false,side:1,settings:{hardness:.55}},
+    1,i,.8,.6,1);
+  assert.ok(Number.isFinite(g.level)&&g.level>=0&&g.level<=.15);
+  assert.ok(g.cutoff>=450&&g.cutoff<=6800);
+}
+almost(skin('gel',forehead,NaN,NaN,NaN,NaN,NaN).level,0,'invalid controls silence surface');
+assert.ok(html.includes('v.skinSource.start(0,'),'skin texture must have continuous synthesized source');
+assert.ok(html.includes('v.skinGain.gain.value=0;'),'skin layer is initially silent');
+assert.ok(html.includes('v.skinMerge.connect(this.externalMix)'),'surface sound should be external, not bone/canal');
+assert.ok(html.includes('v.skinGain.gain.setTargetAtTime(surface.level,t,.032)'),
+  'skin friction uses a smoothed gain envelope');
+assert.ok(html.includes('contactLatch(skin.on,zone.touch,.28,.09)'),
+  'surface tap must respect anti-jitter contact hysteresis');
+assert.ok(html.includes('this.skinTap(this.voices[slot],zone)'),'first-contact event must be emitted');
+assert.ok(html.includes('v.skinBus') && html.includes('v.boneMerge.connect(this.mix)'),
+  'skin and bone routes both remain present');
+assert.ok(html.includes('id="skinSurface"') && html.includes('skinSurface:65'),
+  'skin intensity slider and default must exist');
+assert.ok(html.includes("preset-v14"),'saved settings key must not change');
+console.log('ASMR ear-entry, bone, rumble and skin-surface regression passed');
