@@ -2,50 +2,54 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-10",
-  "sourceMainAtCapture": "f8e239abff214fb77bee352a7248067d685470e6",
+  "sourceMainAtCapture": "8c31a68e667799ef505393f621855e4a7f3d71db",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "NETLAB-06B",
-    "name": "実機デバッグ優先：起動・HTTPS通信はユーザー報告で成功。チェックリスト9項目は未完了（0/9）、NETLAB-06Bは一時停止",
-    "status": "paused_for_user_physical_debug",
-    "entry": "docs/project/ROADMAP.md"
+    "id": "CAMREC-14-R2",
+    "name": "Chappy Recorderスマート録画R1はCI成功・実機未検証。次はAndroid画面OFF録画の安全なForeground Service設計とR1実機QA。NETLAB-06Bは延期保持",
+    "status": "planned_waiting_R1_physical_debug",
+    "entry": "docs/camrec-13-smart-recording.md"
   },
   "lastCompletedBatch": {
-    "id": "DEBUG-QA-CHECKLIST-01",
-    "pr": 133,
-    "mergedCommit": "f8e239abff214fb77bee352a7248067d685470e6",
-    "sourceStatus": "merged_chappy_player_source_and_public_debug_catalog_ci_pass_physical_qa_not_run",
+    "id": "CAMREC-13-R1",
+    "pr": 136,
+    "mergedCommit": "8c31a68e667799ef505393f621855e4a7f3d71db",
+    "sourceStatus": "merged_motion_detection_R1_quick_and_compatibility_ci_success_physical_camera_QA_not_run",
     "quickCi": {
       "status": "success",
-      "run": 42712257849,
-      "successfulSteps": 71
+      "run": 42721111102,
+      "successfulSteps": 74
     },
-    "androidDebugCi": {
-      "status": "not_required",
-      "reason": "Standalone public-safe .chappy mini-app source and Quick CI ZIP; no Android host files changed",
-      "physicalInstallation": "not_run",
-      "signedStable": false
-    },
-    "debugCatalog": {
-      "repository": "mibesamiti-png/chappy-apps",
-      "pr": 7,
-      "mergedCommit": "c0e1eb45dafd891fdf903170de3d042c8197dd1f",
-      "validationRun": 42712891326,
+    "androidCompatibilityCi": {
       "status": "success",
+      "run": 42721110750,
+      "successfulSteps": 17,
+      "abi": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86_64"
+      ],
+      "physicalInstall": "not_run"
+    },
+    "publicMiniappCatalog": {
+      "repository": "mibesamiti-png/chappy-apps",
+      "pr": 8,
+      "mergedCommit": "f3dc66751239da98e382624daf594a84264e8c5d",
+      "validationRun": 42722599197,
+      "status": "success",
+      "channel": "debug",
+      "recorderVersion": "0.1.4",
+      "sha256": "b6ea14d27fda2140c96dbd511075dc6e5f097b0c5a00b12e98af45285b1c0324",
       "stableCount": 2,
-      "debugCount": 9,
-      "appId": "local.chappy.qa_checklist",
-      "version": "0.1.0",
-      "sha256": "26699be9aad879f96cb7dd85c601b41896eaf8d787b74c92f4da0ba47f0fb1db"
+      "debugCount": 9
     },
     "physicalQA": {
-      "status": "partial_user_report",
-      "casesTotal": 9,
+      "status": "not_run",
       "casesPassed": 0,
-      "notes": "App launch and HTTPS communication user-reported success on 2026-11-10 JST. Checklist QA-01..09 not completed; exact APK/build/channel and HTTPS test scope unspecified."
+      "scenariosTotal": 6
     },
-    "qualification": "A zero-permission public-safe .chappy mini-app presents NETLAB QA-01..QA-09 with user-marked Pass/Fail/Blocked/Not run, persists only status flags (not notes), and creates user-copyable reports. Both source Quick CI 71/71 and public chappy-apps catalog validation 7/7 passed; physical on-device WebView operation, localStorage, clipboard and actual router/PCAP QA remain not_run. No debug mini-app auto-installs, no Stable publishing, no native capture/permissions. Existing private prototype QA previews are deliberately NOT published without explicit review."
+    "qualification": "R1: CameraX ImageAnalysis 16x12Y at ~4Hz plus VideoCapture, three explicit modes normal/pause-on-stillness/stop-on-stillness, 10–300s inactivity, 0–100 sensitivity, local-only camera frames, fail-open error handling and legacy host guard. Quick CI 74/74 and Android compatibility build 17/17 on source head 2619f911be81c8339be886439e397a17485b421c; public Debug mini-app v0.1.4 catalog validation 7/7 success. NO user Android physical motion test performed. Android screen-off / FGS / prebuffer still NOT IMPLEMENTED. Existing 1 GiB limit remains. Stable and other mini-apps untouched."
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -125,7 +129,8 @@
       "debugLatest": {
         "deviceLab": "0.2.1",
         "fileLab": "0.2.3",
-        "gameServerLab": "0.1.2"
+        "gameServerLab": "0.1.2",
+        "recorder": "0.1.4"
       }
     },
     "stableRelease": {
@@ -693,65 +698,136 @@
         "casesTotal": 9,
         "reason": "QA-01 requires self-check and report copy in addition to launch; QA-02..09 not explicitly tested. HTTPS connectivity is a separate smoke observation."
       }
+    },
+    "deferredNetlab06B": {
+      "id": "NETLAB-06B",
+      "targetTasks": 8,
+      "implementationScope": "【ユーザー指示】新機能追加は一旦停止。まずNETLAB-06A回帰テスト済みDebug APKを物理Androidでインストールし、Network Labの9項目QA（docs/qa/NETLAB_DEBUG_2026-11-10.md）を実施。現状はソースQuick68/Android17成功・実機QA0/9。本人による機種不明BUFFALOのゲートウェイ自動識別・手動端末一覧・合成PCAP解析を優先。QA報告後のみ元のNETLAB-06B機能計画を再開。NETLAB-06AのPCAPオフライン解析（ソースQuick68/Android17、実機未検証）が完成。ユーザー要望は他の接続端末の外部接続先や通信内容も理解すること。ただしBUFFALO型番/API未確認で他端末のライブトラフィック自動収集は未実装。次は本人管理か許可を得た端末の通信先メタデータを明示同意・最小権限で取得する方法を検証し、BUFFALO公式機種APIがない場合は安全な端末側/本人PC側計測を優先。暗号化HTTPS本文を復号したと主張しない。05B残件8タスクをobservations.deferredRouter05Bへ保持、Game R8 8タスクも延期保持。",
+      "tasks": [
+        {
+          "id": "NETLAB-06B-01",
+          "name": "NETLAB-05C自動識別の実機結果からBUFFALO機種・ファームウェア・AP/ルーターモードを確かめ、公式読取APIの可否を機種別に記録",
+          "status": "blocked"
+        },
+        {
+          "id": "NETLAB-06B-02",
+          "name": "本人が管理/許諾する端末についてライブ接続先IP・ポートを最小権限で取得するPC側/ルーター側の方式と表示根拠を設計",
+          "status": "todo"
+        },
+        {
+          "id": "NETLAB-06B-03",
+          "name": "必要なら既存PC Link相互承認/TLSピンを再利用し、本人PC接続メタデータの単発読取を実装（Wi-Fi全端末の自動傍受と混同しない）",
+          "status": "todo"
+        },
+        {
+          "id": "NETLAB-06B-04",
+          "name": "DNS名・TLS SNI・HTTP平文本文/暗号化本文・アプリ帰属推測を分離し、不明は不明表示、機微本文を初期OFFにする",
+          "status": "todo"
+        },
+        {
+          "id": "NETLAB-06B-05",
+          "name": "端末所有者が明示操作するAndroidデバイス自身の通信可視化はOS承認済みVpnService等を別途評価し、既存VPN/通信を壊さないことを優先",
+          "status": "todo"
+        },
+        {
+          "id": "NETLAB-06B-06",
+          "name": "PCAPNG/IPv6/分割TCPなどの互換性と過大ファイル・機密マスク・ラベル誤認の品質を、合成パケットで拡充検証",
+          "status": "todo"
+        },
+        {
+          "id": "NETLAB-06B-07",
+          "name": "BUFFALO実機・Android APK実インストール/PCAP実ファイル/パケット精度をQAし、ソースCI成功と実機成功を区別",
+          "status": "blocked"
+        },
+        {
+          "id": "NETLAB-06B-08",
+          "name": "実装/不具合/機種別制限・実機QAの記録をSTATE/HANDOFF/ROADMAP/Notionに更新、署名Stable/公開カタログは別承認",
+          "status": "todo"
+        }
+      ],
+      "stopBefore": [
+        "PCコマンド実行",
+        "ルーター管理資格情報の平文HTTP送信",
+        "無断で他人の端末接続先を監視",
+        "無断の通信本文収集・HTTPSペイロードの復号を狙うMITM",
+        "端末管理アプリの偽装/無断感染",
+        "非公開管理画面への総当たりアクセス",
+        "常時背景監視",
+        "ミニアプリJSの特権拡大",
+        "署名Stable自動公開",
+        "CIと実機PASSの混同"
+      ]
+    },
+    "camrec13": {
+      "source": "docs/camrec-13-smart-recording.md",
+      "native": "tools/android/NativeMotionAnalyzer.kt",
+      "recorder": "tools/android/NativeVideoRecorder.kt",
+      "miniApp": "sample_apps/video_recorder/index.html",
+      "status": "source_merged_and_CI_verified_physical_not_run",
+      "quickCiRun": 42721111102,
+      "quickCiSuccess": 74,
+      "androidCiRun": 42721110750,
+      "androidCiSuccess": 17,
+      "publicCatalogPr": 8,
+      "publicCatalogCi": 42722599197,
+      "publicDebugRecorderVersion": "0.1.4",
+      "physicalMotionRecording": "not_run",
+      "screenOffRecording": "not_implemented",
+      "prebuffer": "not_implemented",
+      "mlMotionDetector": "not_implemented"
     }
   },
   "nextBatch": {
-    "id": "NETLAB-06B",
-    "targetTasks": 8,
-    "implementationScope": "【ユーザー指示】新機能追加は一旦停止。まずNETLAB-06A回帰テスト済みDebug APKを物理Androidでインストールし、Network Labの9項目QA（docs/qa/NETLAB_DEBUG_2026-11-10.md）を実施。現状はソースQuick68/Android17成功・実機QA0/9。本人による機種不明BUFFALOのゲートウェイ自動識別・手動端末一覧・合成PCAP解析を優先。QA報告後のみ元のNETLAB-06B機能計画を再開。NETLAB-06AのPCAPオフライン解析（ソースQuick68/Android17、実機未検証）が完成。ユーザー要望は他の接続端末の外部接続先や通信内容も理解すること。ただしBUFFALO型番/API未確認で他端末のライブトラフィック自動収集は未実装。次は本人管理か許可を得た端末の通信先メタデータを明示同意・最小権限で取得する方法を検証し、BUFFALO公式機種APIがない場合は安全な端末側/本人PC側計測を優先。暗号化HTTPS本文を復号したと主張しない。05B残件8タスクをobservations.deferredRouter05Bへ保持、Game R8 8タスクも延期保持。",
+    "id": "CAMREC-14-R2",
+    "targetTasks": 7,
+    "implementationScope": "画面OFFと他アプリ利用中にも、ユーザーが前面から明示的に開始した録画だけ継続できるForeground Serviceを設計・実装する。R1の動き検知・一時停止/再開も統合する。Android 14以降の権限・FGS起動制限、持続通知と停止操作、CameraX LifecycleOwnerの移行を安全に扱う。まずはR1を本人Android実機で動かし、怪しい動き検知・動画保存があればR1へ戻る。プリ録画はR3以降、AI検知はR4以降。従来のNETLAB-06B/GAME-R8はobservationsで延期保持。署名Stable公開は別承認。",
     "tasks": [
       {
-        "id": "NETLAB-06B-01",
-        "name": "NETLAB-05C自動識別の実機結果からBUFFALO機種・ファームウェア・AP/ルーターモードを確かめ、公式読取APIの可否を機種別に記録",
+        "id": "CAMREC-14-01",
+        "name": "Android 14+ camera/microphone FGSの権限・while-in-use制限・通知要件のManifest/サービス設計",
+        "status": "todo"
+      },
+      {
+        "id": "CAMREC-14-02",
+        "name": "CameraX録画所有権をActivity LifecycleOwnerからサービスへ安全に移し、二重起動/競合を禁止",
+        "status": "todo"
+      },
+      {
+        "id": "CAMREC-14-03",
+        "name": "常駐通知に録画中状態・停止ボタン・終了時MP4確定/エラー表示を実装し、OSカメラ表示を隠さない",
+        "status": "todo"
+      },
+      {
+        "id": "CAMREC-14-04",
+        "name": "スマート録画の動き検知・静止一時停止を画面OFFセッションにも統合し、誤検知と電池/発熱を評価",
+        "status": "todo"
+      },
+      {
+        "id": "CAMREC-14-05",
+        "name": "Flutter/Chappy Recorder UIの明示選択、再起動禁止、ロック/復帰時ステータス同期を実装",
+        "status": "todo"
+      },
+      {
+        "id": "CAMREC-14-06",
+        "name": "実機でR1通常/一時停止/静止終了の動画を検証し、画面OFF/他アプリ/着信/権限解除/容量不足の安全性を確認",
         "status": "blocked"
       },
       {
-        "id": "NETLAB-06B-02",
-        "name": "本人が管理/許諾する端末についてライブ接続先IP・ポートを最小権限で取得するPC側/ルーター側の方式と表示根拠を設計",
-        "status": "todo"
-      },
-      {
-        "id": "NETLAB-06B-03",
-        "name": "必要なら既存PC Link相互承認/TLSピンを再利用し、本人PC接続メタデータの単発読取を実装（Wi-Fi全端末の自動傍受と混同しない）",
-        "status": "todo"
-      },
-      {
-        "id": "NETLAB-06B-04",
-        "name": "DNS名・TLS SNI・HTTP平文本文/暗号化本文・アプリ帰属推測を分離し、不明は不明表示、機微本文を初期OFFにする",
-        "status": "todo"
-      },
-      {
-        "id": "NETLAB-06B-05",
-        "name": "端末所有者が明示操作するAndroidデバイス自身の通信可視化はOS承認済みVpnService等を別途評価し、既存VPN/通信を壊さないことを優先",
-        "status": "todo"
-      },
-      {
-        "id": "NETLAB-06B-06",
-        "name": "PCAPNG/IPv6/分割TCPなどの互換性と過大ファイル・機密マスク・ラベル誤認の品質を、合成パケットで拡充検証",
-        "status": "todo"
-      },
-      {
-        "id": "NETLAB-06B-07",
-        "name": "BUFFALO実機・Android APK実インストール/PCAP実ファイル/パケット精度をQAし、ソースCI成功と実機成功を区別",
-        "status": "blocked"
-      },
-      {
-        "id": "NETLAB-06B-08",
-        "name": "実装/不具合/機種別制限・実機QAの記録をSTATE/HANDOFF/ROADMAP/Notionに更新、署名Stable/公開カタログは別承認",
+        "id": "CAMREC-14-07",
+        "name": "Quick CI/Android Debug/実機QAを区別してSTATE/HANDOFF/ROADMAP/Notion更新、公開Debugのみ検証しStableは別承認",
         "status": "todo"
       }
     ],
     "stopBefore": [
       "PCコマンド実行",
-      "ルーター管理資格情報の平文HTTP送信",
-      "無断で他人の端末接続先を監視",
-      "無断の通信本文収集・HTTPSペイロードの復号を狙うMITM",
-      "端末管理アプリの偽装/無断感染",
-      "非公開管理画面への総当たりアクセス",
-      "常時背景監視",
-      "ミニアプリJSの特権拡大",
+      "端末のカメラ緑点・Android録画中通知の無効化",
+      "無断/非表示での録画開始・再起動後の自動録画",
+      "Android 14+のバックグラウンド起動制限の回避",
+      "非公開録画データの無断外部送信",
+      "サービスでのroot/Accessibility権限濫用",
+      "ユーザー未許可でのバックグラウンド録画",
       "署名Stable自動公開",
-      "CIと実機PASSの混同"
+      "実機未検証の成功断言"
     ]
   },
   "policy": {
