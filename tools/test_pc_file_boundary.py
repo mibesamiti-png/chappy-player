@@ -37,11 +37,14 @@ class PcFileBoundaryTests(unittest.TestCase):
 
     def test_lab_no_network_or_new_permission(self):
         html = (ROOT / "sample_apps/pc_transfer_lab/index.html").read_text(encoding="utf-8")
-        manifest = (ROOT / "sample_apps/pc_transfer_lab/manifest.json").read_text(encoding="utf-8")
+        manifest = ROOT / "sample_apps/pc_transfer_lab/manifest.json"
+        self.assertFalse(manifest.exists(), "Packer generates the manifest")
         self.assertIn("PC Transfer Lab", html)
         for forbidden in ("fetch(", "XMLHttpRequest", "WebSocket(", "pc.file.receive", "Chappy.files"):
             self.assertNotIn(forbidden, html)
-        self.assertIn('"permissions": []', manifest)
+        guide = (ROOT / "sample_apps/pc_transfer_lab/README.md").read_text(encoding="utf-8")
+        self.assertIn("permissions: []", guide)
+        self.assertIn("--id local.chappy.pc_transfer_lab", guide)
 
 
 if __name__ == "__main__":
