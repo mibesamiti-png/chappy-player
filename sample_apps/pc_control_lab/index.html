@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PC Control Lab R6B | Private Debug QA</title>
+<style>
+:root{color-scheme:dark;font:16px/1.55 system-ui,sans-serif;color:#eaf2ff;background:#0b1422}
+*{box-sizing:border-box}body{max-width:760px;margin:0 auto;padding:24px 16px 52px}
+h1{font-size:26px;margin:.1em 0}h2{font-size:19px}
+p,li{color:#becde2}section{border:1px solid #384c69;border-radius:15px;padding:18px;margin:18px 0;background:#15243b}
+.banner{border-left:4px solid #ffc66c;background:#30291f;padding:14px;border-radius:7px}
+.check{display:flex;gap:12px;align-items:flex-start;border-top:1px solid #364c69;padding:10px 0}
+input[type=checkbox]{height:22px;width:22px;flex:none;accent-color:#77c2fb;margin-top:3px}
+progress{width:100%;height:18px}textarea{width:100%;height:160px;background:#0b1628;color:#f8faff;border:1px solid #6987af;padding:12px;resize:vertical}
+button{background:#305681;color:#fff;border:1px solid #6498cb;padding:10px 14px;margin:6px;border-radius:8px;font:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #b4ddfc;outline-offset:2px}
+code{color:#c5e8ff}.sub{color:#9bafca;font-size:13px}
+</style></head><body>
+<div class="sub">Private Debug QA • R6B • NO native PC permissions</div>
+<h1>PC Control Lab</h1>
+<p>Windowsメディア操作の手動QA画面。実行機能はChappy Player本体のNetwork Lab → PC連携だけにあります。</p>
+<div class="banner" role="note"><strong>このミニアプリはPCを操作しません。</strong> 接続・音量変更・鍵・送信・ネットワーク通信・OS権限にアクセスできません。チェックは観察者本人の記録であり、テスト自動合格ではありません。</div>
+<section><h2>操作手順</h2><ol>
+<li>同じGit HEADのAndroid Debug APKとWindows Companion EXEプレビューを用意し、本人の端末鍵を使う。</li>
+<li>PCで<code>Start-ChappyMediaOnceV3.cmd</code>を明示起動。AndroidのNetwork Labで新しい<code>media=1</code> QR-v3を読む。</li>
+<li>PCの端末認証<code>YES</code>とAndroidの相互署名を別々に確認する。</li>
+<li>Androidで4操作の1つを選ぶ。PCで表示された操作名を確認し、<code>CONTROL</code>を入力する。</li>
+<li>Androidの別ダイアログで同じ操作名を確認して1回だけ実行。PCの状態を実際に目視する。</li>
+<li>2つ目の操作は同じQRでは不可。毎回新しいQRと両端末の承認で試す。</li>
+</ol><p class="sub">Windowsの再生対象や音声経路により媒体キーの効果は変わるため、目視前にPASSにしないでください。</p></section>
+<section><h2>R6B手動観察チェック（13件）</h2><div id="cases">
+<label class="check"><input type="checkbox" data-r6b="boot">同じHEADのDebug APKとWindows Previewを用意できた</label>
+<label class="check"><input type="checkbox" data-r6b="qr">QR-v3 media=1、TLS指紋と双方P-256相互認証が成功</label>
+<label class="check"><input type="checkbox" data-r6b="volume_up">音量UPでPCシステム音量が一度上がった</label>
+<label class="check"><input type="checkbox" data-r6b="volume_down">音量DOWNでPCシステム音量が一度下がった</label>
+<label class="check"><input type="checkbox" data-r6b="toggle_mute">ミュートが一度切り替わった</label>
+<label class="check"><input type="checkbox" data-r6b="play_pause">対応メディアアプリで再生/一時停止が一度切り替わった</label>
+<label class="check"><input type="checkbox" data-r6b="pc_deny">PCのCONTROL拒否/タイムアウト後は実行・再利用不可</label>
+<label class="check"><input type="checkbox" data-r6b="phone_deny">Androidの追加承認拒否ではPC操作が実行されない</label>
+<label class="check"><input type="checkbox" data-r6b="replay">同じQRで2回目の操作/再送は不可</label>
+<label class="check"><input type="checkbox" data-r6b="expire">期限切れQRと署名を拒否</label>
+<label class="check"><input type="checkbox" data-r6b="background">アプリ背景化/画面離脱後に古いQRを使えない</label>
+<label class="check"><input type="checkbox" data-r6b="offline">Wi-Fi断線/PC停止で実行成功と誤表示しない</label>
+<label class="check"><input type="checkbox" data-r6b="bridge">mini-app JSにはPCメディア/鍵APIがない</label>
+</div>
+<progress id="progress" max="13" value="0" aria-label="R6B手動QA進捗"></progress>
+<p id="progressText" role="status" aria-live="polite">手動観察0/13。自動合格ではありません。</p>
+<button id="report" type="button">手動QAレポートを生成</button>
+<button id="reset" type="button">チェックをリセット</button>
+<label for="output">コピー用・匿名化レポート（指紋、QR、IP、秘密情報は書かない）</label>
+<textarea id="output" readonly placeholder="まだ記録はありません"></textarea>
+</section>
+<section><h2>PC Link 15件の共通QAは別管理</h2>
+<p>NETLAB-03BのQA-01〜QA-15と、この画面の13件は別。現在の共通QAは15件すべて未実施。CIのPASSを実機PASSとして記録しないでください。</p>
+<p class="sub">署名Stable APK/公開Chappy Appsカタログには配信しません。</p></section>
+<script>
+(() => {
+  'use strict';
+  const cases = Array.from(document.querySelectorAll('[data-r6b]'));
+  const progress = document.getElementById('progress');
+  const summary = document.getElementById('progressText');
+  const output = document.getElementById('output');
+  const update = () => {
+    const passed = cases.filter(item => item.checked).length;
+    progress.value = passed;
+    summary.textContent = '手動観察 ' + passed + '/' + cases.length +
+      '（自己申告）。自動検証の結果ではありません。';
+  };
+  cases.forEach(item => item.addEventListener('change', update));
+  document.getElementById('report').addEventListener('click', () => {
+    output.value = 'PC Control Lab R6B 手動QA\n' +
+      cases.map(item => (item.checked ? '[x] ' : '[ ] ') +
+        item.getAttribute('data-r6b')).join('\n') +
+      '\n共通15件QAはこの画面では実施判定できません。' +
+      '\n端末/日時/観察は安全な別記録へ。秘密情報は貼らないでください。';
+  });
+  document.getElementById('reset').addEventListener('click', () => {
+    cases.forEach(item => { item.checked = false; });
+    output.value = '';
+    update();
+  });
+  update();
+})();
+</script></body></html>
