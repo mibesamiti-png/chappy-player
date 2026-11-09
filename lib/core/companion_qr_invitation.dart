@@ -14,6 +14,7 @@ class CompanionQrInvitation {
   final int expiresUnix;
   final String? pcIdentityFingerprint;
   final bool statusOnce;
+  final bool fileOnce;
 
   const CompanionQrInvitation({
     required this.ip,
@@ -23,6 +24,7 @@ class CompanionQrInvitation {
     required this.expiresUnix,
     this.pcIdentityFingerprint,
     this.statusOnce = false,
+    this.fileOnce = false,
   });
 
   static CompanionQrInvitation parse(
@@ -49,11 +51,15 @@ class CompanionQrInvitation {
     };
     final parameters = uri.queryParametersAll;
     final statusPresent = isV3 && parameters.containsKey('status');
+    final filePresent = isV3 && parameters.containsKey('file');
     if (statusPresent) expected.add('status');
+    if (filePresent) expected.add('file');
     if (parameters.keys.toSet().difference(expected).isNotEmpty ||
         expected.difference(parameters.keys.toSet()).isNotEmpty ||
         parameters.values.any((items) => items.length != 1) ||
-        (statusPresent && parameters['status']!.single != '1')) {
+        (statusPresent && parameters['status']!.single != '1') ||
+        (filePresent && parameters['file']!.single != '1') ||
+        (statusPresent && filePresent)) {
       throw const FormatException('QR項目が不足・重複しています');
     }
     final ip = parameters['ip']!.single;
@@ -92,6 +98,7 @@ class CompanionQrInvitation {
       invitation: token, expiresUnix: expiry,
       pcIdentityFingerprint: pc,
       statusOnce: statusPresent,
+      fileOnce: filePresent,
     );
   }
 }
