@@ -2,28 +2,28 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-10",
-  "sourceMainAtCapture": "53aa672000364c31cab4986524f649e33fdfb3e1",
+  "sourceMainAtCapture": "3efe4caa0536c5dedec5a51dd7add364efd93b5e",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "NETLAB-05B",
-    "name": "BUFFALO機種別自動対応：05B手動端末一覧＋05Cルーター候補自動識別ソース完了、実機型番確認待ち",
-    "status": "partially_implemented_router_identity_physical_qa_required",
+    "id": "NETLAB-06B",
+    "name": "本人管理端末の通信先を安全にライブ取得する方式とBUFFALO機種別APIの検証",
+    "status": "planned_buffalo_model_required_for_router_adapter",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "NETLAB-05C",
-    "pr": 127,
-    "mergedCommit": "53aa672000364c31cab4986524f649e33fdfb3e1",
-    "sourceStatus": "merged_quick_android_debug_ci_passed_router_physical_qa_not_run",
+    "id": "NETLAB-06A",
+    "pr": 129,
+    "mergedCommit": "3efe4caa0536c5dedec5a51dd7add364efd93b5e",
+    "sourceStatus": "merged_quick_android_debug_ci_success_pcap_offline_only_real_buffalo_capture_qa_not_run",
     "quickCi": {
       "status": "success",
-      "run": 42697064380,
-      "successfulSteps": 67
+      "run": 42702059765,
+      "successfulSteps": 68
     },
     "androidDebugCi": {
       "status": "success",
-      "run": 42697064416,
+      "run": 42702059838,
       "successfulSteps": 17,
       "abi": [
         "arm64-v8a",
@@ -35,9 +35,9 @@
     },
     "windowsCi": {
       "status": "not_required",
-      "reason": "Only Android native/Dart host sources and tests changed"
+      "reason": "No Windows code changed"
     },
-    "qualification": "One-shot Android host router candidate identity: explicit owner + per-action approval, Android ConnectivityManager active Wi-Fi private IPv4 default gateway (no VPN or cellular); bounded standard SSDP rootdevice M-SEARCH (one multicast datagram, 2.4s/8 packets/2KiB), only gateway-origin replies and same-gateway no-redirect/no-proxy 16KiB UPnP XML GET. UPnP manufacturer/model/friendly name are UNVERIFIED SELF-REPORTS. No UPnP => gateway only, model unknown. No router passwords/admin login/client inventory/connection destinations/packet content/miniapp JS privileges, no history and clears on background. Quick 67/67 and Android Debug 17/17, 3 ABI APK artifacts. Physical Android/BUFFALO UPnP QA and actual APK install NOT RUN. Brand user-reported BUFFALO; exact model/firmware still unknown. Stable/catalog unchanged."
+    "qualification": "New Android host offline, user-selected, owner-authorized classic PCAP analysis. IPv4 TCP/UDP destination source IP/ports; DNS question domain; one-packet TLS ClientHello SNI (unverified); plaintext HTTP request method/path without query and Host; opt-in text/plain or JSON body preview <=120 chars, sensitive-word non-display best effort. MAX 2MiB /2500 packets/160 visible, bounded raw IPv4 or Ethernet classic PCAP 2.4; no PCAPNG/IPv6/reassembly. No live packet capture, router API/PCAP export, MITM, HTTPS decryption, other-device automatic monitoring, mini-app JS, storage or background. Quick 68/68, Android Debug 17/17, 3 ABI artifacts; Android physical installation and any real BUFFALO capture QA NOT RUN. User-supplied synthetic sample pcap produced in conversation, not embedded in GitHub. Exact BUFFALO model/API still unknown. Stable/public miniapp catalog unchanged."
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -108,7 +108,8 @@
       "NETLAB-05A 管理OpenWrtルーター↔Androidの物理HTTPS認証・ルーターconntrack実機表示QA（未実施）",
       "NETLAB-05B OpenWrt以外の利用ルーター実機モデルへのAPI対応・DNS観測精度検証（モデル未提示のため保留）",
       "BUFFALO自動ルーター管理API/通信先IPの実装：機種名・ファームウェア未確認につき未対応",
-      "BUFFALO実機端末一覧のコピー→Android読み込みとAndroid Debug APK実インストールQA：未実施"
+      "BUFFALO実機端末一覧のコピー→Android読み込みとAndroid Debug APK実インストールQA：未実施",
+      "NETLAB-06B：BUFFALO公式API経由のライブ端末別通信先取得とHTTPS暗号化本文表示は未実装（暗号化本文の復号は対象外）。"
     ],
     "publicMiniappCatalog": {
       "stable": 2,
@@ -511,59 +512,156 @@
       "stableChanged": false,
       "publicMiniappCatalogChanged": false,
       "documentation": "docs/netlab-05c-router-auto-identification.md"
+    },
+    "deferredRouter05B": {
+      "id": "NETLAB-05B",
+      "reason": "05B manual BUFFALO client import and 05C gateway/UPnP hint already source+CI complete; actual BUFFALO router model, manufacturer-approved API, and real device QA still blocked; carry all eight original tasks intact.",
+      "tasks": [
+        {
+          "id": "NETLAB-05B-01",
+          "name": "NETLAB-05Cのルーター自動識別画面をBUFFALO接続中Android実機で操作し、取得ゲートウェイ・UPnP型番候補・上流APモード・機種とファームウェアを確認（未実施）",
+          "status": "blocked"
+        },
+        {
+          "id": "NETLAB-05B-02",
+          "name": "機種名確認後、BUFFALOで公式に利用できる端末一覧/通信接続先読取APIの有無を調査し機種別アダプター契約を作る",
+          "status": "blocked"
+        },
+        {
+          "id": "NETLAB-05B-03",
+          "name": "BUFFALO管理画面から手動コピーした接続端末一覧のIP/MAC/名前を、未登録端末も含めオフライン取り込みするUIを実装済み。機種別DHCP自動取得/端末選択は次工程",
+          "status": "in_progress"
+        },
+        {
+          "id": "NETLAB-05B-04",
+          "name": "BUFFALOの接続端末一覧と通信先IP/ポート/ドメイン推測を明確に区別する表示・文書を実装（自動接続先取得は未対応）",
+          "status": "done"
+        },
+        {
+          "id": "NETLAB-05B-05",
+          "name": "ルーターごとの管理認証を必要最小権限・証明書ピン・秘密非保存・拒否時Fail Closedで統一する",
+          "status": "in_progress"
+        },
+        {
+          "id": "NETLAB-05B-06",
+          "name": "機種非対応/VPN・背景化・切断・誤端末・過大応答と手動更新の頻度制限を検証する",
+          "status": "in_progress"
+        },
+        {
+          "id": "NETLAB-05B-07",
+          "name": "実BUFFALOルーター/Androidで05CのSSID不要ゲートウェイとUPnP識別精度、05Bの手動端末読込をQAし、CI成功と実機PASSを区別する",
+          "status": "blocked"
+        },
+        {
+          "id": "NETLAB-05B-08",
+          "name": "05C統合済みQuick67/Android17/3ABI、機種未確認・実機QAなしをGitHubとNotionに引き継ぎ、型番確認後API対応状況を追記する",
+          "status": "in_progress"
+        }
+      ]
+    },
+    "pcapTrafficInspector": {
+      "id": "NETLAB-06A",
+      "pr": 129,
+      "mergedCommit": "3efe4caa0536c5dedec5a51dd7add364efd93b5e",
+      "implementationHead": "f5c2ce5a04bcacd6e96319f355311d07605d31ef",
+      "quickCi": {
+        "run": 42702059765,
+        "status": "success",
+        "passed": 68
+      },
+      "androidDebugCi": {
+        "run": 42702059838,
+        "status": "success",
+        "passed": 17,
+        "abi": [
+          "arm64-v8a",
+          "armeabi-v7a",
+          "x86_64"
+        ]
+      },
+      "mode": "manual_file_picker_offline_only",
+      "requiresOwnerPermission": true,
+      "maxFileBytes": 2097152,
+      "maxPacketCount": 2500,
+      "maxVisible": 160,
+      "parses": [
+        "source_destination_ipv4_port",
+        "tcp_udp",
+        "dns_question_hostname",
+        "tls_clienthello_sni_hint",
+        "http_request_method_path_host",
+        "opt_in_plaintext_http_text_json_120_chars"
+      ],
+      "doesNot": [
+        "real_time_capture",
+        "automatic_buffalo_router_access",
+        "mitm",
+        "tls_decryption",
+        "background_monitoring",
+        "mini_app_js_network_capability",
+        "cloud_sync",
+        "persistent_log"
+      ],
+      "physicalAndroidInstall": "not_run",
+      "physicalBuffaloQa": "not_run",
+      "physicalPcapImport": "not_run",
+      "actualBuffaloModel": "unknown",
+      "signedStable": false,
+      "publicMiniAppCatalogChanged": false,
+      "docs": "docs/netlab-06a-offline-traffic-inspection.md"
     }
   },
   "nextBatch": {
-    "id": "NETLAB-05B",
+    "id": "NETLAB-06B",
     "targetTasks": 8,
-    "implementationScope": "ユーザー申告ルーターブランドBUFFALO、型番は不明。NETLAB-05B手動未登録機器一覧 (PR #125 Quick66/Android17) とNETLAB-05CのAndroid Wi-Fi gateway+UPnP機種候補の自動識別 (PR #127 Quick67/Android17) はソースmain統合済み。次の実機QAでモデル候補が返れば公式ルーター型番と照合し、公開・安全なAPIの有無を検証する。UPnP自己申告は機種認証ではなく、AP/ブリッジでは別の上流ルーターが出る。自動BUFFALO管理API/未登録機器の通信先IP・サイト情報は未実装。Game R8 8タスク維持、Stable変更なし。",
+    "implementationScope": "NETLAB-06AのPCAPオフライン解析（ソースQuick68/Android17、実機未検証）が完成。ユーザー要望は他の接続端末の外部接続先や通信内容も理解すること。ただしBUFFALO型番/API未確認で他端末のライブトラフィック自動収集は未実装。次は本人管理か許可を得た端末の通信先メタデータを明示同意・最小権限で取得する方法を検証し、BUFFALO公式機種APIがない場合は安全な端末側/本人PC側計測を優先。暗号化HTTPS本文を復号したと主張しない。05B残件8タスクをobservations.deferredRouter05Bへ保持、Game R8 8タスクも延期保持。",
     "tasks": [
       {
-        "id": "NETLAB-05B-01",
-        "name": "NETLAB-05Cのルーター自動識別画面をBUFFALO接続中Android実機で操作し、取得ゲートウェイ・UPnP型番候補・上流APモード・機種とファームウェアを確認（未実施）",
+        "id": "NETLAB-06B-01",
+        "name": "NETLAB-05C自動識別の実機結果からBUFFALO機種・ファームウェア・AP/ルーターモードを確かめ、公式読取APIの可否を機種別に記録",
         "status": "blocked"
       },
       {
-        "id": "NETLAB-05B-02",
-        "name": "機種名確認後、BUFFALOで公式に利用できる端末一覧/通信接続先読取APIの有無を調査し機種別アダプター契約を作る",
+        "id": "NETLAB-06B-02",
+        "name": "本人が管理/許諾する端末についてライブ接続先IP・ポートを最小権限で取得するPC側/ルーター側の方式と表示根拠を設計",
+        "status": "todo"
+      },
+      {
+        "id": "NETLAB-06B-03",
+        "name": "必要なら既存PC Link相互承認/TLSピンを再利用し、本人PC接続メタデータの単発読取を実装（Wi-Fi全端末の自動傍受と混同しない）",
+        "status": "todo"
+      },
+      {
+        "id": "NETLAB-06B-04",
+        "name": "DNS名・TLS SNI・HTTP平文本文/暗号化本文・アプリ帰属推測を分離し、不明は不明表示、機微本文を初期OFFにする",
+        "status": "todo"
+      },
+      {
+        "id": "NETLAB-06B-05",
+        "name": "端末所有者が明示操作するAndroidデバイス自身の通信可視化はOS承認済みVpnService等を別途評価し、既存VPN/通信を壊さないことを優先",
+        "status": "todo"
+      },
+      {
+        "id": "NETLAB-06B-06",
+        "name": "PCAPNG/IPv6/分割TCPなどの互換性と過大ファイル・機密マスク・ラベル誤認の品質を、合成パケットで拡充検証",
+        "status": "todo"
+      },
+      {
+        "id": "NETLAB-06B-07",
+        "name": "BUFFALO実機・Android APK実インストール/PCAP実ファイル/パケット精度をQAし、ソースCI成功と実機成功を区別",
         "status": "blocked"
       },
       {
-        "id": "NETLAB-05B-03",
-        "name": "BUFFALO管理画面から手動コピーした接続端末一覧のIP/MAC/名前を、未登録端末も含めオフライン取り込みするUIを実装済み。機種別DHCP自動取得/端末選択は次工程",
-        "status": "in_progress"
-      },
-      {
-        "id": "NETLAB-05B-04",
-        "name": "BUFFALOの接続端末一覧と通信先IP/ポート/ドメイン推測を明確に区別する表示・文書を実装（自動接続先取得は未対応）",
-        "status": "done"
-      },
-      {
-        "id": "NETLAB-05B-05",
-        "name": "ルーターごとの管理認証を必要最小権限・証明書ピン・秘密非保存・拒否時Fail Closedで統一する",
-        "status": "in_progress"
-      },
-      {
-        "id": "NETLAB-05B-06",
-        "name": "機種非対応/VPN・背景化・切断・誤端末・過大応答と手動更新の頻度制限を検証する",
-        "status": "in_progress"
-      },
-      {
-        "id": "NETLAB-05B-07",
-        "name": "実BUFFALOルーター/Androidで05CのSSID不要ゲートウェイとUPnP識別精度、05Bの手動端末読込をQAし、CI成功と実機PASSを区別する",
-        "status": "blocked"
-      },
-      {
-        "id": "NETLAB-05B-08",
-        "name": "05C統合済みQuick67/Android17/3ABI、機種未確認・実機QAなしをGitHubとNotionに引き継ぎ、型番確認後API対応状況を追記する",
-        "status": "in_progress"
+        "id": "NETLAB-06B-08",
+        "name": "実装/不具合/機種別制限・実機QAの記録をSTATE/HANDOFF/ROADMAP/Notionに更新、署名Stable/公開カタログは別承認",
+        "status": "todo"
       }
     ],
     "stopBefore": [
       "PCコマンド実行",
       "ルーター管理資格情報の平文HTTP送信",
       "無断で他人の端末接続先を監視",
-      "パケット本文/HTTPSペイロードの盗聴・MITM",
+      "無断の通信本文収集・HTTPSペイロードの復号を狙うMITM",
       "端末管理アプリの偽装/無断感染",
       "非公開管理画面への総当たりアクセス",
       "常時背景監視",
@@ -591,7 +689,7 @@
     "repository": "https://github.com/mibesamiti-png/chappy-player",
     "pcLinkSpec": "docs/pc-link-mutual-qr-v3.md",
     "qa": "docs/pc-link-two-device-qa-matrix.md",
-    "latestBatch": "docs/netlab-05c-router-auto-identification.md",
+    "latestBatch": "docs/netlab-06a-offline-traffic-inspection.md",
     "ci": "docs/ci-quick-and-manual-debug.md",
     "publicLibrary": "https://github.com/mibesamiti-png/chappy-apps",
     "notion": "https://app.notion.com/p/410948b74937819d92efc11defb9a7c7"
