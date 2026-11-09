@@ -154,7 +154,7 @@ jobs:
             --name "Chappy QA Checklist" \
             --version 0.1.0 \
             --output build/chappy-qa-checklist-v0.1.0.chappy
-          python3 -c "import json,zipfile; z=zipfile.ZipFile('build/chappy-qa-checklist-v0.1.0.chappy'); m=json.loads(z.read('manifest.json')); assert m['id']=='local.chappy.qa_checklist' and m['version']=='0.1.0' and m['permissions']==[] and set(z.namelist())=={'manifest.json','index.html','app.js'}"
+          python3 -c "import json,zipfile; z=zipfile.ZipFile('build/chappy-qa-checklist-v0.1.0.chappy'); m=json.loads(z.read('manifest.json')); assert m['id']=='local.chappy.qa_checklist' and m['version']=='0.1.0' and m['permissions']==[] and set(z.namelist())=={'manifest.json','index.html','app.js','README.md'}"
       - name: Upload Debug QA Checklist preview
         uses: actions/upload-artifact@v4
         with:
