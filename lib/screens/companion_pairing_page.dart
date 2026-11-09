@@ -507,11 +507,15 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
         },
       );
       if (!mounted || generation != _generation ||
-          ModalRoute.of(context)?.isCurrent != true) return;
+          ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
       if (!await widget.discoveryClient.trafficPairingAllowed()) {
         throw StateError('ネットワーク経路が変わりました');
       }
-      if (!mounted || generation != _generation) return;
+      if (!mounted || generation != _generation) {
+        return;
+      }
       setState(() => _trafficReport = result);
     } catch (_) {
       if (mounted && generation == _generation) {
