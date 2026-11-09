@@ -1,5 +1,16 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
+## 【最新】DEBUG-QA-CHECKLIST-01｜Android実機QAミニアプリ・公開Debugライブラリ9本｜2026-11-10
+
+- 要望：「デバッグ内容のチェックリストをミニアプリに追加」「今後のミニアプリ系はDebugライブラリへ」。**Chappy QA Checklist v0.1.0**を `sample_apps/debug_checklist/` として実装し、公開Chappy Appsの**Debugだけ**に追加。[プレイヤー実装PR #133](https://github.com/mibesamiti-png/chappy-player/pull/133) → main `f8e239abff214fb77bee352a7248067d685470e6`、[Quick CI 71/71](https://github.com/mibesamiti-png/chappy-player/actions/runs/42712257849)。
+- [Chappy Apps公開Debug登録PR #7](https://github.com/mibesamiti-png/chappy-apps/pull/7) → `c0e1eb45dafd891fdf903170de3d042c8197dd1f` に統合、[公開カタログ整合性CI 7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42712891326)成功。**Stable 2本・Debug 9本**。`local.chappy.qa_checklist` v0.1.0、SHA256 `26699be9aad879f96cb7dd85c601b41896eaf8d787b74c92f4da0ba47f0fb1db`、19,579 bytes。`https://raw.githubusercontent.com/mibesamiti-png/chappy-apps/main/debug/chappy-qa-checklist-v0.1.0.chappy`。
+- Chappy Player → **Chappy Apps（公開ライブラリ）→ Debug → 更新 → Chappy QA Checklist追加**。アプリを開くと `docs/qa/NETLAB_DEBUG_2026-11-10.md` に対応した **QA-01～QA-09** の操作・期待結果・判定（未実施／成功／失敗／保留）が出る。進捗・メモ・レポートコピー・リセット付き。**成功判定は手動のみ**、CI成功は実機PASSに流用しない。
+- **権限 `[]`**。ネットワーク/PCAP/ルーター/カメラ/マイク/ファイルなどのnative実行機能なし。判定だけlocalStorageへ保存、メモ・Android OSバージョン・Run番号は一時メモリのみ、共有前に個人情報確認。通常のユーザー選択による公開Debugからのダウンロードであり、本体への無断自動インストールやStable公開なし。
+- 既存の**非公開**PC Control Lab／PC Transfer Lab／Browser Labなどは公開していない。今後も公開可能な、レビュー済みミニアプリだけDebugチャンネルへ追加する。非公開試作・機密情報・権限の強いツールは確認なしに公開しない。
+- 実機QA全9項目は**0/9・未実施**。WebView動作、localStorage継続、クリップボード、端末セルフチェック、BUFFALO型番/UPnP、ファイルピッカー/合成PCAPなどはスマホ実機確認待ち。NETLAB-06B新機能追加は一旦停止、既存Game R8延期8タスク・Stable・既存機能を保全。次チャットではmain/PR/CIの最新値を再取得してから再開。
+
+
+
 更新: 2026-11-10。NETLAB-06Aデバッグ回帰と実機9項目QAキットの実装mainスナップショット f5c69477eea37d3fd6f3d810368922332bdbf45e。Quick68/Android17は成功、実機QAは0/9。NETLAB-06B新機能は一時停止してデバッグ優先。再開時は必ず最新main・PR・CIを再取得。
 
 ## 【最新：デバッグ優先】Chappy Player Network Lab 実機QAキット＋解析品質修正｜2026-11-10

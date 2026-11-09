@@ -1,5 +1,11 @@
 # Chappy Player — 次に実装するロードマップ
 
+## 2026-11-10：Androidデバッグチェックリストのミニアプリ化・公開Debug登録
+
+**実装・CI確認完了（実機未検証）**。本人手動9項目の `Chappy QA Checklist v0.1.0` を `local.chappy.qa_checklist` として開発。[本体ソースPR #133](https://github.com/mibesamiti-png/chappy-player/pull/133) の[Quick CI 71/71](https://github.com/mibesamiti-png/chappy-player/actions/runs/42712257849)と、[公開Chappy Apps Debug追加PR #7](https://github.com/mibesamiti-png/chappy-apps/pull/7)の[カタログ整合性CI 7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42712891326)を確認。Stable 2・Debug 9本。手順は **Chappy Player → 公開ライブラリ → Debug → 更新 → Chappy QA Checklist → 追加**。9項目の実機QAは未実施0/9、通常のAndroidビルド/実機インストールとは別。独立ミニアプリの権限はゼロ、本人操作で結果をつける。今後の安全に公開できる新規ミニアプリは、原則Debugに先行登録する一方で、非公開/機密試作は勝手に公開しない。通常版とStableカタログへの自動追加はしない。NETLAB-06B新機能開発の再開はデバッグ後。
+
+
+
 更新: 2026-11-10。**NETLAB-06Aのデバッグ優先に切替。PR #131でDNS応答・IPv4分割・表示省略判定を修正し合成パケット回帰検証を拡充。Quick CI 68/68・Android Debug 17/17成功、3ABI Debug APK生成。実Android実機QAは0/9（未実施）。NETLAB-06B機能追加はスマホ検証結果が来るまで一時停止。** BUFFALOの型番と他端末のライブ通信先は未確認、Stable変更なし。Game R8延期8タスク維持。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |

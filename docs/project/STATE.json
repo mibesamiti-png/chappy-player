@@ -2,42 +2,49 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-10",
-  "sourceMainAtCapture": "f5c69477eea37d3fd6f3d810368922332bdbf45e",
+  "sourceMainAtCapture": "f8e239abff214fb77bee352a7248067d685470e6",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
     "id": "NETLAB-06B",
-    "name": "実機デバッグ優先：通信解析/BUFFALO端末一覧/ルーター自動識別のQA。NETLAB-06B機能追加は停止中",
+    "name": "実機デバッグ優先：Debug QA Checklist v0.1.0公開Debugカタログ登録済み、実機9項目未実施。NETLAB-06B新機能追加は一時停止",
     "status": "paused_for_user_physical_debug",
     "entry": "docs/project/ROADMAP.md"
   },
   "lastCompletedBatch": {
-    "id": "NETLAB-06A-DEBUG-QA",
-    "pr": 131,
-    "mergedCommit": "f5c69477eea37d3fd6f3d810368922332bdbf45e",
-    "sourceStatus": "merged_parser_regression_quick_android_ci_success_physical_debug_not_run",
+    "id": "DEBUG-QA-CHECKLIST-01",
+    "pr": 133,
+    "mergedCommit": "f8e239abff214fb77bee352a7248067d685470e6",
+    "sourceStatus": "merged_chappy_player_source_and_public_debug_catalog_ci_pass_physical_qa_not_run",
     "quickCi": {
       "status": "success",
-      "run": 42708245092,
-      "successfulSteps": 68
+      "run": 42712257849,
+      "successfulSteps": 71
     },
     "androidDebugCi": {
-      "status": "success",
-      "run": 42708245065,
-      "successfulSteps": 17,
-      "abi": [
-        "arm64-v8a",
-        "armeabi-v7a",
-        "x86_64"
-      ],
+      "status": "not_required",
+      "reason": "Standalone public-safe .chappy mini-app source and Quick CI ZIP; no Android host files changed",
       "physicalInstallation": "not_run",
       "signedStable": false
     },
-    "windowsCi": {
-      "status": "not_required",
-      "reason": "Only Dart parser/tests and QA documentation changed"
+    "debugCatalog": {
+      "repository": "mibesamiti-png/chappy-apps",
+      "pr": 7,
+      "mergedCommit": "c0e1eb45dafd891fdf903170de3d042c8197dd1f",
+      "validationRun": 42712891326,
+      "status": "success",
+      "stableCount": 2,
+      "debugCount": 9,
+      "appId": "local.chappy.qa_checklist",
+      "version": "0.1.0",
+      "sha256": "26699be9aad879f96cb7dd85c601b41896eaf8d787b74c92f4da0ba47f0fb1db"
     },
-    "qualification": "Debug quality pass focused on NETLAB-06A: correctly distinguish DNS server response from client query, skip all fragmented IPv4 packets including MF-first fragments, mark truncation only after >160 supported observations. Added deterministic synthetic tests for DNS response, IPv4 MF, VLAN Ethernet, TLS ClientHello SNI, unsupported packet count and 350 seeded malformed packet mutations; no crashes observed under Flutter Quick 68/68. Android Debug 17/17 and 3-ABI APK artifacts produced on exact implementation HEAD b7a8e1830907257f7016e36380b2934d3903e9cd. Created manual nine-case QA checklist docs/qa/NETLAB_DEBUG_2026-11-10.md and separate conversation download ZIP with six fully synthetic PCAP packets plus 2 negative fixtures, not persisted in GitHub. Physical device install, BUFFALO router UPnP, manual inventory import, Android file-picker sample PCAP, app resume/background physical QA ALL not_run. Debug APK may not overwrite installed release due signing key; do not advise uninstalling without backup. Automatic third-party device capture remains unsupported; no Stable/catalog changes. GameR8 eight tasks preserved."
+    "physicalQA": {
+      "status": "not_run",
+      "casesTotal": 9,
+      "casesPassed": 0
+    },
+    "qualification": "A zero-permission public-safe .chappy mini-app presents NETLAB QA-01..QA-09 with user-marked Pass/Fail/Blocked/Not run, persists only status flags (not notes), and creates user-copyable reports. Both source Quick CI 71/71 and public chappy-apps catalog validation 7/7 passed; physical on-device WebView operation, localStorage, clipboard and actual router/PCAP QA remain not_run. No debug mini-app auto-installs, no Stable publishing, no native capture/permissions. Existing private prototype QA previews are deliberately NOT published without explicit review."
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -113,7 +120,7 @@
     ],
     "publicMiniappCatalog": {
       "stable": 2,
-      "debug": 8,
+      "debug": 9,
       "debugLatest": {
         "deviceLab": "0.2.1",
         "fileLab": "0.2.3",
@@ -657,6 +664,21 @@
       "releaseSigned": false,
       "publicCatalogChanged": false,
       "featureExpansion": "paused_by_user_until_debug_results"
+    },
+    "debugChecklist": {
+      "status": "source_and_public_debug_catalog_verified",
+      "sourcePullRequest": 133,
+      "sourceQuickCiRun": 42712257849,
+      "sourceQuickCiPassedSteps": 71,
+      "publicCatalogPr": 7,
+      "publicCatalogValidationRun": 42712891326,
+      "publicDebugAppCount": 9,
+      "publicStableAppCount": 2,
+      "source": "sample_apps/debug_checklist/index.html",
+      "documentation": "sample_apps/debug_checklist/README.md",
+      "physicalDeviceStatus": "not_run",
+      "manualCasesPassed": 0,
+      "manualCasesTotal": 9
     }
   },
   "nextBatch": {

@@ -1,5 +1,13 @@
 # Chappy Apps 公開カタログ (Stable / Debug)
 
+## 2026-11-10：実機デバッグ用チェックリスト追加
+
+新規 `Chappy QA Checklist v0.1.0`（`local.chappy.qa_checklist`）を **公開Debug** に登録。現時点で**Stable 2本・Debug 9本**（従来8＋新規1）。ソース `sample_apps/debug_checklist/`、[実装PR #133](https://github.com/mibesamiti-png/chappy-player/pull/133)、[公開登録PR #7](https://github.com/mibesamiti-png/chappy-apps/pull/7)。実機の操作手順 `docs/qa/NETLAB_DEBUG_2026-11-10.md` の9件を手動判定し、レポートをコピーできる。追加権限 `[]`、判定のみ端末内に保存、メモや通信内容を外部に送らない。
+
+**今後追加するミニアプリ**：機密・実ユーザーのデータ・認証情報を含まず、コードとパッケージをレビューしてテスト合格したものは、ユーザーが選んで追加できるDebugライブラリへ先行登録する。既存の非公開QAプレビューや公開承認がない試作、強い権限のある機能を自動公開しない。Stable公開は別判断。本体Debug APKへの強制同梱/自動インストールは行わない。
+
+
+
 ## 構成
 
 AndroidのChappy Player本体とは別に、`.chappy` ミニアプリだけを配布するための**公開GitHubリポジトリ** `mibesamiti-png/chappy-apps` を想定。ソースを置く非公開 `chappy-player` と、正式署名APK専用 `chappy-player-updates` はそのまま分離する。
