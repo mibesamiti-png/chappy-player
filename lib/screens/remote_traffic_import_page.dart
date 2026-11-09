@@ -145,7 +145,7 @@ class _RemoteTrafficImportPageState extends State<RemoteTrafficImportPage>
       amount /= 1024;
       index++;
     }
-    return amount.toStringAsFixed(index == 0 ? 0 : 1) + ' ' + suffixes[index];
+    return '${amount.toStringAsFixed(index == 0 ? 0 : 1)} ${suffixes[index]}';
   }
 
   Widget _metric(String name, num amount, String key) => Card(
@@ -203,7 +203,7 @@ class _RemoteTrafficImportPageState extends State<RemoteTrafficImportPage>
               Expanded(child: _metric('平均送信/秒',
                   report.avgTxBytesPerSecond, 'remote_traffic_avg_tx')),
             ]),
-            Text('計測時間: ' + report.seconds.toString() + '秒',
+            Text('計測時間: ${report.seconds}秒',
                 key: const Key('remote_traffic_summary')),
             const SizedBox(height: 12),
             Text('1秒ごとの受信量（全アダプター）',
@@ -215,7 +215,7 @@ class _RemoteTrafficImportPageState extends State<RemoteTrafficImportPage>
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 child: Row(children: [
                   SizedBox(width: 45,
-                      child: Text((index + 1).toString() + '秒')),
+                      child: Text('${index + 1}秒')),
                   Expanded(child: LinearProgressIndicator(
                     value: maxRx == 0 ? 0.0 : point.rxBytes / maxRx,
                     minHeight: 8)),
@@ -228,8 +228,8 @@ class _RemoteTrafficImportPageState extends State<RemoteTrafficImportPage>
               );
             }),
             const SizedBox(height: 10),
-            Text('最大受信/秒: ' + _bytes(report.peakRxBytesPerSecond) +
-                 '  最大送信/秒: ' + _bytes(report.peakTxBytesPerSecond)),
+            Text('最大受信/秒: ${_bytes(report.peakRxBytesPerSecond)} '
+                 '最大送信/秒: ${_bytes(report.peakTxBytesPerSecond)}'),
             TextButton.icon(
               key: const Key('remote_traffic_clear'),
               onPressed: () => _clear('結果を破棄しました'),
