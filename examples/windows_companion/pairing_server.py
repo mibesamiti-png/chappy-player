@@ -30,8 +30,10 @@ from windows_identity import identity_status
 
 if TYPE_CHECKING:
     from identity_pairing_v3 import IdentityPairingAttempt
+    from status_once import StatusOnceAttempt
 
 IDENTITY_PROTOCOL = "pair-identity-v3"
+STATUS_PROTOCOL = "pc-status-once-v1"
 
 from companion import (
     MAX_MINUTES,
@@ -159,9 +161,30 @@ def _ask_pc_user(nonce: str) -> bool:
         return False
 
 
+def _ask_pc_status_user() -> bool:
+    """A SECOND, distinct PC console consent only for aggregate read-only status."""
+    print()
+    print("==== OPTIONAL ONE-TIME PC STATUS REQUEST ====")
+    print("Identity verified; this is a SEPARATE status permission.")
+    print("Only CPU logical count, RAM totals and uptime; no files/commands.")
+    print("Approve ONLY if you requested this on your own Android.")
+    answer: queue.Queue[str] = queue.Queue(maxsize=1)
+    def read_console() -> None:
+        try:
+            answer.put(input("Type STATUS for this one read only: ").strip())
+        except (EOFError, OSError):
+            answer.put("")
+    threading.Thread(target=read_console, daemon=True).start()
+    try:
+        return answer.get(timeout=MAX_APPROVAL_SECONDS) == "STATUS"
+    except queue.Empty:
+        return False
+
+
 def invite_payload(ip: str, port: int, fingerprint: str,
                    token: str, expires_at: int,
-                   identity_fingerprint: str | None = None) -> str:
+                   identity_fingerprint: str | None = None,
+                   status_once: bool = False) -> str:
     """Strict, short-lived QR transfer string; nothing grants PC commands."""
     validate_lan_ipv4(ip)
     if not 1 <= port <= 65535:
@@ -177,11 +200,14 @@ def invite_payload(ip: str, port: int, fingerprint: str,
         any(c not in "0123456789abcdef" for c in identity_fingerprint)
     ):
         raise ValueError("Invalid persistent PC identity fingerprint")
+    if status_once and identity_fingerprint is None:
+        raise ValueError("Read-only PC status requires QR-v3 signed identity")
     version = "v3" if identity_fingerprint is not None else "v2"
     return (
         "chappy-pair://" + version + "?ip=" + ip + "&port=" + str(port)
         + "&fp=" + fingerprint + "&inv=" + token + "&exp=" + str(expires_at)
         + ("&pc=" + identity_fingerprint if identity_fingerprint is not None else "")
+        + ("&status=1" if status_once else "")
     )
 
 
@@ -209,7 +235,8 @@ def render_qr(invitation: str) -> str:
 
 
 def make_handler(session: PairingSession,
-                 identity: IdentityPairingAttempt | None = None):
+                 identity: IdentityPairingAttempt | None = None,
+                 status_once: StatusOnceAttempt | None = None):
     class PairHandler(BaseHTTPRequestHandler):
         server_version = "ChappyPairPreview/1.0"
         sys_version = ""
@@ -296,7 +323,63 @@ def make_handler(session: PairingSession,
                 # Do not reveal secrets or the reason a public identity failed.
                 self._reply(403, {"status": "identity_denied"})
 
+        def _handle_status_once(self) -> None:
+            if status_once is None or self.path not in (
+                "/v3/status-begin", "/v3/status-finish",
+            ):
+                self._reply(404, {"status": "not_found"})
+                return
+            # Use identical strict parsing/framing as identity endpoints.
+            lengths = self.headers.get_all("Content-Length", [])
+            if (len(lengths) != 1 or len(lengths[0]) > 5
+                    or not lengths[0].isascii()
+                    or not lengths[0].isdecimal()
+                    or self.headers.get_all("Transfer-Encoding", [])):
+                self._reply(400, {"status": "bad_request"})
+                return
+            length = int(lengths[0])
+            if not 1 <= length <= MAX_IDENTITY_REQUEST:
+                self._reply(413, {"status": "too_large"})
+                return
+            if self.headers.get_all("Content-Type", []) != ["application/json"]:
+                self._reply(415, {"status": "unsupported_type"})
+                return
+            try:
+                incoming = self.rfile.read(length)
+                if len(incoming) != length:
+                    raise ValueError("Incomplete status request")
+                data = _strict_identity_json(incoming)
+                if data.get("protocol") != STATUS_PROTOCOL:
+                    raise ValueError("Wrong status protocol")
+                if self.path == "/v3/status-begin":
+                    if set(data) != {
+                        "protocol", "invitation", "phone_fp", "phone_nonce",
+                    }:
+                        raise ValueError("Unexpected status begin fields")
+                    answer = status_once.begin(
+                        invitation=data["invitation"],
+                        phone_fp=data["phone_fp"],
+                        phone_nonce=data["phone_nonce"],
+                        approve_pc_status=_ask_pc_status_user,
+                    )
+                else:
+                    if set(data) != {
+                        "protocol", "invitation", "phone_fp", "phone_proof",
+                    } or not isinstance(data["phone_proof"], dict):
+                        raise ValueError("Invalid status final proof")
+                    answer = status_once.finish(
+                        invitation=data["invitation"],
+                        phone_fp=data["phone_fp"],
+                        phone_proof=data["phone_proof"],
+                    )
+                self._reply(200, answer)
+            except (ValueError, TypeError, KeyError, PermissionError, OSError):
+                self._reply(403, {"status": "status_denied"})
+
         def do_POST(self) -> None:
+            if self.path.startswith("/v3/status-"):
+                self._handle_status_once()
+                return
             if self.path.startswith("/v3/"):
                 self._handle_identity()
                 return
@@ -396,7 +479,8 @@ class BoundedHttpsServer(ThreadingHTTPServer):
 
 def run_pairing(ip: str, minutes: int, qr: bool = False,
                 identity_mode: bool = False,
-                expected_phone_fingerprint: str | None = None) -> None:
+                expected_phone_fingerprint: str | None = None,
+                status_once: bool = False) -> None:
     """Expose a single, explicitly PC-approved HTTPS confirmation session."""
     from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
@@ -405,6 +489,8 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
         raise ValueError("Duration must be 1-30 minutes")
     if identity_mode and not qr:
         raise ValueError("Identity enrollment requires a scanned QR")
+    if status_once and not identity_mode:
+        raise ValueError("Status once requires explicit QR-v3 identity mode")
     if expected_phone_fingerprint is not None and not identity_mode:
         raise ValueError("Known-phone comparison requires QR-v3 identity mode")
     # Never create a persistent signing key when a PC listener is started.
@@ -438,8 +524,14 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                 expected_phone_fingerprint=expected_phone_fingerprint,
             ) if identity_mode else None
         )
+        status = (
+            StatusOnceAttempt(
+                identity=identity, invitation=invitation, qr_expires=expires_at,
+                tls_fingerprint=fingerprint, pc_fingerprint=pc_public_fingerprint,
+            ) if status_once else None
+        )
         with BoundedHttpsServer(
-            (address, 0), make_handler(session, identity),
+            (address, 0), make_handler(session, identity, status),
         ) as server:
             server.context = context
             port = server.server_address[1]
@@ -466,6 +558,7 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                     invite_text = invite_payload(
                         address, port, fingerprint, invitation, expires_at,
                         identity_fingerprint=pc_public_fingerprint,
+                        status_once=status_once,
                     )
                     print("Scan this QR on your Android Chappy Network Lab:")
                     # The terminal may use a legacy encoding. Do not log the
@@ -478,6 +571,8 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                 print("Your PC must separately approve one phone request.")
                 if identity_mode:
                     print("Identity v3: mutual signed proof ONLY; no saved pairing.")
+                if status_once:
+                    print("Optional PC status: one use, separate PC STATUS and phone consent.")
                 if expected_phone_fingerprint is not None:
                     print("Manual known-phone comparison ON (NOT automatic trust).")
                     print("Expected Android public key SHA-256:")
@@ -487,7 +582,18 @@ def run_pairing(ip: str, minutes: int, qr: bool = False,
                 print("Auto-stop: " + str(minutes) + " min. Ctrl+C stops.")
                 deadline = time.monotonic() + lifetime_seconds
                 finished = identity.finished if identity is not None else session.finished
-                while time.monotonic() < deadline and not finished.is_set():
+                verified_since = None
+                while time.monotonic() < deadline:
+                    if finished.is_set():
+                        if status is None or identity.verified_phone_fingerprint is None:
+                            break
+                        if status.finished.is_set():
+                            break
+                        if verified_since is None:
+                            verified_since = time.monotonic()
+                        if time.monotonic() - verified_since >= 90:
+                            status.cancel()
+                            break
                     try:
                         server.handle_request()
                     except (ssl.SSLError, OSError):
