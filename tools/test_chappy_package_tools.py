@@ -123,16 +123,16 @@ with tempfile.TemporaryDirectory(prefix="chappy_html_tools_") as temp:
         raise AssertionError("Overwriting package was allowed")
 
 
-    # Current ASMR 1.4.4 source is tracked independently of published Stable 1.4.0.
+    # Current ASMR 1.4.5 source is tracked independently of published Stable 1.4.0.
     # Verify packaging, app identity, permission boundary and inline JS syntax.
     asmr_source = Path(__file__).resolve().parent.parent / "sample_apps/asmr_sound_lab"
-    asmr_preview = root / "asmr-skin-preview-v1.4.4.chappy"
+    asmr_preview = root / "asmr-stroke-preview-v1.4.5.chappy"
     package_html(asmr_source, asmr_preview, "local.chappy.asmr",
-                 "ASMR Sound Lab", "1.4.4")
+                 "ASMR Sound Lab", "1.4.5")
     with zipfile.ZipFile(asmr_preview) as archive:
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["id"] == "local.chappy.asmr"
-        assert manifest["version"] == "1.4.4"
+        assert manifest["version"] == "1.4.5"
         assert manifest["permissions"] == []
         assert set(archive.namelist()) == {"manifest.json", "index.html", "README.md"}
         html_bytes = archive.read("index.html")

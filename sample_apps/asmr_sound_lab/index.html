@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ASMR Sound Lab v1.4.4 — Chappy Edition</title>
+<title>ASMR Sound Lab v1.4.5 — Chappy Edition</title>
 <style>
 :root{color-scheme:dark;--bg:#0b1020;--surface:#141c2e;--line:#2a3650;--text:#eaf0fb;--muted:#a4b3c9;--a:#76dbd0;--a2:#b7a3ff}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,"Yu Gothic","Meiryo",sans-serif;background:radial-gradient(ellipse at 70% -15%,#213453 0%,#0b1020 55%);color:var(--text);min-height:100vh}
@@ -76,7 +76,7 @@
 </head>
 <body>
 <div class="page">
- <header class="top"><div><div class="eyebrow">SPATIAL AUDIO · CONTACT ACOUSTICS · 1.4.4</div><h1>ASMR Sound Lab <span style="font-size:15px;color:#9db0ca;font-weight:400">/ 合成音実験室</span></h1><div class="sub">指で音源を動かし、接近→接触→密閉を連続表現。v1.4は、音が耳に入ったときだけ低音と密閉感を追加強調。心音・耳かき・ゲルの接触挙動、音源A・Bの独立操作、音源ごとの自動最適化にも対応します。スマホは2本指、PCはマウス＋WASDで操作。録音素材の読み込みも継続。</div></div><div class="topActions"><span class="pill">完全オフライン</span><button class="button primary" id="startBtn">▶ 音声を開始</button><button class="button" id="stopBtn" disabled>■ 停止</button></div></header>
+ <header class="top"><div><div class="eyebrow">SPATIAL AUDIO · CONTACT ACOUSTICS · 1.4.5</div><h1>ASMR Sound Lab <span style="font-size:15px;color:#9db0ca;font-weight:400">/ 合成音実験室</span></h1><div class="sub">指で音源を動かし、接近→接触→密閉を連続表現。v1.4は、音が耳に入ったときだけ低音と密閉感を追加強調。心音・耳かき・ゲルの接触挙動、音源A・Bの独立操作、音源ごとの自動最適化にも対応します。スマホは2本指、PCはマウス＋WASDで操作。録音素材の読み込みも継続。</div></div><div class="topActions"><span class="pill">完全オフライン</span><button class="button primary" id="startBtn">▶ 音声を開始</button><button class="button" id="stopBtn" disabled>■ 停止</button></div></header>
  <div class="layout"><main class="stack">
   <section class="panel"><div class="stageHeader"><h2 style="margin:0">1. 音源Aを選択</h2><span class="minor">8種類 · 合成＋外部サンプル</span></div><div class="modes" id="modes">
   <button class="mode active" data-mode="bee"><span class="emoji">🐝</span><span>蜂の飛行</span><small>自発</small></button>
@@ -152,6 +152,7 @@
     <label class="switch" for="boneOn"><input id="boneOn" type="checkbox" checked><strong>頭・顔への接触で内部振動を再現</strong></label>
     <div class="hint" style="margin-top:10px">頭や頬を叩くと短い振動、なでると柔らかな摩擦、押し続けると小さな低域ノイズ。空気中の音・耳内の直接接触音とは独立した経路で左右に伝えます。実際の骨伝導デバイスではありません。</div>
     <div class="control" style="margin-top:12px"><div class="clabel"><label for="skinSurface">頭・顔表面の触感（撫でる・トンッ）</label><output id="skinSurfaceValue">65%</output></div><input id="skinSurface" type="range" min="0" max="100" value="65"><div class="hint">額や頬・頭皮を触ると、表面の擦れと小さな接触音を追加。止めると摩擦は静かになり、骨振動・耳内音とは別に調整できます。</div></div>
+    <div class="control" style="margin-top:12px"><div class="clabel"><label for="strokeBoost">頭を撫でる感・髪のサラサラ</label><output id="strokeBoostValue">88%</output></div><input id="strokeBoost" type="range" min="0" max="100" value="88"><div class="hint">頭皮では毛先のサラサラ音と柔らかな引っかかりを重ね、頬ではより低く柔らかい摩擦に。ゆっくり動かしても感じやすく、止めると静かになります。0%で追加レイヤーOFF。</div></div>
     <div class="boneStatus"><div><span>音源Aの接触部位</span><b id="boneZoneMouse">非接触</b></div><div><span>音源Bの接触部位</span><b id="boneZoneKeyboard">非接触</b></div></div>
     <div class="row2"><div class="control"><div class="clabel"><label for="boneStrength">内部振動の強さ</label><output id="boneStrengthValue">58%</output></div><input id="boneStrength" type="range" min="0" max="100" value="58"></div>
     <div class="control"><div class="clabel"><label for="boneSoftness">軟部組織の柔らかさ</label><output id="boneSoftnessValue">48%</output></div><input id="boneSoftness" type="range" min="0" max="100" value="48"></div></div>
@@ -236,7 +237,7 @@
   <section class="panel"><h2>8. 環境ノイズ（重ねられる）</h2><div class="noiseRow"><label class="switch"><input type="checkbox" id="whiteOn"> ホワイト</label><input type="range" min="0" max="100" value="24" id="whiteLevel"><output id="whiteLevelValue">24%</output></div><div class="noiseRow"><label class="switch"><input type="checkbox" id="brownOn"> ブラウン</label><input type="range" min="0" max="100" value="32" id="brownLevel"><output id="brownLevelValue">46%</output></div><div class="hint">この2つは背景用の独立音源。蜂・耳かき・心音などと同時に再生でき、前方のマウス位置には連動しません。</div></section>
   <section class="panel"><h2>9. 設定と録音</h2><div class="bottomBar"><button class="button" id="saveBtn">↓ 設定を保存</button><button class="button" id="loadBtn">↑ 設定を読込</button><input id="loadInput" type="file" accept="application/json,.json" hidden></div><div class="bottomBar"><button class="button" id="recordBtn" disabled>● 録音開始</button><span class="minor">WebM/Opus · ブラウザ対応時のみ</span></div><div class="message" id="message" aria-live="polite"></div><div class="divider"></div><div class="miniTitle">v1.4の骨・組織伝導と試作の限界</div><div class="hint">v1.4は従来の心音・タップ・吸着音、耳内低音・密閉エンジンを維持し、頭・顔を触ったときの骨・組織伝導風の第3経路を追加。低周波の体内振動風ノイズ、耳かきの小さなタップと連続摩擦、ゲルの吸着・解除音にも対応。音源ごとのおすすめ設定を自動で適用。2音源とも左耳・右耳を自由に選んで移動できるダミーヘッド型の操作図を追加。耳への接近→接触→耳内の低域強調を連続して計算します。完全な耳内では外側への音の経路を閉じ、接触音を対象の耳へ限定します。これは<strong>主観的な密閉感を作る音響近似</strong>で、実測HRTFや耳道の精密シミュレーションではありません。サンプル音声はユーザーが読み込んだものだけを使います。急な大音量を避けるため再生前に端末の音量を下げてください。</div></section>
  </aside></div>
- <p class="footer">ASMR Sound Lab v1.4.4 · ダミーヘッド＋独立3経路（空気・頭部振動・耳内）＋左右自由配置 · スマホ2本指＋PCキーボード操作 · 合成音はオフライン。取り込んだ音源はブラウザ内だけで再生し外部送信しません。ブラウザの「音声を開始」操作が必要です。音量と低音の圧迫感が強くなっています。ヘッドホンの音量を低く設定してから開始し、不快な場合はすぐ停止してください。</p>
+ <p class="footer">ASMR Sound Lab v1.4.5 · ダミーヘッド＋独立3経路（空気・頭部振動・耳内）＋左右自由配置 · スマホ2本指＋PCキーボード操作 · 合成音はオフライン。取り込んだ音源はブラウザ内だけで再生し外部送信しません。ブラウザの「音声を開始」操作が必要です。音量と低音の圧迫感が強くなっています。ヘッドホンの音量を低く設定してから開始し、不快な場合はすぐ停止してください。</p>
 </div>
 <script>
 'use strict';
@@ -307,7 +308,7 @@ function skinContactTargets(mode,zone,gate,speed,strength,texture,amount){
  const weights={ear:.88,foam:.68,gel:.72,water:.38};
  const kind=weights[mode]||0;
  const unit=v=>Number.isFinite(v)?clamp(v,0,1):0;
- const moving=smoothstep(unit(Number.isFinite(speed)?speed/72:0));
+ const moving=smoothstep(unit(Number.isFinite(speed)?speed/44:0));
  const touch=zone&&!zone.isCanal?unit(zone.touch):0;
  const hardness=zone&&zone.settings?unit(zone.settings.hardness):.5;
  const level=clamp(.145*kind*touch*unit(gate)*moving*
@@ -316,6 +317,21 @@ function skinContactTargets(mode,zone,gate,speed,strength,texture,amount){
  const side=zone?.side;
  return {level,cutoff,left:side===0?1:side===1?0.35:0.82,
          right:side===1?1:side===0?0.35:0.82,kind};
+}
+// SURF-04: scalp/hair strand noise + soft skin drag, responsive even to slow strokes.
+// An entirely optional supplement to the existing skin contact and bone buses.
+function scalpStrokeTargets(mode,zone,gate,speed,strength,texture,surface,boost){
+ const unit=v=>Number.isFinite(v)?clamp(v,0,1):0;
+ const kind={ear:1,foam:.85,gel:.66,water:.38}[mode]||0;
+ const touch=zone&&!zone.isCanal?unit(zone.touch):0;
+ const motion=smoothstep((Number.isFinite(speed)?Math.max(0,speed)-2:0)/36);
+ const scalp=zone?.id==='scalp',cheek=zone?.id==='cheek_L'||zone?.id==='cheek_R';
+ const energy=kind*touch*unit(gate)*motion*unit(surface)*unit(boost);
+ const hair=clamp(energy*(scalp?.30:cheek?.07:.15)*(.72+.28*unit(texture)),0,.22);
+ const drag=clamp(energy*(scalp?.18:cheek?.20:.14)*(.56+.44*unit(strength)),0,.14);
+ const hairHz=clamp((scalp?3100:cheek?1350:2300)*(.72+.5*unit(texture)),650,5200);
+ const dragHz=clamp((scalp?280:cheek?460:370)*(.75+.5*unit(texture)),160,700);
+ return {hair,drag,hairHz,dragHz};
 }
 const modes = ['bee','ear','foam','water','gel','heart','white','brown'];
 const continuous = new Set(['bee','heart','white','brown']);
@@ -414,7 +430,7 @@ const modeHelp = {
 const state = {
  mouse:{mode:'bee',x:.14,y:.78,speed:0,pressed:false,auto:false,level:72,behavior:'auto',profile:{...soundProfiles.bee}},
  keyboard:{mode:'foam',x:.86,y:.78,speed:0,pressed:false,auto:false,level:88,behavior:'auto',profile:{...soundProfiles.foam},enabled:true,latch:false},
- autoOptimize:true,boneOn:true,showBoneZones:true,skinSurface:65,boneStrength:58,boneSoftness:48,boneCross:66,boneOcclusion:58,boneTap:70,boneRub:63,strength:52,texture:50,rate:50,master:35,heartBpm:72,heartWarm:72,heartRumble:67,earTap:76,earScrape:80,gelSuction:74,pressure:46,insideBass:88,canalBassBoost:62,canalSealBoost:66,insideIsolation:100,proximityBoost:63,spatial:90,sampleBlend:75,preserveStereo:false,startFade:350,stopFade:180,transientSoft:50,
+ autoOptimize:true,boneOn:true,showBoneZones:true,skinSurface:65,strokeBoost:88,boneStrength:58,boneSoftness:48,boneCross:66,boneOcclusion:58,boneTap:70,boneRub:63,strength:52,texture:50,rate:50,master:35,heartBpm:72,heartWarm:72,heartRumble:67,earTap:76,earScrape:80,gelSuction:74,pressure:46,insideBass:88,canalBassBoost:62,canalSealBoost:66,insideIsolation:100,proximityBoost:63,spatial:90,sampleBlend:75,preserveStereo:false,startFade:350,stopFade:180,transientSoft:50,
  sealOn:true,insideOn:true,seal:96,sealKeep:78,inside:95,bodyNoise:84,rangeCm:25,insertionCm:1.5,leftEar:100,rightEar:100,
  entryPoint:74,nearFocus:78,transition:58,surfaceFriction:82,canalResonance:72,sealDepth:42,
  whiteOn:false,brownOn:false,whiteLevel:24,brownLevel:32
@@ -430,7 +446,7 @@ const keyMap = {KeyW:[0,1],KeyA:[-1,0],KeyS:[0,-1],KeyD:[1,0],ArrowUp:[0,1],Arro
 let lastStatus = '';
 function setMessage(message){$('message').textContent=message;}
 function updateLabels(){
-  for(const id of ['skinSurface','boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub','strength','texture','rate','master','heartBpm','heartWarm','heartRumble','earTap','earScrape','gelSuction','pressure','insideBass','canalBassBoost','canalSealBoost','insideIsolation','proximityBoost','whiteLevel','brownLevel','mouseLevel','keyboardLevel','spatial','sampleBlend','startFade','stopFade','transientSoft','seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']) {
+  for(const id of ['skinSurface','strokeBoost','boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub','strength','texture','rate','master','heartBpm','heartWarm','heartRumble','earTap','earScrape','gelSuction','pressure','insideBass','canalBassBoost','canalSealBoost','insideIsolation','proximityBoost','whiteLevel','brownLevel','mouseLevel','keyboardLevel','spatial','sampleBlend','startFade','stopFade','transientSoft','seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']) {
     const value = id==='mouseLevel'?state.mouse.level:id==='keyboardLevel'?state.keyboard.level:state[id];
     $(id+'Value').textContent = id==='rangeCm'?value+' cm':id==='insertionCm'?Number(value).toFixed(1)+' cm':id==='heartBpm'?value+' BPM':(id==='startFade'||id==='stopFade')?value+' ms':value+'%';
   }
@@ -666,6 +682,23 @@ class ASMRSystem {
   }
   v.skinMerge.connect(this.externalMix);
   v.skinSource.start(0,slot==='mouse'?.31:.61);
+  // Hair-strand rustle and slow skin drag share the external, ear-occluded skin path.
+  v.strokeHairSource=this.source(this.noise.monoWhite);v.sources.push(v.strokeHairSource);
+  v.strokeHairFilter=c.createBiquadFilter();v.strokeHairFilter.type='bandpass';
+  v.strokeHairFilter.frequency.value=2800;v.strokeHairFilter.Q.value=.7;
+  v.strokeHairGain=c.createGain();v.strokeHairGain.gain.value=0;
+  v.strokeHairSource.connect(v.strokeHairFilter);
+  v.strokeHairFilter.connect(v.strokeHairGain);v.strokeHairGain.connect(v.skinBus);
+  v.strokeDragSource=this.source(this.noise.monoBrown);v.sources.push(v.strokeDragSource);
+  v.strokeDragHigh=c.createBiquadFilter();v.strokeDragHigh.type='highpass';
+  v.strokeDragHigh.frequency.value=65;
+  v.strokeDragLow=c.createBiquadFilter();v.strokeDragLow.type='lowpass';
+  v.strokeDragLow.frequency.value=380;
+  v.strokeDragGain=c.createGain();v.strokeDragGain.gain.value=0;
+  v.strokeDragSource.connect(v.strokeDragHigh);v.strokeDragHigh.connect(v.strokeDragLow);
+  v.strokeDragLow.connect(v.strokeDragGain);v.strokeDragGain.connect(v.skinBus);
+  v.strokeHairSource.start(0,slot==='mouse'?1.31:2.14);
+  v.strokeDragSource.start(0,slot==='mouse'?.9:1.7);
   // Looping noise layers start silent; a tap impulse is created only on actual new contact.
   v.boneRubSource=this.source(this.noise.monoWhite);v.sources.push(v.boneRubSource);
   v.boneRubFilter.type='bandpass';v.boneRubFilter.frequency.value=290;v.boneRubFilter.Q.value=.65;
@@ -778,7 +811,7 @@ class ASMRSystem {
  }
  disposeVoice(v){
   for(const src of v.sources){try{src.stop();}catch(e){}}
-  for(const node of [...v.nodes,v.filter,v.out,v.synthGain,v.sampleBus,v.stereoBus,v.stereoOut,v.stereoFilter,v.stereoInsideFilter,v.stereoInsideGain,v.distanceFilter,v.distanceGain,v.panner,v.dry,v.pressHigh,v.pressLow,v.pressGain,v.contactLow,v.contactWarm,v.contactRes,v.canalBassShelf,v.canalBassPeak,v.contactGain,v.contactPan,v.contactSplit,v.contactMerge,...v.contactEarGains,v.rubLow,v.rubBand,v.rubGain,...v.earTone,...v.earDelay,...v.earGains,v.earMerge,v.boneBus,v.boneRubFilter,v.boneRubGain,v.bonePressFilter,v.bonePressGain,...v.boneLowpass,...v.boneOcclusionEQ,...v.boneEarGains,v.boneMerge,v.skinHigh,v.skinLow,v.skinGain,v.skinBus,...v.skinEarGains,v.skinMerge]){
+  for(const node of [...v.nodes,v.filter,v.out,v.synthGain,v.sampleBus,v.stereoBus,v.stereoOut,v.stereoFilter,v.stereoInsideFilter,v.stereoInsideGain,v.distanceFilter,v.distanceGain,v.panner,v.dry,v.pressHigh,v.pressLow,v.pressGain,v.contactLow,v.contactWarm,v.contactRes,v.canalBassShelf,v.canalBassPeak,v.contactGain,v.contactPan,v.contactSplit,v.contactMerge,...v.contactEarGains,v.rubLow,v.rubBand,v.rubGain,...v.earTone,...v.earDelay,...v.earGains,v.earMerge,v.boneBus,v.boneRubFilter,v.boneRubGain,v.bonePressFilter,v.bonePressGain,...v.boneLowpass,...v.boneOcclusionEQ,...v.boneEarGains,v.boneMerge,v.skinHigh,v.skinLow,v.skinGain,v.skinBus,...v.skinEarGains,v.skinMerge,v.strokeHairFilter,v.strokeHairGain,v.strokeDragHigh,v.strokeDragLow,v.strokeDragGain]){
    try{node.disconnect();}catch(e){}
   }
  }
@@ -865,6 +898,12 @@ class ASMRSystem {
     strength,wet,state.skinSurface/100);
   v.skinGain.gain.setTargetAtTime(surface.level,t,.032);
   v.skinLow.frequency.setTargetAtTime(surface.cutoff,t,.05);
+  const stroke=scalpStrokeTargets(v.mode,zone,emission.gate,slotState.speed,
+    strength,wet,state.skinSurface/100,state.strokeBoost/100);
+  v.strokeHairGain.gain.setTargetAtTime(stroke.hair,t,.038);
+  v.strokeDragGain.gain.setTargetAtTime(stroke.drag,t,.06);
+  v.strokeHairFilter.frequency.setTargetAtTime(stroke.hairHz,t,.065);
+  v.strokeDragLow.frequency.setTargetAtTime(stroke.dragHz,t,.07);
   for(let i=0;i<2;i++)v.skinEarGains[i].gain.setTargetAtTime(i===0?surface.left:surface.right,t,.035);
   const boneKind=boneModeWeight[v.mode]||0;
   const faceGain=state.boneOn&&!zone.isCanal?emission.gate*boneKind*zone.touch:0;
@@ -1401,7 +1440,7 @@ stage.addEventListener('wheel',e=>{
  e.preventDefault();state.strength=clamp(state.strength-Math.sign(e.deltaY)*3,0,100);
  $('strength').value=state.strength;engine?.updateParameters();updateLabels();
 },{passive:false});
-for(const id of ['skinSurface','boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub','strength','texture','rate','master','heartBpm','heartWarm','heartRumble','earTap','earScrape','gelSuction','pressure','insideBass','canalBassBoost','canalSealBoost','insideIsolation','proximityBoost','whiteLevel','brownLevel','mouseLevel','keyboardLevel','spatial','sampleBlend','startFade','stopFade','transientSoft','seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']){
+for(const id of ['skinSurface','strokeBoost','boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub','strength','texture','rate','master','heartBpm','heartWarm','heartRumble','earTap','earScrape','gelSuction','pressure','insideBass','canalBassBoost','canalSealBoost','insideIsolation','proximityBoost','whiteLevel','brownLevel','mouseLevel','keyboardLevel','spatial','sampleBlend','startFade','stopFade','transientSoft','seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']){
  $(id).addEventListener('input',e=>{
   if(id==='mouseLevel')state.mouse.level=Number(e.target.value);
   else if(id==='keyboardLevel')state.keyboard.level=Number(e.target.value);
@@ -1580,7 +1619,7 @@ async function saveChappyPreset(report=false){
 function applyPreset(preset,quiet=false){
   if(preset.format!=='asmr-sound-lab-preset'||![1,2,3,4,5,6,7,8,9,10,11,12,13,14].includes(preset.version)||!preset.settings)throw Error('非対応の設定ファイルです。');
   const saved=preset.settings;
-  for(const k of ['skinSurface','boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub','strength','texture','rate','master','heartBpm','heartWarm','heartRumble','earTap','earScrape','gelSuction','pressure','insideBass','canalBassBoost','canalSealBoost','insideIsolation','proximityBoost','whiteLevel','brownLevel','spatial','sampleBlend','startFade','stopFade','transientSoft','seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']){
+  for(const k of ['skinSurface','strokeBoost','boneStrength','boneSoftness','boneCross','boneOcclusion','boneTap','boneRub','strength','texture','rate','master','heartBpm','heartWarm','heartRumble','earTap','earScrape','gelSuction','pressure','insideBass','canalBassBoost','canalSealBoost','insideIsolation','proximityBoost','whiteLevel','brownLevel','spatial','sampleBlend','startFade','stopFade','transientSoft','seal','sealKeep','inside','bodyNoise','rangeCm','insertionCm','leftEar','rightEar','entryPoint','nearFocus','transition','surfaceFriction','canalResonance','sealDepth']){
    const n=Number(saved[k]);if(Number.isFinite(n))state[k]=k==='rangeCm'?clamp(n,8,80):k==='insertionCm'?clamp(n,.5,3):k==='heartBpm'?clamp(n,42,135):k==='startFade'?clamp(n,100,1000):k==='stopFade'?clamp(n,90,450):clamp(n,0,100);
    $(k).value=state[k];
   }
