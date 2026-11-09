@@ -7,6 +7,7 @@ import 'package:chappy_player/screens/network_diagnostic_page.dart';
 import 'package:chappy_player/screens/device_traffic_page.dart';
 import 'package:chappy_player/screens/remote_traffic_import_page.dart';
 import 'package:chappy_player/screens/router_connection_lab_page.dart';
+import 'package:chappy_player/screens/buffalo_inventory_page.dart';
 import 'package:chappy_player/screens/pc_identity_page.dart';
 import 'package:chappy_player/core/companion_pairing_client.dart';
 import 'package:flutter/material.dart';
@@ -375,6 +376,18 @@ class _NetworkLabPageState extends State<NetworkLabPage>
               },
               icon: const Icon(Icons.router_outlined),
               label: const Text('管理ルーターの端末別接続先を確認（OpenWrt）'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('netlab_buffalo_inventory'),
+              onPressed: () {
+                _cancelScan(clearResults: true);
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const BuffaloInventoryPage(),
+                ));
+              },
+              icon: const Icon(Icons.devices_outlined),
+              label: const Text('BUFFALOの接続端末一覧（未登録機器も確認）'),
             ),
             const SizedBox(height: 20),
             const Text(
