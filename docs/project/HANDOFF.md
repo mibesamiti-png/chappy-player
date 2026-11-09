@@ -1,8 +1,19 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
-更新: 2026-11-10。NETLAB-04A統合mainスナップショット 38c35433ab793b2dfff9bf4726d66fbd4cc3b2f9。再開時はGitHub最新main HEAD/PR/CIを再取得。
+更新: 2026-11-10。NETLAB-04Bソース統合mainスナップショット 664802dba4b899d0334ef4ba845c96fdfe0a9861。再開時はGitHub最新main HEAD/PR/CIを再取得。
 
-## 【最新】NETLAB-04A PC通信量レポート読込完了 → 次はNETLAB-04B Wi-Fi直接取得｜2026-11-10
+## 【最新】NETLAB-04B Wi-Fi経由の本人PC通信量取得、ソース/3CI統合完了 → 次はGame R8｜2026-11-10
+
+- **[実装PR #121](https://github.com/mibesamiti-png/chappy-player/pull/121)をmain `664802dba4b899d0334ef4ba845c96fdfe0a9861` に統合。** 正本 `STATE.json` の NETLAB-04B-01〜08 の8タスクは、コード/CI/記録ゲートまで完了。前バッチNETLAB-04Aの手動JSON読込とASMRを含む既存機能は維持。
+- **最終PR HEAD `7aff08d5cfbd3145f78f43ce6546b44e92b9ff97` で3 CI全成功**：[Quick #42676947378](https://github.com/mibesamiti-png/chappy-player/actions/runs/42676947378) 64/64、[Windows #42676947845](https://github.com/mibesamiti-png/chappy-player/actions/runs/42676947845) 28/28、[Android Debug #42676947259](https://github.com/mibesamiti-png/chappy-player/actions/runs/42676947259) 17/17。Windows EXE＋`Start-ChappyTrafficReadOnceV3.cmd`、Android ARM64/ARM32/x86-64のDebug APK成果物あり。
+- **機能**：本人がWindows Companionを明示起動、QR-v3 `traffic=1`・双方P-256署名・TLSピン。まずPC YESとAndroid相互認証、通信量取得には **Windows TRAFFIC別承認＋Android前景の別承認** を追加。5〜30秒・1秒ごとの全NIC合計RX/TXカウンターのみを1回だけ暗号化経路で受信し、Android本体RAMに合計/平均/ピーク/推移を表示・消去。端末名、IP、SSID、接続先、本文、他機器は返さない。mDNSや履歴だけでは許可しない。VPN/非Wi-Fi経路、リプレイ、キャンセルや失効を拒否。
+- **実機QAと公開は別判定**：物理Windows↔AndroidでのWi-Fi QR/TLS接続・TRAFFIC承認・カウンター計測/受信は **未実施**。PC Link共通0/15、媒体キー0/13、R7 0/12は変更なし。Android Debug APKの実機インストールも未確認。署名Stable（既存 `v0.3.0-b11`）と公開Chappy Appsカタログは変更せず。
+- **次に実装するGame R8（8タスク未着手）**：本人が選んだゲームサーバーへの一時参加、ルーム/参加・退出/同期、メッセージのレート・容量/再送制限、ユーザー主導Pingと切断、private Game Room LabのQA。無断サーバー接続、常駐、PCコマンド実行、mini-appへの権限逸脱は不可。
+- 参照：[04B仕様](../netlab-04b-consented-traffic-once.md) / [STATE](STATE.json) / [ROADMAP](ROADMAP.md) / [04A旧方式](../netlab-04a-remote-traffic-report.md)。GitHub main/PR/CIが正本。Notionは手動ミラー。
+
+---
+
+## 【履歴：04B実装前】NETLAB-04A PC通信量レポート読込完了 → 当時の次はNETLAB-04B｜2026-11-10
 
 - **[NETLAB-04A PR #119](https://github.com/mibesamiti-png/chappy-player/pull/119)をmain 38c35433ab793b2dfff9bf4726d66fbd4cc3b2f9に統合。** 管理Windows PC側でTRAFFIC同意→5〜30秒の全NIC送受信カウンター（Wi-Fi専用ではない）を上書き禁止JSONへ保存。Android本体Network LabでOSファイル選択→16KiB/厳格スキーマ検証→合計/平均/ピーク/1秒推移をRAMに表示、背景化・終了時消去。**ファイル経由でありWi-Fiでの直接読込や他機器パケット捕捉はまだない。**
 - **最終PR HEADで3 CI全成功**：[Quick #42668253644](https://github.com/mibesamiti-png/chappy-player/actions/runs/42668253644)64ステップ、[Windows #42668253778](https://github.com/mibesamiti-png/chappy-player/actions/runs/42668253778)28ステップ（EXE＋`Start-ChappyTrafficExport.cmd`）、[Android Debug #42668253834](https://github.com/mibesamiti-png/chappy-player/actions/runs/42668253834)17ステップ、ARM64/ARM32/x86-64 APK生成。
