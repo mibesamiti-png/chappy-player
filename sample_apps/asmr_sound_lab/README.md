@@ -25,6 +25,15 @@ python3 tools/test_chappy_package_tools.py
 
 The packager adds a `manifest.json` with `entry: index.html`, `permissions: []` and the same ID. It may produce different ZIP bytes because archive timestamps/manifest encoding differ; the embedded source is preserved. **Do not publish a rebuilt package as the existing Stable 1.4.0 version.** For a change, bump the version, verify it, publish to a reviewed Debug channel first, test on an actual Android device, then separately approve Stable promotion. Do not publish an APK for a mini-app-only edit.
 
+## v1.4.1 candidate — ear-entry transition (not published)
+
+- Replace the linear exterior/interior amplitude crossover with a **power-preserving trigonometric crossfade** after the smoothstep ear-entry distance curve. This reduces the perceived dip around the virtual ear entrance while preserving zero external routing at full insertion.
+- The same envelope is applied to external head-spatial audio, preserved-stereo source routing, and internal sample entry. Existing exclusive contact-ear routing and limiter remain unchanged.
+- `node tools/test_asmr_sound_lab.js` checks endpoints, continuity, equal-power invariance and the corresponding audio-path connections. The packager smoke test invokes it in both regular and Quick CI.
+- Quick CI creates **asmr-sound-lab-v1.4.1-preview.chappy** as an **unpublished** artifact for manual Chappy Player installation. It is not an APK, public catalog update or Stable release.
+- No new user permissions, private samples, or destructive settings migration. The existing `preset-v14` storage key is preserved across the minor patch.
+- **Pending:** headphones/Android WebView listening comparison (volume balance, phone touch response and ear isolation); CI cannot determine perceived realism or device-specific audio bugs.
+
 ## Existing implementation / verification boundary
 
 - Implemented in this baseline: eight synthesised sound types, independently movable A/B sources, dual touch, head and ear geometry, contact vs. self-producing sounds, depth-related seal/bass effects, bone/tissue-inspired contact route, audio samples, presets, and Chappy storage integration.
