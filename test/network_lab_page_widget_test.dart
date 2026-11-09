@@ -62,6 +62,8 @@ void main() {
     ));
     expect(calls, isEmpty);
     expect(find.text('探索停止中'), findsOneWidget);
+    expect(find.byKey(const Key('netlab_browser')), findsOneWidget);
+    expect(find.byKey(const Key('netlab_diagnostic')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('netlab_start')));
     await tester.pumpAndSettle();

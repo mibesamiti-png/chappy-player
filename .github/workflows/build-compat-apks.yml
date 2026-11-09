@@ -9,6 +9,12 @@ on:
       - 'test/pc_media_vectors_test.dart'
       - 'docs/pc-link-r6b-media-vectors.json'
       - 'sample_apps/pc_control_lab/**'
+      - 'lib/**'
+      - 'test/browser_url_policy_test.dart'
+      - 'test/network_diagnostic_service_test.dart'
+      - 'test/network_diagnostic_page_widget_test.dart'
+      - 'sample_apps/browser_lab/**'
+      - 'tools/test_network_r7_boundary.py'
   push:
     branches: [main]
     paths:
