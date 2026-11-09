@@ -44,7 +44,8 @@ class SelectedDestination:
         if type(path_text) is not str or not path_text.strip():
             raise ValueError("Choose an absolute destination on the PC")
         path = Path(path_text.strip().strip('"'))
-        if not path.is_absolute() or str(path).startswith(("\\\\", "//")):
+        if (not path.is_absolute() or ".." in path.parts
+                or str(path).startswith(("\\\\", "//"))):
             raise ValueError("No relative or UNC destinations")
         self.name = safe_name(path.name)
         parent = path.parent
