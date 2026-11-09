@@ -153,7 +153,7 @@ class PcapInspector {
       q+=8;
     }
     final transport=proto==6?'TCP':'UDP';
-    var summary='\$transport 接続';
+    var summary='$transport 接続';
     String? host,body;
     var encrypted=false;
     if(proto==17 && (sport==53 || dport==53)){
@@ -175,7 +175,7 @@ class PcapInspector {
           final method=match.group(1)!,path=match.group(2)!.split('?').first;
           final hostValue=_header(payload,'Host');
           host=hostValue!=null&&_safeDomain(hostValue)?hostValue:null;
-          summary='平文HTTP \$method ${path.length>80?path.substring(0,80):path}';
+          summary='平文HTTP $method ${path.length>80?path.substring(0,80):path}';
           final mime=_header(payload,'Content-Type')?.toLowerCase();
           final bodyAt=payload.indexOf('\r\n\r\n');
           if(showBody && bodyAt>=0 &&
