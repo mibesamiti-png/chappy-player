@@ -41,7 +41,9 @@ class BuffaloClientInventoryParser {
   static String? privateIp(String value) {
     final address = InternetAddress.tryParse(value);
     if (address == null || address.type != InternetAddressType.IPv4 ||
-        value != address.address) return null;
+        value != address.address) {
+      return null;
+    }
     final b = address.rawAddress;
     if (b[0] == 10 ||
         (b[0] == 172 && b[1] >= 16 && b[1] <= 31) ||
