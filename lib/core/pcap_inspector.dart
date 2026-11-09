@@ -135,7 +135,9 @@ class PcapInspector {
     final totalLength=_u16(b,p+2,false);
     if(totalLength<h)return null;
     final ipEnd=(p+totalLength).clamp(p+h,end).toInt();
-    if ((_u16(b,p+6,false) & 0x1fff) != 0) return null;
+    // Both nonzero fragment offset and MF flag indicate a partial datagram.
+    // Do not mistake its partial transport payload for complete content.
+    if ((_u16(b,p+6,false) & 0x3fff) != 0) return null;
     final src=_ip(b,p+12),dst=_ip(b,p+16);
     final proto=b[p+9];
     if(proto!=6 && proto!=17)return null;
@@ -158,7 +160,12 @@ class PcapInspector {
     var encrypted=false;
     if(proto==17 && (sport==53 || dport==53)){
       host=_dns(b,q,ipEnd);
-      summary=host==null?'DNS（名前未解析）':'DNS問い合わせ（接続先の証明ではありません）';
+      // DNS replies may repeat the question. They are not client queries.
+      final response = q+3 <= ipEnd && (b[q+2] & 0x80) != 0;
+      summary = host == null
+          ? (response ? 'DNS応答（名前未解析）' : 'DNS（名前未解析）')
+          : (response ? 'DNS応答（接続先の証明ではありません）'
+              : 'DNS問い合わせ（接続先の証明ではありません）');
     }else if(proto==6 && q<ipEnd){
       if(b[q]==22 && q+1<ipEnd && b[q+1]==3){
         host=_sni(b,q,ipEnd);
@@ -212,6 +219,7 @@ class PcapInspector {
       throw const FormatException('Ethernet/Raw IPv4 PCAPのみ対応');
     final rows=<PcapObservation>[];
     var total=0,p=24;
+    var visibleOverflow=false;
     while(p<b.length){
       if(p+16>b.length)throw const FormatException('PCAPヘッダー切れ');
       final length=_u32(b,p+8,le),orig=_u32(b,p+12,le);
@@ -220,13 +228,19 @@ class PcapInspector {
         throw const FormatException('PCAPレコード長が不正');
       total++;
       if(total>maxPacketCount)throw const FormatException('2500パケットを超えています');
-      if(rows.length<maxVisible){
+      if (!visibleOverflow) {
         final item=_packet(b,p,p+length,link,includePlaintextBody);
-        if(item!=null)rows.add(item);
+        if (item!=null) {
+          if (rows.length<maxVisible) {
+            rows.add(item);
+          } else {
+            visibleOverflow=true;
+          }
+        }
       }
       p+=length;
     }
     return PcapInspection._(
-      total,total>maxVisible,includePlaintextBody,List.unmodifiable(rows));
+      total,visibleOverflow,includePlaintextBody,List.unmodifiable(rows));
   }
 }
