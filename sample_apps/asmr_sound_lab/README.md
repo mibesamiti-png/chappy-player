@@ -18,12 +18,20 @@ python3 tools/pack_html_chappy.py \
   --source sample_apps/asmr_sound_lab \
   --id local.chappy.asmr \
   --name "ASMR Sound Lab" \
-  --version 1.4.0 \
-  --output /tmp/asmr-source-check-v1.4.0.chappy
+  --version 1.4.2 \
+  --output /tmp/asmr-contact-preview-v1.4.2.chappy
 python3 tools/test_chappy_package_tools.py
 ```
 
 The packager adds a `manifest.json` with `entry: index.html`, `permissions: []` and the same ID. It may produce different ZIP bytes because archive timestamps/manifest encoding differ; the embedded source is preserved. **Do not publish a rebuilt package as the existing Stable 1.4.0 version.** For a change, bump the version, verify it, publish to a reviewed Debug channel first, test on an actual Android device, then separately approve Stable promotion. Do not publish an APK for a mini-app-only edit.
+
+## v1.4.2 candidate — contact-edge hysteresis (not published)
+
+- **ASMR-CONTACT-01**: a Schmitt-style contact-event latch replaces a single threshold for ear-tip taps, gel touch/peel events, and bone/face taps. A new touch must pass the stronger engagement threshold; small boundary drift won't retrigger until contact strength drops below the lower release threshold.
+- Ear/gel: engage at **0.20**, release below **0.07**. Head/face vibration: engage at **0.28**, release below **0.09**. Values act only on **discrete transients**; continuous contact gain, sealing EQ, stereo routing and oscillator waveform remain unchanged.
+- Existing `lastTap` anti-burst timing and independent A/B latches remain intact; turning off an input or disabling bone effects still suppresses events.
+- `node tools/test_asmr_sound_lab.js` now checks boundary drift, first-contact, release, invalid input and source wiring. CI builds an **unpublished v1.4.2 `.chappy` artifact**.
+- Never overwrite public Stable v1.4.0 or republish v1.4.1 with different bytes. Device-specific tactile/audio tests remain pending.
 
 ## v1.4.1 candidate — ear-entry transition (not published)
 
