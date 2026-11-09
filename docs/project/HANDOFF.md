@@ -1,8 +1,18 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
-更新: 2026-11-09。R5B統合時点のmainスナップショット: 1ed1f7d2186148e4ba8fd2dcedb2cf909767ef1b。再開時は必ずGitHub最新main HEAD・Open PR・Actionsを再取得。
+更新: 2026-11-09。R6A統合時点のmainスナップショット d87b00e661ce9ea83e17af37ad5898b0c155654c。必ず最新main HEAD/PR/CIを再取得。
 
-## 【最新】R5B統合済み・R6が次｜2026-11-09
+## 【最新】R6Aソース/CI完了 → 次はR6B｜2026-11-09
+
+- **PC Link R6A**: [PR #107](https://github.com/mibesamiti-png/chappy-player/pull/107) をmainへ統合。基準コミット d87b00e661ce9ea83e17af37ad5898b0c155654c。QR-v3 `media=1`、Windows明示 `--media-once`/専用CMD、音量上下・ミュート切替・再生/一時停止の固定4キーを追加。
+- QR-v3のPC YES/Android相互署名を保持し、**別のWindows CONTROL（操作を画面表示）＋Android前景別承認**を要求。`pc.media.control` にコマンド名を含むP-256新署名、期限90秒以内、QRにつき1回だけ実行。PC状態/ファイル権限を流用しない。ミニアプリJS、任意PCコマンド、一般キーボード/マウス、継続接続には一切公開しない。
+- **CI最終HEAD合格**: [Quick CI #42603449636](https://github.com/mibesamiti-png/chappy-player/actions/runs/42603449636) Flutter analyze/test・権限隔離。 [Windows CI #42603450028](https://github.com/mibesamiti-png/chappy-player/actions/runs/42603450028) 署名/拒否/再実行防止のPythonモック検証・EXE/専用CMDアーティファクト生成。
+- **PC Link物理2台QAは0/15、未実施**。Windows実キー操作やR6A Android Debug APKの起動/転送などは物理的に未確認。EXE生成とCIは実機動作を保証しない。Stable署名APK v0.3.0-b11、公開Chappy Apps Debug 8/Stable 2は変更していない。
+- **次はR6B（予定・未着手）**: Python/Dart共有署名ベクトル、隔離したHTTP結合試験、前景拒否・中断・応答ロスト回帰、private PC Control Lab (QAのみ・JS無権限)、フルDebug APKと15件QAを別追跡。任意のPC遠隔入力・継続的権限は含めない。
+- 最新仕様: [R6A](../pc-link-r6a-media-once.md) / [STATE](STATE.json) / [ROADMAP](ROADMAP.md)。この下の「R6未着手」はR5B時点の過去記録。GitHub main/PR/CIが正本、Notionは節目に手動更新。
+
+---
+## 【履歴：R5B時点】R5B統合済み・当時の次バッチR6｜2026-11-09
 
 - **R5AはPR #101でmain統合済み**。PC→Android 1ファイル・4MiB/16KiB・別のSEND/Android承認・SHA-256/Save As。PR #102でR5AのSTATE/HANDOFF/ROADMAPを更新済み。
 - **R5Bも[PR #103](https://github.com/mibesamiti-png/chappy-player/pull/103)でmain統合済み**。統合SHA 1ed1f7d2186148e4ba8fd2dcedb2cf909767ef1b、最終PR HEAD b1e3e81603f8a14843bffc0507d4430cab421ef9。Android→Windowsを1ファイル4MiB限定で送信し、保存先はPC本人が起動前に絶対パスで指定。Windows RECEIVE + Android別承認、独立した `pc.file.upload` 署名、順序付き16KiB、SHA-256、一時ファイルと上書き防止処理。R5A/R4Cの権限流用不可。
