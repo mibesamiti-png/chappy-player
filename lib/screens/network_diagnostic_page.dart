@@ -81,7 +81,9 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage>
       ),
     );
     if (!mounted || !_foreground || beforeConsent != _epoch ||
-        accepted != true) return;
+        accepted != true) {
+      return;
+    }
     final request = ++_epoch;
     final service = widget.serviceFactory?.call() ?? NetworkDiagnosticService();
     _active = service;

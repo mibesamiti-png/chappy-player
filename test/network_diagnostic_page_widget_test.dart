@@ -46,6 +46,34 @@ void main() {
     expect(find.text('HTTP 204'), findsOneWidget);
   });
 
+  testWidgets('background during consent invalidates it after resume',
+      (tester) async {
+    var runs = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: NetworkDiagnosticPage(
+        serviceFactory: () => NetworkDiagnosticService(
+          interfaceProbe: () async {
+            runs++;
+            return 1;
+          },
+          dnsProbe: () async => true,
+          httpsProbe: () async => 200,
+        ),
+      ),
+    ));
+    await tester.tap(find.byKey(const Key('r7_diag_start')));
+    await tester.pumpAndSettle();
+    expect(runs, 0);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.tap(find.text('今回だけ診断する'));
+    await tester.pumpAndSettle();
+    expect(runs, 0);
+    expect(find.byKey(const Key('r7_diag_https')), findsNothing);
+  });
+
   testWidgets('cancel discards in-flight result and has no automatic retry',
       (tester) async {
     final pending = Completer<int>();

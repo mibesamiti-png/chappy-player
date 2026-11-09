@@ -182,7 +182,9 @@ class _BrowserPageState extends State<BrowserPage>
       );
       if (!mounted || !_foreground || approved != true ||
           startingGeneration != _generation ||
-          !identical(controller, _controller)) return;
+          !identical(controller, _controller)) {
+        return;
+      }
     }
     try {
       await controller.setJavaScriptMode(
@@ -218,7 +220,9 @@ class _BrowserPageState extends State<BrowserPage>
     );
     if (!mounted || !_foreground || approved != true ||
         startingGeneration != _generation ||
-        !identical(controller, _controller)) return;
+        !identical(controller, _controller)) {
+        return;
+      }
     try {
       await controller.clearCache();
       await controller.clearLocalStorage();
