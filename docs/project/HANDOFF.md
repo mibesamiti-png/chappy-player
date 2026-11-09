@@ -1,38 +1,44 @@
-# Chappy Player — 最初に読む引き継ぎ入口
+# Chappy Player — 最新開発引き継ぎ（単一チャット高速開発 v2）
 
-> 更新日: 2026-11-08 | 単一チャット高速開発方式 v2
-> 確認したmain SHA: `ad95401f86362c760139990241a7546984c809f6`（**この時点のスナップショット**、次回必ず再取得）
+> 最終更新: 2026-11-09 / GitHub main確認時点SHA: `cc4a692b0d4c3e687e2344f399ff7111811f9e34`
+> **これはスナップショット。次回必ず最新main HEAD・PR・CIを再取得すること。**
 
-## 最初の60秒でやること
+## 60秒で再開する
 
-1. GitHub main最新HEAD、Open PR、最終HEADのCIを再取得。本文のSHAが現HEADだとは決めつけない。
-2. [STATE.json](STATE.json) → [ROADMAP.md](ROADMAP.md) → [SINGLE_CHAT_DEVELOPMENT.md](SINGLE_CHAT_DEVELOPMENT.md) の順に読む。
-3. PC Linkの実装を始めるなら [R4Bオフライン契約](../pc-link-r4b-session-preview.md)、[QR-v3](../pc-link-mutual-qr-v3.md)、[15項目実機QA](../pc-link-two-device-qa-matrix.md)、対象のWindows/Dartコードと回帰テストを読む。
-4. **次の未着手バッチはPC Link R4C**。R4BはソースとCIまで完了。実Windows↔Android通信・状態取得はまだ出来たと扱わない。
-5. 1チャットで5〜10関連タスク、事前検証→一括コミット→1PR→最終HEADのQuick CI＋Windows CI→統合→状態更新。競合ブランチや他者の未完了PRを再マージしない。
+1. 最新main HEAD、open PR、最終HEADのActionsを再取得し、重複・競合を確認。
+2. [STATE.json](STATE.json) → [ROADMAP.md](ROADMAP.md) → [SINGLE_CHAT_DEVELOPMENT.md](SINGLE_CHAT_DEVELOPMENT.md) を読む。
+3. 今回のR4Cについては [R4C read-only status設計](../pc-link-r4c-status-once.md)、[QR-v3本人確認](../pc-link-mutual-qr-v3.md)、[実機QA 15項目](../pc-link-two-device-qa-matrix.md) を読む。
+4. **次はPC Link R5（未着手）**。実機の本格デバッグ前に作れる安全なファイル転送の骨組み、ホストUIとPC Transfer Labを実装する。すべての権限・本人の選択を明示し、R4Cのstatus権限をファイルに流用しない。
+5. 1チャット内で関連5〜10タスク、可能なら一括コミット・1PR。Quick CI / Windows CIの最終HEAD成功を確認後、mainへ統合。Notionは節目で手動更新。
 
-## 最新の確定証拠
+## 最近の確定成果
 
-| 項目 | 状態 | 証拠 |
+| 項目 | コード / CI | 実機 / 配布 |
 | --- | --- | --- |
-| PC Link R4B | Python/Dartオフラインセッション、独立同意・失効・127.0.0.1模擬通信 **ソース統合済み** | [PR #97](https://github.com/mibesamiti-png/chappy-player/pull/97)、merge `ad95401f86362c760139990241a7546984c809f6` |
-| R4B Quick CI | **成功**、Flutter analyze・テスト・Python/Dartループバック | [Run #42468375810](https://github.com/mibesamiti-png/chappy-player/actions/runs/42468375810) |
-| R4B Windows CI | **成功**、Python契約/安全テスト・Windows EXEビルド | [Run #42468375793](https://github.com/mibesamiti-png/chappy-player/actions/runs/42468375793) |
-| R4A前段 | QR-v3起動スクリプト、--doctorを実装 | [PR #95](https://github.com/mibesamiti-png/chappy-player/pull/95) |
-| Android Debug起動 | ユーザーが起動成功を報告 | 2026-11-08会話。R4BやPC実機QAの成功ではない |
-| PC Link Windows↔Android QA | **0/15 未実施** | [2台QA](../pc-link-two-device-qa-matrix.md) |
-| Chappy Apps | Debug 8・Stable 2 | [catalog.json](https://github.com/mibesamiti-png/chappy-apps/blob/main/catalog.json) |
-| 正式署名APK | v0.3.0-b11、R4Bは非公開 | [Releases](https://github.com/mibesamiti-png/chappy-player-updates/releases/tag/v0.3.0-b11) |
+| **R4C read-only PC status** | [PR #99](https://github.com/mibesamiti-png/chappy-player/pull/99)統合、main `cc4a692b0d4c3e687e2344f399ff7111811f9e34` | **Android↔Windows QA未実施** |
+| R4C Quick CI | [#42587043221](https://github.com/mibesamiti-png/chappy-player/actions/runs/42587043221) **成功** | Dart/Flutterおよび安全性テスト |
+| R4C Windows Preview CI | [#42587042801](https://github.com/mibesamiti-png/chappy-player/actions/runs/42587042801) **成功** | Windows EXEプレビューArtifact生成。実PC利用確認ではない |
+| R4B前段 | [PR #97](https://github.com/mibesamiti-png/chappy-player/pull/97) オフラインstate+127.0.0.1模擬連携 | R4Bは本番接続には未接続のテスト専用 |
+| PC Link物理2台テスト | **0/15・未実施** | [15項目](../pc-link-two-device-qa-matrix.md) |
+| Android Debug APK | ユーザーの以前の起動成功報告あり | R4Cの変更を含むDebug APKを実機検証したわけではない |
+| Chappy Apps | Debug 8 / Stable 2（今回変更なし） | [catalog](https://github.com/mibesamiti-png/chappy-apps/blob/main/catalog.json) |
+| 正式署名APK | v0.3.0-b11（今回変更なし） | [Releases](https://github.com/mibesamiti-png/chappy-player-updates/releases/tag/v0.3.0-b11) |
 
-## R4Cの主要対象コード
+## R4Cのセキュリティ境界（絶対維持）
 
-- Windows: `examples/windows_companion/identity_pairing_v3.py`, `pairing_server.py`, `offline_session_preview.py`, `mutual_proof_session.py`
-- Android: `lib/core/companion_identity_exchange.dart`, `pc_link_preview_session.dart`, `lib/screens/companion_pairing_page.dart`
-- 契約: `docs/pc-link-session-preview-v1.json`（R4Bテスト専用、**そのまま本番認可として使わない**）
-- テスト: `tools/test_pc_link_r4b.py`, `test/pc_link_preview_session_test.dart`, `tools/test_pc_link_r4b_boundary.py`
+- Android KeyStore/Windows DPAPI、QR-v3本人確認、QRで固定したTLS証明書。
+- `--status-once` はWindowsの明示オプトイン。PC側で通常YESのほか、別のSTATUS承認が必要。
+- Androidの別承認とドメイン分離した新しいP-256証明がそろってから、PCの論理CPU/RAM/uptimeだけを1回取得。
+- 結果はホスト画面内だけ。Hostname/IP/プロセス/ファイル/通信内容/PC操作は取得しない。
+- 1回限り・QR期限と認証後90秒上限。秘密や権限をJSへ公開しない。
+- これは永続セッション・自動再接続・PCファイル転送の認可ではない。R5では独立した明示権限・安全な経路を作る。
+- CI成功を実機PASSや正式公開と混同しない。
 
-## 次回の報告に必須
+## R5再開対象
 
-最新main／開始との差分、バッチID・実装済み/残り、PR・最終HEAD・CI URL、Debug APK/実機/Stableの別判定、次に触るファイル。状態の正本はコードとGitHubのPR/CI。Notionは人間向けの節目更新で、常時同期は未実装。
+- Windows `examples/windows_companion/status_once.py`, `pairing_server.py`, `pc_status_metrics.py`（権限境界の参考、ファイルアクセスに転用不可）。
+- Android `lib/core/companion_identity_exchange.dart`, `pc_status_once.dart`, `lib/screens/companion_pairing_page.dart`（明示承認とホスト隔離の参考）。
+- R4Cテスト `tools/test_pc_status_once.py`, `tools/test_pc_status_boundary.py`, `test/pc_status_once_test.dart`、QRテスト。
+- 安全な独立転送を新しい機能スコープで設計すること。Windowsの一般的な任意パス取得・リモートシェルを追加しない。
 
-**セキュリティ**: 署名の検証成功＝PC操作許可ではない。R4Bで使ったテスト用の真偽値を本番認証に転用しない。ユーザーの鍵・招待・保存データをGitHubに置かない。
+**Notionは人間向けの節目更新であり、GitHubとの常時自動同期は未実装。**
