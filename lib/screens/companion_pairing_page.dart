@@ -644,8 +644,8 @@ class _CompanionPairingPageState extends State<CompanionPairingPage>
               content: Text(
                 'PCのQR-v3 YESと追加のRECEIVEが済み、'
                 '送信専用署名が確認できました。\n\n'
-                'ファイル名: ' + offered.fileName + '\n'
-                '容量: ' + offered.bytes.length.toString() + ' バイト\n\n'
+                'ファイル名: ${offered.fileName}\n'
+                '容量: ${offered.bytes.length} バイト\n\n'
                 'Windowsで事前指定された同名の新規ファイルにだけ保存します。'
                 '既存ファイルへの上書きは禁止。最大4MiB、1回限りです。',
               ),
