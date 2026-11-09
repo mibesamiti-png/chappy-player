@@ -18,12 +18,21 @@ python3 tools/pack_html_chappy.py \
   --source sample_apps/asmr_sound_lab \
   --id local.chappy.asmr \
   --name "ASMR Sound Lab" \
-  --version 1.4.4 \
-  --output /tmp/asmr-skin-preview-v1.4.4.chappy
+  --version 1.4.5 \
+  --output /tmp/asmr-stroke-preview-v1.4.5.chappy
 python3 tools/test_chappy_package_tools.py
 ```
 
 The packager adds a `manifest.json` with `entry: index.html`, `permissions: []` and the same ID. It may produce different ZIP bytes because archive timestamps/manifest encoding differ; the embedded source is preserved. **Do not publish a rebuilt package as the existing Stable 1.4.0 version.** For a change, bump the version, verify it, publish to a reviewed Debug channel first, test on an actual Android device, then separately approve Stable promotion. Do not publish an APK for a mini-app-only edit.
+
+## v1.4.5 candidate — stronger scalp stroking and finger/hair texture (not published)
+
+- **ASMR-SURF-04 (implemented, numeric QA added, device listening pending):** add two procedurally synthesized layers on the **existing skin surface bus**: a band-passed white-noise hair-strand rustle and a low-passed/high-passed brown-noise skin-drag component. These remain distinct from bone vibration and ear canal contact.
+- **Slow-stroke responsiveness:** update the existing skin friction envelope from speed/72 to speed/44; the new layers also respond to slow movement, with a strictly zero envelope at rest. Scalp has much more high-frequency hair texture than cheek, while cheek favors soft lower friction. This is sound design, not a medical simulation of touch.
+- **ASMR-SURF-05 (implemented, numeric QA added):** add a 0–100% `strokeBoost` control (default **88%**) that affects only the added rustle/drag layers; the preexisting `skinSurface` setting remains independently available. Both new layers begin at zero gain and smoothly ramp when touched/moved. Max target gains: hair <=0.22, drag <=0.14.
+- **Compatibility:** unchanged `local.chappy.asmr`, Chappy storage key `preset-v14`, v14 JSON preset format and all preexisting controls. Older saved presets without `strokeBoost` initialize it to the new default. Both A/B sources remain separate; no external samples or permissions.
+- **QA:** `tools/test_asmr_sound_lab.js` tests resting, out-of-contact, ear canal, user OFF, non-contact modes, slow/fast stroke ordering, scalp/cheek tonal differences, gain caps, graph routing and preset restoration hooks. GitHub Quick CI creates two **unpublished** review artifacts: a `.chappy` mini-app and its identical standalone HTML source.
+- **Still pending:** physical Android headphone perception, slow-stroke noise quality, CPU/latency on mobile WebView, ear-specific localization with simultaneous A/B sources, real-device clipping checks. Keep system volume low during testing.
 
 ## v1.4.4 candidate — independent head/face surface contact (not published)
 
