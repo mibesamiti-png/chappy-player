@@ -249,6 +249,21 @@ class MediaHttpIntegrationTests(unittest.TestCase):
         })
         self.assertEqual([], self.executed)
 
+    def test_parallel_finish_requests_execute_at_most_once(self):
+        from concurrent.futures import ThreadPoolExecutor
+        self.authorize_identity()
+        challenge = self.begin_media("play_pause")
+        def attempt(_):
+            try:
+                return self.finish(challenge)["status"]
+            except urllib.error.HTTPError as error:
+                return error.code
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            results = list(pool.map(attempt, range(6)))
+        self.assertEqual(results.count("executed"), 1)
+        self.assertEqual(results.count(403), 5)
+        self.assertEqual(self.executed, ["play_pause"])
+
     def test_lost_response_cannot_repeat_toggle_or_use_other_routes(self):
         self.authorize_identity()
         challenge = self.begin_media("toggle_mute")
