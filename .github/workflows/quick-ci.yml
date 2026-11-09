@@ -26,8 +26,10 @@ jobs:
         run: python3 tools/test_pc_status_boundary.py
       - name: R5A PC file transfer scoped file and mini-app isolation preflight
         run: python3 tools/test_pc_file_boundary.py
-      - name: NETLAB-04 owned-PC traffic file export regression
-        run: python3 tools/test_pc_traffic_export.py
+      - name: NETLAB-04A export and 04B scoped Python syntax preflight
+        run: |
+          python3 tools/test_pc_traffic_export.py
+          python3 -m py_compile examples/windows_companion/traffic_once.py examples/windows_companion/pairing_server.py examples/windows_companion/companion.py
       - name: R7 host browser URL/security and private Browser Lab preflight
         run: |
           python3 tools/test_network_r7_boundary.py
