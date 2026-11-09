@@ -1,6 +1,6 @@
 # Chappy Player — 次に実装するロードマップ
 
-更新: 2026-11-09。**R6Aはソース/Quick/Windows CI成功でmain統合。次R6Bは未着手**。PC Link物理2台QA 0/15・未実施。
+更新: 2026-11-09。**R6A・R6Bをソースmain統合、R6BはQuick/Windows/Debug APK CI成功。次はNetwork R7（未着手）**。PC Link実機共通QA 0/15、媒体キーQA 0/13は未実施。
 
 | 順番 | バッチ | 主な内容 | 本体/ミニアプリ | 現状 |
 | --- | --- | --- | --- | --- |
@@ -8,14 +8,34 @@
 | 2 | PC Link R4C | QR-v3署名/TLSピン＋双方別承認の1回限定PC状態取得（CPU/RAM/起動時間） | 本体ホスト画面＋Windows Companion。新規Debug Labなし | **ソース統合・CI成功、実機QA未実施** |
 | 3 | PC Link R5A | Windowsで選んだ1ファイルを4MiB・16KiB分割でAndroidへ、安全な承認とSHA-256後に保存 | 本体＋Companion、PC Transfer Lab新規（非公開Debug QA） | **ソース/CI成功・実機QA未実施** |
 | 3b | PC Link R5B | AndroidからPCへの本人選択ファイル送信・PC保存先選択・安全な一時ファイル処理 | 本体＋Companion、PC Transfer Lab拡張 | **ソース統合・Quick/Windows CI成功、実機QA未実施** |
-| 4（進行中） | PC Link R6 | R6A：音量上下/ミュート/再生一時停止を1回だけ署名＋双方追加承認 | 本体＋Companionに実装。PC Control LabはR6Bでprivate QA予定 | **R6Aソース/CI完了・実機未検証。R6B未着手** |
-| 5 | Network R7 | Browser/LAN診断、ブラウザUI、通信診断 | 本体API、**Browser Lab 新規**、Game Server Lab拡張 | 未着手 |
+| 4（開発段階完了） | PC Link R6 | R6A：限定メディア操作、R6B：署名/HTTP/Win32モック検証と実機QAキット | 本体＋Companion、**private PC Control Lab 0.1.0**、Debug APK 3 ABI | **R6Bソース/3 CI成功・実機QAは0/15＋0/13** |
+| 5（次） | Network R7 | Browser/LAN診断、ブラウザUI、通信診断 | 本体API、**Browser Lab 新規**、Game Server Lab連携 | 計画・未着手 |
 | 6 | Game R8 | セッション・ルーム同期・Ping・承認済みゲームサーバーへの通信 | Game Server Lab拡張 | 未着手 |
 | 7 | Media R9 | 録画耐久・安全な復旧、Androidの制約と許可に合うバックグラウンド動作 | Recorder / Media Lab拡張 | 未着手 |
 | 8 | Platform R10 | API対応状況・権限明示・開発者向け検査と互換性 | **API Test Lab 新規** | 未着手 |
 | 9 | Release Gate | 全体の回帰・2台実機QA・署名/保存データ継続・公開判断 | 既存Debug Lab活用 | 毎段階で実施、Stableは別承認 |
 
-## 【次】PC Link R6B（8タスク・未着手）
+## 【次】Network R7 — Androidブラウザ・LAN診断（8タスク、未着手）
+
+R6A/R6Bのプレビューはソース/CIまで統合。PC Linkの物理QAはNETLAB-03B **0/15**、媒体操作 **0/13**で全て未実施のまま。新しいR7はこれらの実機PASS判定を変更しない。HTTPSとアプリ権限境界を優先し、ユーザーの明示操作に限定したブラウザ・LAN診断を作る。
+
+1. 既存WebView・Network Lab・mini-app sandboxの安全境界を監査。
+2. Android本体で明示起動するBrowser UI（URL入力、戻る/進む、更新）。
+3. HTTPS制限・危険スキーム拒否・WebViewのナビゲーション/ダウンロード保護。
+4. 明示実行の接続可否・DNS・LAN診断。無断スキャン/パケット監視はしない。
+5. 履歴/サイトデータの最小化と利用者による削除方法を設計。
+6. private Browser Lab QA・Game Server Lab連携の検討。
+7. Flutter/Android/JavaScriptの異常系テスト・端末プライバシー境界検証。
+8. 最終HEAD CI、Debugビルド、実機・Stable公開を分離してGitHub/Notionへ引き継ぎ。
+
+## 【R6B完了記録】検証強化・private PC Control Lab（ソース/CI成功、実機未検証）
+
+- [R6B PR #111](https://github.com/mibesamiti-png/chappy-player/pull/111)、main 1e7cb5e2678eへ統合。[Quick CI #42611593883](https://github.com/mibesamiti-png/chappy-player/actions/runs/42611593883)、[Windows #42611593897](https://github.com/mibesamiti-png/chappy-player/actions/runs/42611593897)、[Android Debug #42611593749](https://github.com/mibesamiti-png/chappy-player/actions/runs/42611593749) 全成功。
+- Python/Dart共有署名ベクトル8件、実P-256のHTTP localhost結合と拒否・再送・競合・期限テスト、Win32モックによる固定媒体キー1 down/up、private PC Control Lab 13項目手動QAとDebug APK 3 ABI/報告書を準備。
+- コードの動作実証・Android実機インストール・Windowsメディアキー操作の実機PASSは**まだない**。共通15ケース0/15、媒体13ケース0/13。Stable APK/Chappy Apps公開カタログは変更しない。[手順](../pc-link-r6b-qa.md)。
+
+---
+## 【履歴：R6A時点】PC Link R6Bの当初8タスク（現在はソース/CI完了）
 
 R6Aは[PR #107](https://github.com/mibesamiti-png/chappy-player/pull/107)でmain統合済み。 [Quick CI #42603449636](https://github.com/mibesamiti-png/chappy-player/actions/runs/42603449636) と [Windows CI #42603450028](https://github.com/mibesamiti-png/chappy-player/actions/runs/42603450028) はPR最終HEADで成功。ただしWindows/Android物理2台でのメディア操作・Debug APK起動は**未検証 0/15**。私有PC Control Lab/フルAndroid Debug実機受入は未完了。
 

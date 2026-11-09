@@ -1,8 +1,18 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
-更新: 2026-11-09。R6A統合時点のmainスナップショット d87b00e661ce9ea83e17af37ad5898b0c155654c。必ず最新main HEAD/PR/CIを再取得。
+更新: 2026-11-09。R6Bコード統合時点mainスナップショット 1e7cb5e2678ea3b03be5a23b34723dc1fc66c825。再開時は必ずGitHub最新main HEAD/PR/CIを再取得。
 
-## 【最新】R6Aソース/CI完了 → 次はR6B｜2026-11-09
+## 【最新】R6Bソース/3系統CI成功 → 次はNetwork R7｜2026-11-09
+
+- [R6B PR #111](https://github.com/mibesamiti-png/chappy-player/pull/111)をmainに統合（コミット 1e7cb5e2678ea3b03be5a23b34723dc1fc66c825）。R6Aの固定4種メディア操作の認証・隔離HTTP・同時再送拒否・Win32固定キーの模擬発行・UI拒否/切断手順を強化。Python/Dartの共有SHA-256署名ベクトル8つを検証。
+- **3系統の最終PR HEAD CI成功**：[Quick #42611593883](https://github.com/mibesamiti-png/chappy-player/actions/runs/42611593883) Flutter解析/Unit＋private PC Control Lab 0.1.0生成、[Windows #42611593897](https://github.com/mibesamiti-png/chappy-player/actions/runs/42611593897) 実P-256鍵でlocalhost HTTPと模擬Win32固定キー検証/Windows EXE、[Debug APK #42611593749](https://github.com/mibesamiti-png/chappy-player/actions/runs/42611593749) ARM64/ARM32/x86-64ビルド＋互換性レポート/成果物。
+- **private PC Control Lab**：`local.chappy.pc_control_lab` v0.1.0、`permissions: []`。メディアキーを実行する機能はなく、13項目の手動QA観察・匿名化レポート生成のみ。旧PC Transfer LabやASMRなど別開発も保持し、Stable署名APK/公開カタログは変更しない。
+- **実機QAは未実施**：NETLAB-03B共通15件は **0/15**、R6B媒体キー13件は **0/13**。Android Debugビルド生成はインストール/Windows↔Android相互接続の確認ではない。実機メディア操作やWi-Fi/TLSは別途本人の実機テストを要する。
+- **次はNetwork R7（予定・未着手）**：Androidホストのユーザー起動ブラウザ＋LAN診断・private Browser Labを8タスクで進める。ネットワーク監視・任意PC操作・ミニアプリJS特権は拡張しない。R6Bの未実機QAも別ゲートで維持。
+- 正本：[STATE](STATE.json) / [ROADMAP](ROADMAP.md) / [R6B QA](../pc-link-r6b-qa.md) / [R6Bベクトル](../pc-link-r6b-media-vectors.json)。Notionは節目の手動ミラーであり常時自動同期ではない。
+
+---
+## 【履歴：R6A時点】R6Aソース/CI完了 → 当時の次バッチR6B｜2026-11-09
 
 - **PC Link R6A**: [PR #107](https://github.com/mibesamiti-png/chappy-player/pull/107) をmainへ統合。基準コミット d87b00e661ce9ea83e17af37ad5898b0c155654c。QR-v3 `media=1`、Windows明示 `--media-once`/専用CMD、音量上下・ミュート切替・再生/一時停止の固定4キーを追加。
 - QR-v3のPC YES/Android相互署名を保持し、**別のWindows CONTROL（操作を画面表示）＋Android前景別承認**を要求。`pc.media.control` にコマンド名を含むP-256新署名、期限90秒以内、QRにつき1回だけ実行。PC状態/ファイル権限を流用しない。ミニアプリJS、任意PCコマンド、一般キーボード/マウス、継続接続には一切公開しない。
