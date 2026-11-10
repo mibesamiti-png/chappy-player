@@ -56,8 +56,10 @@ assert "id=\"recordDark\"" in html and "id=\"recordStop\"" in html
 assert "tools/android/NativeMotionAnalyzer.kt" in installer
 assert "image.close()" in analyzer and "finally {" in analyzer
 assert "asPersistentRecording()" not in recorder
-assert "FOREGROUND_SERVICE_CAMERA" not in installer
-assert "FOREGROUND_SERVICE_MICROPHONE" not in installer
+assert "FOREGROUND_SERVICE_CAMERA" in installer
+assert "FOREGROUND_SERVICE_MICROPHONE" in installer
+assert "ChappyCameraService.kt" in installer
+assert "onFinalized" in recorder
 assert "スマート録画" in html
 assert "smart pause/stop options" in qa
 print("CAMREC-13 motion recording source boundary checks passed (NOT physical recording).")
