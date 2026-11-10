@@ -1,6 +1,9 @@
 package dev.chappy.chappy_player
 
 import android.app.Activity
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.app.Dialog
 import android.content.ContentValues
 import android.content.pm.PackageManager
@@ -38,14 +41,23 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * Phase 1: user-consented, foreground-only CameraX video capture.
+ * User-consented CameraX video capture, also usable from the explicit
+ * camera foreground service when the user chooses screen-off recording.
  *
- * No camera/microphone service is registered, and onPause stops recording.
+ * A service must independently own its LifecycleRegistry and stop notification.
  * By default videos remain in app-internal private storage (not MediaStore).
  * The only exposed file identifiers are app-scoped file names, never paths.
  * Public MediaStore output is explicitly opt-in for each recording.
  */
-class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
+class NativeVideoRecorder(
+    private val context: Context,
+    private val activity: Activity? = context as? Activity,
+    private val onFinalized: (() -> Unit)? = null
+) : LifecycleOwner {
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private fun onMain(action: () -> Unit) {
+        mainHandler.post(action)
+    }
     private val registry = LifecycleRegistry(this)
     override val lifecycle: Lifecycle get() = registry
     private var state = "idle"
@@ -156,7 +168,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         if (!ownerPattern.matches(appId) || appId.length > 100) {
             throw IllegalArgumentException("INVALID_VIDEO_OWNER")
         }
-        val dir = File(activity.filesDir, "chappy_private_videos/$appId")
+        val dir = File(context.filesDir, "chappy_private_videos/$appId")
         if (!dir.exists() && !dir.mkdirs()) {
             throw IllegalStateException("VIDEO_DIRECTORY_UNAVAILABLE")
         }
@@ -171,12 +183,12 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         requestedSensitivity: Int = 40,
     ) {
         if (registry.currentState != Lifecycle.State.RESUMED ||
-            ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) !=
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) !=
                 PackageManager.PERMISSION_GRANTED) {
             result.error("VIDEO_NOT_ALLOWED", "Foreground camera permission required", null)
             return
         }
-        if (audio && ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) !=
+        if (audio && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED) {
             result.error("VIDEO_AUDIO_NOT_ALLOWED", "Microphone permission required", null)
             return
@@ -229,7 +241,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             releaseMotionAnalysis()
             pendingFile = temp
             completeFile = file
-            val future = ProcessCameraProvider.getInstance(activity)
+            val future = ProcessCameraProvider.getInstance(context)
             future.addListener({
                 if (requestToken != token || state != "initializing" ||
                     registry.currentState != Lifecycle.State.RESUMED) {
@@ -266,12 +278,12 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
                         analysis.setAnalyzer(executor, NativeMotionAnalyzer(
                             motionSensitivity,
                             { score, moving, baseline ->
-                                activity.runOnUiThread {
+                                onMain {
                                     motionSample(requestToken, score, moving, baseline)
                                 }
                             },
                             {
-                                activity.runOnUiThread {
+                                onMain {
                                     if (requestToken == token && state == "recording") {
                                         motionFailed = true
                                         motionStatus = "error"
@@ -285,7 +297,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
                     }
                     val prepared = if (visibility == "private") {
                         val destination = temp ?: throw IllegalStateException("VIDEO_PATH_MISSING")
-                        capture.output.prepareRecording(activity,
+                        capture.output.prepareRecording(context,
                             FileOutputOptions.Builder(destination).setFileSizeLimit(1024L * 1024 * 1024).build())
                     } else {
                         val values = ContentValues().apply {
@@ -296,14 +308,14 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
                                 put(MediaStore.Video.Media.IS_PENDING, 1)
                             }
                         }
-                        capture.output.prepareRecording(activity,
-                            MediaStoreOutputOptions.Builder(activity.contentResolver,
+                        capture.output.prepareRecording(context,
+                            MediaStoreOutputOptions.Builder(context.contentResolver,
                                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
                                 .setContentValues(values)
                                 .setFileSizeLimit(1024L * 1024 * 1024).build())
                     }
                     val session = if (audio) prepared.withAudioEnabled() else prepared
-                    recording = session.start(ContextCompat.getMainExecutor(activity)) { event ->
+                    recording = session.start(ContextCompat.getMainExecutor(context)) { event ->
                         when (event) {
                             is VideoRecordEvent.Start -> {
                                 if (state == "starting" || state == "initializing") {
@@ -336,7 +348,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
                     lastError = error.javaClass.simpleName
                     result.error("VIDEO_START_FAILED", "CameraX could not start: ${error.message}", null)
                 }
-            }, ContextCompat.getMainExecutor(activity))
+            }, ContextCompat.getMainExecutor(context))
         } catch (error: Exception) {
             pendingFile?.delete()
             pendingFile = null
@@ -369,7 +381,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             if (storage == "gallery") {
                 val output = event.outputResults.outputUri
                 if (output != android.net.Uri.EMPTY) {
-                    try { activity.contentResolver.delete(output, null, null) } catch (_: Exception) {}
+                    try { context.contentResolver.delete(output, null, null) } catch (_: Exception) {}
                 }
             }
             lastFileName = null
@@ -387,7 +399,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
             val output = event.outputResults.outputUri
             try {
                 if (Build.VERSION.SDK_INT >= 29 && output != android.net.Uri.EMPTY) {
-                    activity.contentResolver.update(output,
+                    context.contentResolver.update(output,
                         ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) }, null, null)
                 }
                 lastFileName = "ギャラリーに保存済み"
@@ -399,6 +411,9 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
         completeFile = null
         owner = null
         state = "idle"
+        // Service can release its foreground notification only after MP4
+        // Finalize, never immediately after stop() was requested.
+        onFinalized?.invoke()
     }
 
     fun stop(): Map<String, Any> {
@@ -433,6 +448,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
     fun isDark(): Boolean = dimmed
 
     fun setDark(enabled: Boolean): Boolean {
+        val activity = activity ?: return false
         if (enabled && registry.currentState != Lifecycle.State.RESUMED) return false
         if (enabled == dimmed) return dimmed
         val window = activity.window
@@ -469,6 +485,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
      * This is per-window only; original brightness is restored when leaving.
      */
     fun setDarkBrightness(brightness: Float): Boolean {
+        val activity = activity ?: return false
         if (!dimmed || registry.currentState != Lifecycle.State.RESUMED ||
             brightness.isNaN() || brightness !in 0.01f..1.0f) {
             return false
@@ -572,6 +589,7 @@ class NativeVideoRecorder(private val activity: Activity) : LifecycleOwner {
     }
 
     fun openPrivate(appId: String, id: String): Boolean {
+        val activity = activity ?: throw IllegalStateException("VIDEO_PLAYER_REQUIRES_VISIBLE_ACTIVITY")
         if (restoringVideos || state != "idle" || !Regex("^Chappy_[0-9_]+\\.mp4$").matches(id)) {
             throw IllegalArgumentException("VIDEO_OPEN_NOT_ALLOWED")
         }
