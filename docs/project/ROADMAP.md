@@ -1,5 +1,12 @@
 # Chappy Player — 次に実装するロードマップ
 
+## 2026-11-10：CAMREC-14 画面OFF録画R2ソース/CI完了・Debug v0.1.5公開 → 次CAMREC-15実機QA
+
+物理画面OFFを使えばOSの緑色点が見えなくなるが、**Androidプライバシー表示のシステム機能を無効化するものではない**。新しい[Chappy Player PR #138](https://github.com/mibesamiti-png/chappy-player/pull/138) にCameraX service独立LifecycleOwner、前面で本人が明示録画開始、Androidカメラ・マイク/通知権限の確認、録画中通知+停止、MP4 Finalizeを実装した。[Quick CI 75/75](https://github.com/mibesamiti-png/chappy-player/actions/runs/42825321344)、[3ABIビルド17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42825321377)、[DebugカタログPR #9の7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42826029840)成功。Stable 2/Debug 9本でRecorder Debugは`v0.1.5`。**実機撮影・画面OFF継続・通知停止は未検証**。既存MP4データは保持し、上書き更新不可のときもStableをアンインストールしない。
+
+次は**CAMREC-15-QA**：本人が新Debug APKとChappy Recorder v0.1.5を起動、画面ONで30秒撮影→物理画面OFF→復帰してMP4を確認、通知停止、他アプリ中の連続録画、音声ON/OFF、動き検知pause/再開、1GiB上限/省電力/権限拒否をテスト。失敗した条件だけ再修正する。R3プリ録画・R4物体検出AIは未実装。元NETLAB-06BとGameR8の延期タスクはSTATEで保持。
+
+
 ## 2026-11-10：CAMREC-13 スマート録画R1完了（コード・Android APKビルド）／R2画面OFF録画へ
 
 **CAMREC-13-R1はソース・CI完了、実機録画QA未実施。** カメラのY平面差分で動き検知、3モード（通常/静止pause→動くとresume/静止でstop）、静止時間10〜300秒、感度0〜100。失敗時は通常録画継続。Chappy Player [PR #136](https://github.com/mibesamiti-png/chappy-player/pull/136)・[Quick 74/74](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721111102)・[Android 3 ABI 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721110750)。Chappy Apps [公開Debug PR #8](https://github.com/mibesamiti-png/chappy-apps/pull/8)でv0.1.4更新、[検証7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42722599197)、Stable 2／Debug 9。旧Android本体は通常録画だけ。**OSカメラ使用表示はそのまま。**
