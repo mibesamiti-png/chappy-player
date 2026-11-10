@@ -37,6 +37,7 @@ class MainActivity : FlutterActivity() {
     private val externalChannelName = "dev.chappy.player/external_chappy"
     private val mediaChannelName = "dev.chappy.player/media_permissions"
     private val networkLabChannelName = "dev.chappy.player/network_lab"
+    private val textHandoffChannelName = "dev.chappy.player/text_handoff"
     private val mediaPermissionRequestCode = 0x44FA
     private val nativeMic = NativeMicCapture()
     private val nativeVideo = NativeVideoRecorder(this)
@@ -769,6 +770,45 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     else -> result.notImplemented()
+                }
+            }
+
+        // Explicit, user-approved Android handoff. No app-specific private API,
+        // accessibility service, auto-submit, background launch, or scraping.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, textHandoffChannelName)
+            .setMethodCallHandler { call, result ->
+                if (!micActivityVisible) {
+                    result.error("HANDOFF_NOT_FOREGROUND",
+                        "操作を行うにはChappy Playerを前面に表示してください", null)
+                } else {
+                    try {
+                        when (call.method) {
+                            "shareText" -> {
+                                val text = call.argument<String>("text") ?: ""
+                                if (text.isBlank() || text.length > 5000) {
+                                    result.error("HANDOFF_INVALID_TEXT",
+                                        "共有する指示文は1〜5000文字です", null)
+                                } else {
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, text)
+                                    }
+                                    startActivity(Intent.createChooser(intent, "指示の共有先を選択"))
+                                    result.success("chooser_opened")
+                                }
+                            }
+                            "openChatGPT" -> {
+                                val intent = Intent(Intent.ACTION_VIEW,
+                                    Uri.parse("https://chatgpt.com/"))
+                                startActivity(intent)
+                                result.success("external_app_opened")
+                            }
+                            else -> result.notImplemented()
+                        }
+                    } catch (error: Exception) {
+                        result.error("HANDOFF_UNAVAILABLE",
+                            "Androidの共有・外部アプリ起動ができません", null)
+                    }
                 }
             }
 
