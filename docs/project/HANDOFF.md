@@ -1,5 +1,16 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
+## 【最新】CAMREC-15 Recorder UX v0.1.6（2026-11-11）— Debugで登録済み／実機未検証
+
+- **ユーザー要望を実装済み**：スマート録画の標準を「静止時pause・動けばresume」、静止判定の標準を**5秒**に変更。Android CameraX・画面OFF録画サービス・Flutterのバリデーションとも5秒に対応。空き容量カードをコンパクトに再配置。
+- スマート録画設定を**プライベート動画の後＝一番下に移動**し、初期状態は閉じる。内部の「毎回『今回の録画を許可』を確認する」で録画ごとのChappy Player独自確認を選択可能。初期値はON（毎回確認）。OFF変更時に限って本人に一度だけホスト確認し、Android本体のSharedPreferencesに保存。以後の本人による録画ボタン操作でのホスト確認は省略できる。**OSのカメラ/マイク/通知許可、画面OFF録画の通知と停止操作、Androidのプライバシー緑点はそのまま**。他のミニアプリに一般的な確認省略権限を渡さない。
+- Recorderヘッダーの「DEBUG」横に「説明 ON/OFF」ボタンを追加。長い補足説明だけをまとめて切替。Chappy AppsのDebug/Stable切り替えの隣にも説明文の表示/非表示ボタンを追加。
+- [Chappy PlayerソースPR #140](https://github.com/mibesamiti-png/chappy-player/pull/140) → main `a4f94b2239ce3eb3d29cc2edc26429fbaf8deb35`、[Quick CI 76/76](https://github.com/mibesamiti-png/chappy-player/actions/runs/42872432652)、[Android 3ABI 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42872432385) **成功**。
+- [Chappy Apps Debug PR #10](https://github.com/mibesamiti-png/chappy-apps/pull/10) → main `104c1fd1f8e336a52aebd4c8faca2d64b169686e`、[カタログ検証7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42872700793)成功。Recorder Debug `v0.1.6`、Stable 2本/Debug 9本、従来のStable無変更。インストールは新しいDebug APK→Chappy Apps→Debug→更新→Recorder v0.1.6。
+- **実機カメラ確認はまだ0件**。次は画面OFF録画、通知停止、5秒でpause・動いてresume、MP4確定、権限確認OFFの持続・再ON、音声ON/OFFを確認。画像に写った端末空き容量は約1.0GBと少ないため、長時間録画の前に空き領域を確保する。現行の1GiB/ファイル上限は維持。
+- 次の機能実装よりも実機QAを優先。CAMREC-14 R2の画面OFF録画設計・NETLAB延期計画・プリ録画R3候補は維持。
+
+
 ## 【復旧・最新】CAMREC-14 R2：画面OFF録画コード統合済み／実機QA待ち（2026-11-11）
 
 - 途中停止したように見えた前作業を最新GitHubから再確認。**画面OFF録画PR #138は2026-11-10にmainへ既にマージ済み**（`05fba83784845e466bdd6d3d387a352a8009ff64`）。`ChappyCameraService.kt` にユーザー明示同意によるAndroid camera/mic Foreground Service、録画中のOS通知と停止アクション、`NativeVideoRecorder.kt` のCameraXサービス所有・録画確定処理がある。
