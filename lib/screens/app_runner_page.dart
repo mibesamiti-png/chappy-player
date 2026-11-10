@@ -397,6 +397,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         final askEveryTime = widget.app.id != 'local.chappy.recorder' ||
             (await _mediaChannel.invokeMethod<bool>(
                 'readRecorderConfirmPreference')) != false;
+        if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+          throw StateError('Recorder page no longer foreground');
+        }
         if (askEveryTime) {
       final approved = await showDialog<bool>(
         context: context,
@@ -496,6 +499,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     final requested = params['askEveryTime'] as bool;
     final current = await _recorderAskEveryTime();
     if (requested == current) return current;
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+      throw StateError('Recorder page no longer foreground');
+    }
     if (!requested) {
       // A one-time user-facing Flutter host confirmation is required to
       // disable future repeat prompts. Never let JS opt out silently.
@@ -522,7 +528,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         ),
       );
       if (approved != true || !mounted ||
-          ModalRoute.of(context)?.isCurrent != true) return current;
+          ModalRoute.of(context)?.isCurrent != true) {
+        return current;
+      }
     }
     final saved = await _mediaChannel.invokeMethod<bool>(
       'writeRecorderConfirmPreference', {'askEveryTime': requested});
