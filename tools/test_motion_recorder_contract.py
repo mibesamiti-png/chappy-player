@@ -61,5 +61,6 @@ assert "FOREGROUND_SERVICE_MICROPHONE" in installer
 assert "ChappyCameraService.kt" in installer
 assert "onFinalized" in recorder
 assert "スマート録画" in html
-assert "smart pause/stop options" in qa
+assert "native screen-off opt-in" in qa
+assert "motion and normal capture" in qa
 print("CAMREC-13 motion recording source boundary checks passed (NOT physical recording).")
