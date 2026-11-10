@@ -2,28 +2,29 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-10",
-  "sourceMainAtCapture": "8c31a68e667799ef505393f621855e4a7f3d71db",
+  "sourceMainAtCapture": "05fba83784845e466bdd6d3d387a352a8009ff64",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "CAMREC-14-R2",
-    "name": "Chappy Recorderスマート録画R1はCI成功・実機未検証。次はAndroid画面OFF録画の安全なForeground Service設計とR1実機QA。NETLAB-06Bは延期保持",
-    "status": "planned_waiting_R1_physical_debug",
-    "entry": "docs/camrec-13-smart-recording.md"
+    "id": "CAMREC-15-QA",
+    "name": "画面OFF録画R2ソース・Android APKビルド・公開Debug登録済み。次は端末の録画連続性・通知停止・データ保全を実機確認し不具合を修正",
+    "status": "pending_physical_QA",
+    "entry": "docs/camrec-14-screenoff-recorder.md"
   },
   "lastCompletedBatch": {
-    "id": "CAMREC-13-R1",
-    "pr": 136,
-    "mergedCommit": "8c31a68e667799ef505393f621855e4a7f3d71db",
-    "sourceStatus": "merged_motion_detection_R1_quick_and_compatibility_ci_success_physical_camera_QA_not_run",
+    "id": "CAMREC-14-R2",
+    "pr": 138,
+    "mergedCommit": "05fba83784845e466bdd6d3d387a352a8009ff64",
+    "sourceStatus": "camera_fgs_screenoff_implemented_source_merged_quick_ci_and_android_compat_success_device_QA_NOT_RUN",
     "quickCi": {
       "status": "success",
-      "run": 42721111102,
-      "successfulSteps": 74
+      "run": 42825321344,
+      "successfulSteps": 75,
+      "sourceHead": "0b53dacb2c7172d2c25e2230c63daefbdf598e8f"
     },
     "androidCompatibilityCi": {
       "status": "success",
-      "run": 42721110750,
+      "run": 42825321377,
       "successfulSteps": 17,
       "abi": [
         "arm64-v8a",
@@ -32,24 +33,26 @@
       ],
       "physicalInstall": "not_run"
     },
-    "publicMiniappCatalog": {
-      "repository": "mibesamiti-png/chappy-apps",
-      "pr": 8,
-      "mergedCommit": "f3dc66751239da98e382624daf594a84264e8c5d",
-      "validationRun": 42722599197,
+    "publicDebugMiniapp": {
+      "repo": "mibesamiti-png/chappy-apps",
+      "pr": 9,
+      "mergedCommit": "5b814ab185dc4f7f02db7e7726eaeec2ea30e0a5",
+      "validationRun": 42826029840,
       "status": "success",
+      "id": "local.chappy.recorder",
+      "version": "0.1.5",
+      "sizeBytes": 27402,
+      "sha256": "5a9fb6821bbaa5f3e615c1b88b92ae7fc3e01a551a1090d8a2511d2ff94ec5a4",
       "channel": "debug",
-      "recorderVersion": "0.1.4",
-      "sha256": "b6ea14d27fda2140c96dbd511075dc6e5f097b0c5a00b12e98af45285b1c0324",
       "stableCount": 2,
       "debugCount": 9
     },
     "physicalQA": {
       "status": "not_run",
-      "casesPassed": 0,
-      "scenariosTotal": 6
+      "casesTotal": 9,
+      "casesPassed": 0
     },
-    "qualification": "R1: CameraX ImageAnalysis 16x12Y at ~4Hz plus VideoCapture, three explicit modes normal/pause-on-stillness/stop-on-stillness, 10–300s inactivity, 0–100 sensitivity, local-only camera frames, fail-open error handling and legacy host guard. Quick CI 74/74 and Android compatibility build 17/17 on source head 2619f911be81c8339be886439e397a17485b421c; public Debug mini-app v0.1.4 catalog validation 7/7 success. NO user Android physical motion test performed. Android screen-off / FGS / prebuffer still NOT IMPLEMENTED. Existing 1 GiB limit remains. Stable and other mini-apps untouched."
+    "qualification": "R2 implementation: camera/mic foreground service owning independent NativeVideoRecorder CameraX lifecycle, non-exported receiver stopping through ongoing notification, explicit visible Activity consent and CAMERA / optional RECORD_AUDIO / notification permission before start, Android API>=30. Flutter and Recorder permit only explicit service recordings to continue on Activity pause; ordinary recording still stops. OS green privacy indicator is never disabled: merely not visible when physical display is off. Code+CI passed, not a proof of physical screen-off recording or MP4 continuity; signed Stable unchanged."
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -130,7 +133,7 @@
         "deviceLab": "0.2.1",
         "fileLab": "0.2.3",
         "gameServerLab": "0.1.2",
-        "recorder": "0.1.4"
+        "recorder": "0.1.5"
       }
     },
     "stableRelease": {
@@ -775,59 +778,131 @@
       "screenOffRecording": "not_implemented",
       "prebuffer": "not_implemented",
       "mlMotionDetector": "not_implemented"
+    },
+    "camrec14": {
+      "status": "source_and_public_debug_build_verified_device_not_run",
+      "source": "docs/camrec-14-screenoff-recorder.md",
+      "native": "tools/android/ChappyCameraService.kt",
+      "test": "tools/test_screenoff_recorder_contract.py",
+      "miniApp": "sample_apps/video_recorder/index.html",
+      "sourcePr": 138,
+      "quickCiRun": 42825321344,
+      "quickCiSteps": 75,
+      "androidCiRun": 42825321377,
+      "androidCiSteps": 17,
+      "catalogPr": 9,
+      "catalogRun": 42826029840,
+      "publicDebugRecorderVersion": "0.1.5",
+      "deviceCameraScreenOffQA": "not_run",
+      "actualPrivacyIndicatorBypass": "not_implemented",
+      "physicalScreenOffQAStatus": "not_run",
+      "signedStable": "unchanged"
+    },
+    "deferredCamrec14Plan": {
+      "id": "CAMREC-14-R2",
+      "targetTasks": 7,
+      "implementationScope": "画面OFFと他アプリ利用中にも、ユーザーが前面から明示的に開始した録画だけ継続できるForeground Serviceを設計・実装する。R1の動き検知・一時停止/再開も統合する。Android 14以降の権限・FGS起動制限、持続通知と停止操作、CameraX LifecycleOwnerの移行を安全に扱う。まずはR1を本人Android実機で動かし、怪しい動き検知・動画保存があればR1へ戻る。プリ録画はR3以降、AI検知はR4以降。従来のNETLAB-06B/GAME-R8はobservationsで延期保持。署名Stable公開は別承認。",
+      "tasks": [
+        {
+          "id": "CAMREC-14-01",
+          "name": "Android 14+ camera/microphone FGSの権限・while-in-use制限・通知要件のManifest/サービス設計",
+          "status": "todo"
+        },
+        {
+          "id": "CAMREC-14-02",
+          "name": "CameraX録画所有権をActivity LifecycleOwnerからサービスへ安全に移し、二重起動/競合を禁止",
+          "status": "todo"
+        },
+        {
+          "id": "CAMREC-14-03",
+          "name": "常駐通知に録画中状態・停止ボタン・終了時MP4確定/エラー表示を実装し、OSカメラ表示を隠さない",
+          "status": "todo"
+        },
+        {
+          "id": "CAMREC-14-04",
+          "name": "スマート録画の動き検知・静止一時停止を画面OFFセッションにも統合し、誤検知と電池/発熱を評価",
+          "status": "todo"
+        },
+        {
+          "id": "CAMREC-14-05",
+          "name": "Flutter/Chappy Recorder UIの明示選択、再起動禁止、ロック/復帰時ステータス同期を実装",
+          "status": "todo"
+        },
+        {
+          "id": "CAMREC-14-06",
+          "name": "実機でR1通常/一時停止/静止終了の動画を検証し、画面OFF/他アプリ/着信/権限解除/容量不足の安全性を確認",
+          "status": "blocked"
+        },
+        {
+          "id": "CAMREC-14-07",
+          "name": "Quick CI/Android Debug/実機QAを区別してSTATE/HANDOFF/ROADMAP/Notion更新、公開Debugのみ検証しStableは別承認",
+          "status": "todo"
+        }
+      ],
+      "stopBefore": [
+        "PCコマンド実行",
+        "端末のカメラ緑点・Android録画中通知の無効化",
+        "無断/非表示での録画開始・再起動後の自動録画",
+        "Android 14+のバックグラウンド起動制限の回避",
+        "非公開録画データの無断外部送信",
+        "サービスでのroot/Accessibility権限濫用",
+        "ユーザー未許可でのバックグラウンド録画",
+        "署名Stable自動公開",
+        "実機未検証の成功断言"
+      ]
     }
   },
   "nextBatch": {
-    "id": "CAMREC-14-R2",
+    "id": "CAMREC-15-QA",
     "targetTasks": 7,
-    "implementationScope": "画面OFFと他アプリ利用中にも、ユーザーが前面から明示的に開始した録画だけ継続できるForeground Serviceを設計・実装する。R1の動き検知・一時停止/再開も統合する。Android 14以降の権限・FGS起動制限、持続通知と停止操作、CameraX LifecycleOwnerの移行を安全に扱う。まずはR1を本人Android実機で動かし、怪しい動き検知・動画保存があればR1へ戻る。プリ録画はR3以降、AI検知はR4以降。従来のNETLAB-06B/GAME-R8はobservationsで延期保持。署名Stable公開は別承認。",
+    "implementationScope": "CAMREC-14画面OFF録画とCAMREC-13動き検知スマート録画のソース/CIビルドは完了、実機未検証。新Debug APKとDebug Chappy Recorder v0.1.5をユーザーが実機でインストール・操作し、CAMREC-14の通知・権限・録画中画面OFF・保存データ・音声/スマートモードの挙動を検証する。誤判定・録画中断・MP4未確定・端末省電力差を修正。Android緑点の無効化、無断起動、隠し通知は実装しない。NETLAB-06B/GameR8の延期タスクを保持し、署名Stableへの公開は別承認。",
     "tasks": [
       {
-        "id": "CAMREC-14-01",
-        "name": "Android 14+ camera/microphone FGSの権限・while-in-use制限・通知要件のManifest/サービス設計",
-        "status": "todo"
-      },
-      {
-        "id": "CAMREC-14-02",
-        "name": "CameraX録画所有権をActivity LifecycleOwnerからサービスへ安全に移し、二重起動/競合を禁止",
-        "status": "todo"
-      },
-      {
-        "id": "CAMREC-14-03",
-        "name": "常駐通知に録画中状態・停止ボタン・終了時MP4確定/エラー表示を実装し、OSカメラ表示を隠さない",
-        "status": "todo"
-      },
-      {
-        "id": "CAMREC-14-04",
-        "name": "スマート録画の動き検知・静止一時停止を画面OFFセッションにも統合し、誤検知と電池/発熱を評価",
-        "status": "todo"
-      },
-      {
-        "id": "CAMREC-14-05",
-        "name": "Flutter/Chappy Recorder UIの明示選択、再起動禁止、ロック/復帰時ステータス同期を実装",
-        "status": "todo"
-      },
-      {
-        "id": "CAMREC-14-06",
-        "name": "実機でR1通常/一時停止/静止終了の動画を検証し、画面OFF/他アプリ/着信/権限解除/容量不足の安全性を確認",
+        "id": "CAMREC-15-01",
+        "name": "ユーザー実機で新Debug APKとChappy Recorder v0.1.5の起動/権限許可を確認（既存の安定版やprivate MP4を消さない）",
         "status": "blocked"
       },
       {
-        "id": "CAMREC-14-07",
-        "name": "Quick CI/Android Debug/実機QAを区別してSTATE/HANDOFF/ROADMAP/Notion更新、公開Debugのみ検証しStableは別承認",
+        "id": "CAMREC-15-02",
+        "name": "画面ONで30秒録画後に物理画面OFF→復帰し、撮影継続・音声・MP4再生を検証",
+        "status": "blocked"
+      },
+      {
+        "id": "CAMREC-15-03",
+        "name": "ホーム/他アプリ切替・ロック画面からの録画中通知停止・ファイルFinalize結果とエラーを検証",
+        "status": "blocked"
+      },
+      {
+        "id": "CAMREC-15-04",
+        "name": "動き検知の静止pause/resume・自動停止・通常モードの画面ロックでの停止を回帰検証",
+        "status": "blocked"
+      },
+      {
+        "id": "CAMREC-15-05",
+        "name": "CAMERA/RECORD_AUDIO/通知拒否、通話、OS省電力、1GiB容量上限、アプリ強制終了時のデータ保全を安全側に試験",
+        "status": "blocked"
+      },
+      {
+        "id": "CAMREC-15-06",
+        "name": "異常時ステータス反映・保存失敗・通知同期・端末差への対策を実装し、CameraX/Android CIを再実行",
+        "status": "todo"
+      },
+      {
+        "id": "CAMREC-15-07",
+        "name": "GitHub STATE/HANDOFF/ROADMAPとNotionへ実機QAを誤認なく記録し、Stable公開の可否を別判断",
         "status": "todo"
       }
     ],
     "stopBefore": [
       "PCコマンド実行",
-      "端末のカメラ緑点・Android録画中通知の無効化",
-      "無断/非表示での録画開始・再起動後の自動録画",
-      "Android 14+のバックグラウンド起動制限の回避",
-      "非公開録画データの無断外部送信",
-      "サービスでのroot/Accessibility権限濫用",
-      "ユーザー未許可でのバックグラウンド録画",
+      "Androidのプライバシー表示の無効化",
+      "録画中通知の隠蔽",
+      "バックグラウンドからの無断録画開始",
+      "再起動後の録画自動開始",
+      "権限/OS制限回避",
+      "ユーザー未許可の録画・機密データ送信",
       "署名Stable自動公開",
-      "実機未検証の成功断言"
+      "CI成功と実機撮影PASSの混同"
     ]
   },
   "policy": {
