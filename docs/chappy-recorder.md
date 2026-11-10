@@ -34,3 +34,9 @@ The video bridge requires a compatible new Chappy Player Debug APK for `video.st
 - RECORDER-02: export or share private MP4s after explicit user selection
 - RECORDER-03: optional device-independent storage estimates / retention warnings
 - RECORDER-04: robust long-recording and available-space warnings
+
+## CAMREC-16: Recorder explanation settings and start feedback (2026-11-11)
+
+- Recorder's `説明 ON/OFF` is part of the bottom `スマート録画・確認設定` panel, not beside the `DEBUG` label. The separate Chappy Apps catalog description switch remains in the catalog header.
+- Start buttons no longer stay disabled solely because the asynchronous motion capability/status probe has not completed. If the host cannot confirm smart recording support, a deliberate tap opens the settings and gives a clear message to update the Debug APK or explicitly select normal recording; it does not silently start an always-recording session.
+- Android camera/mic/notification permissions and owner-confirmation controls are unchanged. Android on-device successful capture is *not* yet verified; do not mark the Stable channel ready. Source-only unit tests are not proof of camera support.
