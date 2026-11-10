@@ -67,7 +67,12 @@ assert "file.parentFile != root" in camera
 assert "privateDirectory(appId).canonicalFile" in camera
 assert "VIDEO_EXPORT_BUSY" in exporter
 assert "android.permission.VIBRATE" in manifest
-assert "FOREGROUND_SERVICE_CAMERA" not in manifest
-assert "FOREGROUND_SERVICE_MICROPHONE" not in manifest
+# The service is present for the *separate*, user-approved screen-off
+# recording path; motion and haptics mini-app permissions are unchanged.
+assert "FOREGROUND_SERVICE_CAMERA" in manifest
+assert "FOREGROUND_SERVICE_MICROPHONE" in manifest
+assert "ChappyCameraService" in manifest
+assert "android.permission.SYSTEM_ALERT_WINDOW" not in manifest
+assert "NativeVideoExport" in exporter
 
 print("Native motion/haptics/video-export capability static safety tests passed")
