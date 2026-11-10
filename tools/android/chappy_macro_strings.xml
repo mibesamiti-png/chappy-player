@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chappy_macro_service_label">Chappy Macro Lab R1（自作画面限定）</string>
+    <string name="chappy_macro_service_description">Chappy Player内の専用検証画面だけで、本人が開始した固定2手順の操作を試す機能です。外部アプリの操作、画面内容の収集、バックグラウンド実行は行いません。Android設定でいつでも無効化できます。</string>
+</resources>
