@@ -417,7 +417,7 @@ class MainActivity : FlutterActivity() {
         mediaControlChannel?.setMethodCallHandler { call, result ->
                 when (call.method) {
                     "startNativeMic" -> {
-                        if (!micActivityVisible || nativeVideo.isRecording() ||
+                        if (!micActivityVisible || nativeVideo.status()["state"] != "idle" ||
                             ChappyCameraService.isActive() ||
                             ContextCompat.checkSelfPermission(this,
                                 Manifest.permission.RECORD_AUDIO) !=
@@ -459,7 +459,7 @@ class MainActivity : FlutterActivity() {
                         val screenOff = call.argument<Boolean>("screenOff") == true
                         if (!micActivityVisible) {
                             result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
-                        } else if (ChappyCameraService.isActive() || nativeVideo.isRecording()) {
+                        } else if (ChappyCameraService.isActive() || nativeVideo.status()["state"] != "idle") {
                             result.error("VIDEO_BUSY", "Another camera recording is active", null)
                         } else {
                             nativeMic.stop()
