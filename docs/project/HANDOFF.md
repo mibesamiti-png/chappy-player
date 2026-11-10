@@ -7,7 +7,7 @@
 - Recorderヘッダーの「DEBUG」横に「説明 ON/OFF」ボタンを追加。長い補足説明だけをまとめて切替。Chappy AppsのDebug/Stable切り替えの隣にも説明文の表示/非表示ボタンを追加。
 - [Chappy PlayerソースPR #140](https://github.com/mibesamiti-png/chappy-player/pull/140) → main `a4f94b2239ce3eb3d29cc2edc26429fbaf8deb35`、[Quick CI 76/76](https://github.com/mibesamiti-png/chappy-player/actions/runs/42872432652)、[Android 3ABI 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42872432385) **成功**。
 - [Chappy Apps Debug PR #10](https://github.com/mibesamiti-png/chappy-apps/pull/10) → main `104c1fd1f8e336a52aebd4c8faca2d64b169686e`、[カタログ検証7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42872700793)成功。Recorder Debug `v0.1.6`、Stable 2本/Debug 9本、従来のStable無変更。インストールは新しいDebug APK→Chappy Apps→Debug→更新→Recorder v0.1.6。
-- **実機カメラ確認はまだ0件**。次は画面OFF録画、通知停止、5秒でpause・動いてresume、MP4確定、権限確認OFFの持続・再ON、音声ON/OFFを確認。画像に写った端末空き容量は約1.0GBと少ないため、長時間録画の前に空き領域を確保する。現行の1GiB/ファイル上限は維持。
+- **実機カメラ確認はまだ0件**。次は画面OFF録画、通知停止、5秒でpause・動いてresume、MP4確定、権限確認OFFの持続・再ON、音声ON/OFFを確認。長時間録画の前に空き領域を十分に確保する。現行の1GiB/ファイル上限は維持。
 - 次の機能実装よりも実機QAを優先。CAMREC-14 R2の画面OFF録画設計・NETLAB延期計画・プリ録画R3候補は維持。
 
 
