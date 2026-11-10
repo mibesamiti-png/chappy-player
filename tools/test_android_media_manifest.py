@@ -36,6 +36,7 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     templates.mkdir(parents=True)
     for name in ["MainActivity.kt", "chappy_update_paths.xml",
                  "NativeMicCapture.kt", "NativeVideoRecorder.kt",
+                 "RecorderConfirmationPreferences.kt",
                  "NativeMotionAnalyzer.kt", "ChappyCameraService.kt",
                  "NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
