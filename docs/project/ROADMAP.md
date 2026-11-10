@@ -1,5 +1,10 @@
 # Chappy Player — 次に実装するロードマップ
 
+## 2026-11-11：CAMREC-14 R2画面OFF録画 — コード完了、実機QA待ち
+
+[Chappy Player PR #138](https://github.com/mibesamiti-png/chappy-player/pull/138)で、**前面から明示開始した録画**をAndroid Camera Foreground Serviceへ移し、電源ボタンで消灯しても継続できる構造を実装。録画通知・停止ボタン・CameraX Finalize/既存プライベート保存・スマート動き検知との連携を用意。Androidの緑の点を無効化しない。mainの[Quick CI](https://github.com/mibesamiti-png/chappy-player/actions/runs/42826356725)と[Android3ABI APKビルド](https://github.com/mibesamiti-png/chappy-player/actions/runs/42826356999)は成功。[Chappy Apps Debug PR #9](https://github.com/mibesamiti-png/chappy-apps/pull/9) でRecorder v0.1.5を登録済み。**実機での長時間録画・OS通知停止は未検証**で、次の関門は実機QA（`docs/camrec-14-screenoff-recorder.md`）。テスト済みStableへ自動配布しない。R3プリ録画、R4 AI動き検知は未実装。
+
+
 ## 2026-11-10：CAMREC-13 スマート録画R1完了（コード・Android APKビルド）／R2画面OFF録画へ
 
 **CAMREC-13-R1はソース・CI完了、実機録画QA未実施。** カメラのY平面差分で動き検知、3モード（通常/静止pause→動くとresume/静止でstop）、静止時間10〜300秒、感度0〜100。失敗時は通常録画継続。Chappy Player [PR #136](https://github.com/mibesamiti-png/chappy-player/pull/136)・[Quick 74/74](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721111102)・[Android 3 ABI 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721110750)。Chappy Apps [公開Debug PR #8](https://github.com/mibesamiti-png/chappy-apps/pull/8)でv0.1.4更新、[検証7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42722599197)、Stable 2／Debug 9。旧Android本体は通常録画だけ。**OSカメラ使用表示はそのまま。**
