@@ -2,27 +2,29 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-10",
-  "sourceMainAtCapture": "05fba83784845e466bdd6d3d387a352a8009ff64",
+  "sourceMainAtCapture": "a4f94b2239ce3eb3d29cc2edc26429fbaf8deb35",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
     "id": "CAMREC-14-R2",
-    "name": "画面OFF録画R2はソース/Android3ABIビルドと公開Debugミニアプリv0.1.5統合済み。次は実機カメラ/停止通知/画面復帰QA（未実施）。",
+    "name": "Chappy Recorder UX v0.1.6はコード/Debug配布/CI完了。次はスマホ実機で画面OFF録画・通知停止・動き検知5秒・権限省略設定のQA",
     "status": "awaiting_physical_camera_qa",
     "entry": "docs/camrec-14-screenoff-recorder.md"
   },
   "lastCompletedBatch": {
-    "id": "CAMREC-14-R2",
-    "pr": 138,
-    "mergedCommit": "05fba83784845e466bdd6d3d387a352a8009ff64",
-    "sourceStatus": "merged_screen_off_foreground_camera_service_ci_passed_physical_camera_QA_not_run",
+    "id": "CAMREC-15-UX",
+    "pr": 140,
+    "mergedCommit": "a4f94b2239ce3eb3d29cc2edc26429fbaf8deb35",
+    "sourceStatus": "merged_recording_ux_defaults_preferences_debug_catalog_verified_physical_not_run",
     "quickCi": {
       "status": "success",
-      "run": 42826356725
+      "run": 42872432652,
+      "successfulSteps": 76
     },
     "androidCompatibilityCi": {
       "status": "success",
-      "run": 42826356999,
+      "run": 42872432385,
+      "successfulSteps": 17,
       "abi": [
         "arm64-v8a",
         "armeabi-v7a",
@@ -31,20 +33,24 @@
       "physicalInstall": "not_run"
     },
     "debugCatalog": {
-      "repository": "mibesamiti-png/chappy-apps",
-      "pr": 9,
-      "mergeCommit": "5b814ab185dc4f7f02db7e7726eaeec2ea30e0a5",
+      "repo": "mibesamiti-png/chappy-apps",
+      "pr": 10,
+      "mergedCommit": "104c1fd1f8e336a52aebd4c8faca2d64b169686e",
+      "status": "success",
+      "validationRun": 42872700793,
+      "validationSteps": 7,
       "channel": "debug",
-      "id": "local.chappy.recorder",
-      "version": "0.1.5",
-      "sha256": "5a9fb6821bbaa5f3e615c1b88b92ae7fc3e01a551a1090d8a2511d2ff94ec5a4",
-      "stableUnchanged": true
+      "recorderVersion": "0.1.6",
+      "sha256": "cae89142d613af8fbf7118749ccdc924af1951902663452797f238bb9e06dc1e",
+      "bytes": 32525,
+      "stableCount": 2,
+      "debugCount": 9
     },
     "physicalQA": {
       "status": "not_run",
       "casesPassed": 0
     },
-    "qualification": "CameraX service for user-confirmed screen-off recording with persistent OS recording notification and Stop; Android camera/mic privacy indicator remains enabled. R1 motion pause/resume remains available. Source and 3ABI build green; NO physical camera, lock-screen or notification-stop QA was run. No Stable release."
+    "qualification": "Recorder UX revision: default motion pause/resume with 5s threshold; compact capacity card; smart settings moved below private video library and collapsed; confirmation askEveryTime host-owned persistent preference default true, user can opt out with one explicit host confirmation. Android camera/mic/notification runtime permission checks, camera privacy indicator and foreground service stop notification remain. Recorder DEBUG header help toggle, Chappy Apps Debug/Stable descriptions toggle. Source Quick CI 76/76 and Android 3 ABI build 17/17 pass. Public Debug Recorder v0.1.6 catalog validator 7/7. Android physical motion/screen-off and saved media QA NOT RUN. Signed Stable untouched."
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -125,7 +131,7 @@
         "deviceLab": "0.2.1",
         "fileLab": "0.2.3",
         "gameServerLab": "0.1.2",
-        "recorder": "0.1.5"
+        "recorder": "0.1.6"
       }
     },
     "stableRelease": {
@@ -765,7 +771,7 @@
       "androidCiSuccess": 17,
       "publicCatalogPr": 8,
       "publicCatalogCi": 42722599197,
-      "publicDebugRecorderVersion": "0.1.5",
+      "publicDebugRecorderVersion": "0.1.6",
       "physicalMotionRecording": "not_run",
       "screenOffRecording": "implemented_source_CI_pass_physical_not_run",
       "prebuffer": "not_implemented",
@@ -782,17 +788,49 @@
       "androidBuildRun": 42826356999,
       "androidBuild": "success",
       "catalogPr": 9,
-      "recorderDebugVersion": "0.1.5",
+      "recorderDebugVersion": "0.1.6",
       "physicalScreenOffRecording": "not_run",
       "physicalStopNotification": "not_run",
       "androidPrivacyIndicator": "system_controlled",
       "statusNote": "Recording screen off is available for physical QA, not yet certified on a real device."
+    },
+    "camrec15": {
+      "status": "source_and_public_debug_catalog_merged_ci_pass_physical_qa_not_run",
+      "sourcePullRequest": 140,
+      "sourceMergedCommit": "a4f94b2239ce3eb3d29cc2edc26429fbaf8deb35",
+      "quickCiRun": 42872432652,
+      "quickCiPassedSteps": 76,
+      "androidBuildRun": 42872432385,
+      "androidPassedSteps": 17,
+      "catalogPullRequest": 10,
+      "catalogMergeCommit": "104c1fd1f8e336a52aebd4c8faca2d64b169686e",
+      "catalogValidationRun": 42872700793,
+      "recorderDebugVersion": "0.1.6",
+      "motionDefault": "pause_resume",
+      "idleDefaultSeconds": 5,
+      "motionSensitivityDefault": 40,
+      "collapsedSmartSettings": true,
+      "capacityCard": "compact",
+      "repeatPrompt": {
+        "storage": "Android host SharedPreferences",
+        "defaultAskEveryTime": true,
+        "userMayOptOut": true,
+        "oneTimeHostConfirmationToOptOut": true,
+        "runtimeAndroidPermissions": "always_checked",
+        "onlyRecorderId": "local.chappy.recorder"
+      },
+      "descriptionToggle": [
+        "Recorder DEBUG header",
+        "Chappy Apps Debug/Stable catalog"
+      ],
+      "physicalDeviceStatus": "not_run",
+      "stableRelease": "unchanged"
     }
   },
   "nextBatch": {
     "id": "CAMREC-14-R2",
     "targetTasks": 7,
-    "implementationScope": "CAMREC-14-R2のcamera foreground service、録画通知/停止ボタン、Android画面OFF録画のソースはPR #138でmainへ統合、Quick CIと3ABI Androidビルド成功、公開Debug Recorder v0.1.5もPR #9で統合。Android実機テストは未実施。残作業は実機で画面OFF時のMP4継続、通知停止とfinalize、既存スマート録画、音声有無・端末特有のバッテリー制限を確認し、問題があれば修正する。Stable配布は別承認。プリ録画R3は未着手。NETLAB-06B 8タスクはobservations.deferredNetlab06Bに保存。",
+    "implementationScope": "CAMREC-14-R2のcamera foreground service、録画通知/停止ボタン、Android画面OFF録画のソースはPR #138でmainへ統合、Quick CIと3ABI Androidビルド成功、公開Debug Recorder v0.1.5もPR #9で統合。Android実機テストは未実施。残作業は実機で画面OFF時のMP4継続、通知停止とfinalize、既存スマート録画、音声有無・端末特有のバッテリー制限を確認し、問題があれば修正する。Stable配布は別承認。プリ録画R3は未着手。NETLAB-06B 8タスクはobservations.deferredNetlab06Bに保存。 2026-11-11 CAMREC-15-UXを完了：Recorder UI縮小、スマート録画デフォルトpause/5秒、最下部折りたたみ、ホスト承認の毎回確認設定、DEBUG横説明ON/OFF、Chappy Apps説明ON/OFF、Debug v0.1.6。PR #140 Quick76/Android17成功、Chappy Apps PR #10検証7成功。録画実機テストは未実施。",
     "tasks": [
       {
         "id": "CAMREC-14-01",
