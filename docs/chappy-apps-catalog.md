@@ -1,5 +1,12 @@
 # Chappy Apps 公開カタログ (Stable / Debug)
 
+## 2026-11-11：Chappy Recorder Debug v0.1.6 ユーザー向けUI改善
+
+[Chappy Player PR #140](https://github.com/mibesamiti-png/chappy-player/pull/140)（Quick76/Android17成功）により、容量表示の小型化、動き検知pause/5秒初期値、スマート録画最下部の開閉、ホストの録画確認省略の任意設定、DEBUG横の説明表示/非表示を追加。カタログ本体側のDebug/Stable横にも全ミニアプリの説明表示/非表示を追加した。
+
+[Chappy Apps PR #10](https://github.com/mibesamiti-png/chappy-apps/pull/10)を公開Debugへ統合（[検証CI7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42872700793)成功）。`debug/chappy-recorder-ux-v0.1.6.chappy`、32,525bytes、SHA256 `cae89142d613af8fbf7118749ccdc924af1951902663452797f238bb9e06dc1e`。Stable 2/Debug 9本。新しいAndroid Debug APKが必要、Stableの署名配布は別承認。画面OFF・動き検知の実機録画成功は未検証。OSのカメラ・マイク利用表示は無効にしない。
+
+
 ## 2026-11-11：Chappy Recorder Debug v0.1.5（画面OFF録画の実機検証版）
 
 [Chappy Player PR #138](https://github.com/mibesamiti-png/chappy-player/pull/138)のAndroid camera Foreground Serviceと一致するミニアプリを[Chappy Apps PR #9](https://github.com/mibesamiti-png/chappy-apps/pull/9)で公開**Debug**に登録。v0.1.4から**v0.1.5**へ更新。公開パッケージ`debug/chappy-recorder-screenoff-v0.1.5.chappy`（SHA256 `5a9fb6821bbaa5f3e615c1b88b92ae7fc3e01a551a1090d8a2511d2ff94ec5a4`）。Stableは不変。ユーザーは新しいAndroid Debug APKが必要。画面OFF中は緑点が見えないが、録画時のAndroidカメラ使用表示と録画中通知を無効化しない。実機録画成功を断言しない。
