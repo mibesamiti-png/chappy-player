@@ -44,7 +44,11 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
                  "NativeNetworkDiscovery.kt", "NativeRouterIdentity.kt",
                  "NativeTrafficCounters.kt",
                  "NativePcIdentity.kt", "NativePcProof.kt",
-                 "NativeVerifiedPcHistory.kt"]:
+                 "NativeVerifiedPcHistory.kt",
+                 "ChappyMacroAccessibilityService.kt",
+                 "ChappyMacroLabActivity.kt",
+                 "chappy_macro_accessibility_config.xml",
+                 "chappy_macro_strings.xml"]:
         (templates / name).write_bytes(
             (PROJECT / "tools/android" / name).read_bytes()
         )
@@ -75,9 +79,23 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
                  "NativeNetworkDiscovery.kt", "NativeRouterIdentity.kt",
                  "NativeTrafficCounters.kt",
                  "NativePcIdentity.kt", "NativePcProof.kt",
-                 "NativeVerifiedPcHistory.kt"):
+                 "NativeVerifiedPcHistory.kt",
+                 "ChappyMacroAccessibilityService.kt",
+                 "ChappyMacroLabActivity.kt"):
         copied = native_class.with_name(name)
         assert copied.read_bytes() == (PROJECT / "tools/android" / name).read_bytes()
+    macro_config = root / "android/app/src/main/res/xml/chappy_macro_accessibility_config.xml"
+    macro_strings = root / "android/app/src/main/res/values/chappy_macro_strings.xml"
+    assert macro_config.read_bytes() == (
+        PROJECT / "tools/android/chappy_macro_accessibility_config.xml"
+    ).read_bytes()
+    assert macro_strings.read_bytes() == (
+        PROJECT / "tools/android/chappy_macro_strings.xml"
+    ).read_bytes()
+    macro_root = ET.parse(macro_config).getroot()
+    assert macro_root.get(ANDROID + "canRetrieveWindowContent") == "true"
+    assert macro_root.get(ANDROID + "canPerformGestures") == "false"
+    assert macro_root.get(ANDROID + "isAccessibilityTool") == "false"
     gradle_text = gradle.read_text(encoding="utf-8")
     assert gradle_text.count('androidx.camera:camera-video:1.5.3') == 1
     assert gradle_text.count('androidx.camera:camera-lifecycle:1.5.3') == 1
@@ -111,6 +129,28 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
                 node.get(ANDROID + "exported") == "false" and
                 node.get(ANDROID + "foregroundServiceType") ==
                 "camera|microphone"]) == 1
+    macro = [node for node in services
+             if node.get(ANDROID + "name") ==
+             "dev.chappy.chappy_player.ChappyMacroAccessibilityService"]
+    assert len(macro) == 1
+    assert macro[0].get(ANDROID + "permission") == (
+        "android.permission.BIND_ACCESSIBILITY_SERVICE"
+    )
+    assert macro[0].get(ANDROID + "exported") == "true"
+    assert [node.get(ANDROID + "name")
+            for node in macro[0].findall("intent-filter/action")] == [
+        "android.accessibilityservice.AccessibilityService"
+    ]
+    macro_meta = macro[0].find("meta-data")
+    assert macro_meta is not None
+    assert macro_meta.get(ANDROID + "resource") == (
+        "@xml/chappy_macro_accessibility_config"
+    )
+    macro_activities = [node for node in application.findall("activity")
+                        if node.get(ANDROID + "name") ==
+                        "dev.chappy.chappy_player.ChappyMacroLabActivity"]
+    assert len(macro_activities) == 1
+    assert macro_activities[0].get(ANDROID + "exported") == "false"
     receivers = application.findall("receiver")
     assert len([node for node in receivers
                 if node.get(ANDROID + "name") ==
