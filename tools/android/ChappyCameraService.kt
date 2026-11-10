@@ -68,7 +68,7 @@ class ChappyCameraService : Service() {
             if (lens !in listOf("front", "back") || quality !in listOf("720", "1080") ||
                 storage !in listOf("private", "gallery") ||
                 motionMode !in listOf("normal", "pause", "stop") ||
-                idleSeconds !in 10..300 || sensitivity !in 0..100 ||
+                idleSeconds !in 5..300 || sensitivity !in 0..100 ||
                 !Regex("^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$").matches(owner)) {
                 throw IllegalArgumentException("INVALID_SCREEN_OFF_VIDEO_OPTIONS")
             }
