@@ -190,5 +190,26 @@ vm.runInNewContext(match[1], {
   window.__chappyResolve({requestId:sentConnect.requestId,ok:true,
     value:{connected:true,origin:'wss://game.example.org:443'}});
   assert.equal(timers.size,0,'No timers remain after WSS timeout');
-  console.log('Bridge smoke tests passed: HTTPS/WSS, WSS hang cancellation and game motion/haptics');
+  // Chappy Hub Mobile handoff is a request, not a send/completion signal.
+  const copyPrompt = window.Chappy.handoff.copyPrompt('続けてー');
+  let cmd = sent.at(-1);
+  assert.equal(cmd.method, 'handoff.copyPrompt');
+  assert.equal(cmd.params.text, '続けてー');
+  assert.equal([...timers.values()].filter(x => x.ms === 12000).length, 0);
+  window.__chappyResolve({requestId: cmd.requestId, ok: true, value: {status:'copied'}});
+  assert.equal((await copyPrompt).status, 'copied');
+  const sharePrompt = window.Chappy.handoff.sharePrompt('動作確認');
+  cmd = sent.at(-1);
+  assert.equal(cmd.method, 'handoff.sharePrompt');
+  assert.equal(cmd.params.text, '動作確認');
+  window.__chappyResolve({requestId: cmd.requestId, ok: true, value: {status:'chooser_opened'}});
+  assert.equal((await sharePrompt).status, 'chooser_opened');
+  const openChat = window.Chappy.handoff.openChatGPT();
+  cmd = sent.at(-1);
+  assert.equal(cmd.method, 'handoff.openChatGPT');
+  assert.equal(Object.keys(cmd.params).length, 0);
+  window.__chappyResolve({requestId: cmd.requestId, ok: true, value: {status:'cancelled'}});
+  assert.equal((await openChat).status, 'cancelled');
+  assert.equal(timers.size, 0, 'Handoff must not leave hanging timers');
+  console.log('Bridge smoke tests passed: Hub Mobile handoff + HTTPS/WSS + motion/haptics');
 })().catch(err => { console.error(err); process.exit(1); });
