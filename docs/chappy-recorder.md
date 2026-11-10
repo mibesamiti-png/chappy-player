@@ -40,3 +40,10 @@ The video bridge requires a compatible new Chappy Player Debug APK for `video.st
 - Recorder's `説明 ON/OFF` is part of the bottom `スマート録画・確認設定` panel, not beside the `DEBUG` label. The separate Chappy Apps catalog description switch remains in the catalog header.
 - Start buttons no longer stay disabled solely because the asynchronous motion capability/status probe has not completed. If the host cannot confirm smart recording support, a deliberate tap opens the settings and gives a clear message to update the Debug APK or explicitly select normal recording; it does not silently start an always-recording session.
 - Android camera/mic/notification permissions and owner-confirmation controls are unchanged. Android on-device successful capture is *not* yet verified; do not mark the Stable channel ready. Source-only unit tests are not proof of camera support.
+
+## CAMREC-16: 画面OFF録画の通知にスマート一時停止状態を反映
+
+- Androidの録画中通知は録画中 `Chappy Recorder — 録画中`、動き検知でCameraX保存を停止した間は `Chappy Recorder — 一時停止中` に切り替える。動きが戻って録画再開すれば録画中へ戻す。
+- 更新はモーション検知の実際のpause/resume遷移時だけ。毎フレーム通知を出し直さない。通常録画・暗転録画のUI通知は対象外。
+- 通知の `録画を停止` アクション、カメラ/マイクのAndroidプライバシー表示、FGSは一時停止中も継続する。録画開始の本人操作は引き続き必要。
+- source-only/Android CI と実機QAは区別。実機では静止5秒・動作再開・通知停止でのファイル確定を確認。
