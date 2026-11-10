@@ -15,6 +15,10 @@ on:
       - 'test/network_diagnostic_page_widget_test.dart'
       - 'sample_apps/browser_lab/**'
       - 'tools/test_network_r7_boundary.py'
+      # Kotlin CameraX / foreground-service source must compile on PRs too.
+      - 'tools/android/**'
+      - 'tools/patch_android.py'
+      - 'sample_apps/video_recorder/**'
   push:
     branches: [main]
     paths:

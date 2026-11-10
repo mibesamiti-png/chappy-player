@@ -25,7 +25,12 @@ for text in (
     "ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA",
     "ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE",
     "startForeground(NOTICE_ID, ongoingNotification(), type)",
-    "NativeVideoRecorder(this, onFinalized = { finishRecording() })",
+    "onFinalized = { finishRecording() }",
+    "onMotionPausedChanged = { paused -> updateMotionNotification(paused) }",
+    "private fun updateMotionNotification(paused: Boolean)",
+    ".notify(NOTICE_ID, ongoingNotification(paused))",
+    "Chappy Recorder — 一時停止中",
+    "動くと自動再開します",
     "stopForeground(STOP_FOREGROUND_REMOVE)",
     "ChappyRecordingStopReceiver",
     "PendingIntent.getBroadcast",
@@ -82,5 +87,11 @@ for perm in ("FOREGROUND_SERVICE_CAMERA", "FOREGROUND_SERVICE_MICROPHONE",
 assert "private val context: Context" in recorder
 assert "private val onFinalized: (() -> Unit)?" in recorder
 assert "onFinalized?.invoke()" in recorder
+assert "onMotionPausedChanged: ((Boolean) -> Unit)?" in recorder
+assert "onMotionPausedChanged?.invoke(true)" in recorder
+assert "onMotionPausedChanged?.invoke(false)" in recorder
+assert recorder.index("recording?.pause()") < recorder.index("onMotionPausedChanged?.invoke(true)")
+assert recorder.index("recording?.resume()") < recorder.index("onMotionPausedChanged?.invoke(false)")
+assert service.count('"録画を停止"') == 1, "Stop action must remain available in both notification states"
 assert "CameraX" in recorder
 print("CAMREC-14 static camera FGS / notification / consent / lifecycle contract passed")

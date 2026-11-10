@@ -28,6 +28,10 @@ assert 'id="smartSettingsPanel" hidden' in html
 assert 'id="toggleSmartSettings"' in html
 assert html.index('id="toggleLibrary"') < html.index('id="toggleSmartSettings"')
 assert 'id="toggleExplanations"' in html
+assert html.index('id="smartSettingsPanel"') < html.index('id="toggleExplanations"')
+assert html.index('id="toggleExplanations"') < html.index('id="footerExplanation"')
+assert "$('recordDark').disabled = busy || !video;" in html
+assert 'smartExpanded = true;' in html
 assert 'explanationIds' in html
 assert "aria-pressed" in html
 assert "'recordExplanation'" in html and "'screenOffHint'" in html

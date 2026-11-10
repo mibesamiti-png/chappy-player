@@ -16,6 +16,10 @@ assert(source.includes('id="toggleSmartSettings"') &&
        source.includes('id="confirmEachRecording"'));
 assert(source.indexOf('id="toggleLibrary"') < source.indexOf('id="toggleSmartSettings"'),
   'Smart recording settings should appear after the private library');
+assert(source.indexOf('id="smartSettingsPanel"') < source.indexOf('id="toggleExplanations"'),
+  'Recorder explanations toggle must be in smart recording/confirmation settings');
+assert(source.indexOf('id="toggleExplanations"') < source.indexOf('</section>\n<p class="hint explanation" id="footerExplanation"'),
+  'Recorder explanations toggle must not be in the DEBUG header');
 assert(source.includes('id="motionMode"') && source.includes('id="motionIdle"') &&
        source.includes('id="motionSensitivity"') && source.includes('id="motionFeedback"'));
 assert(!/<script[^>]+src=|https:\/\/.*\.js/.test(source), 'mini app must be offline');
@@ -103,6 +107,10 @@ const click = async id => {
   await callback();await settle();
 };
 (async()=>{
+  assert.equal(get('recordDark').disabled,false,
+    'Start stays tappable while capability status is still loading');
+  assert.equal(get('recordScreenOff').disabled,false,
+    'Screen-off Start stays tappable and must explain unsupported hosts on tap');
   await settle();
   assert.equal(get('freeSpace').textContent,'32.0 GB');
   assert.equal(get('totalSpace').textContent,'全容量：128.0 GB');

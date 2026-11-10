@@ -76,7 +76,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
 <body>
 <main>
 <header>
-  <div class="brand"><div class="logo" aria-hidden="true">●</div><div><h1>Chappy Recorder</h1><div class="eyebrow-row"><span class="eyebrow">PRIVATE VIDEO STUDIO · DEBUG</span><button id="toggleExplanations" type="button" class="secondary help-toggle" aria-pressed="true">説明 ON</button></div></div></div>
+  <div class="brand"><div class="logo" aria-hidden="true">●</div><div><h1>Chappy Recorder</h1><div class="eyebrow-row"><span class="eyebrow">PRIVATE VIDEO STUDIO · DEBUG</span></div></div></div>
   <span class="badge" id="hostStatus">接続確認中</span>
 </header>
 
@@ -168,6 +168,10 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   <p id="motionHostHint" class="hint explanation">対応するChappy Player Debug本体で利用できます。既存本体でも通常録画は使えます。</p>
   <label class="audio-line"><input type="checkbox" id="confirmEachRecording" checked disabled>毎回「今回の録画を許可」を確認する</label>
   <p class="hint explanation" id="confirmationHint">初期設定では毎回確認します。省略に変更する際は本体側で一度だけ確認し、Androidの権限確認は引き続き行います。</p>
+  <div class="row" style="margin-top:10px;justify-content:space-between">
+    <span class="hint">各機能の説明文を表示</span>
+    <button id="toggleExplanations" type="button" class="secondary help-toggle" aria-pressed="true">説明 ON</button>
+  </div>
   </section>
   <p id="motionFeedback" aria-live="polite"></p>
 </section>
@@ -219,10 +223,10 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   function updateControls() {
     const busy = recording || starting || stopping;
     controlIds.forEach(id => { $(id).disabled = busy; });
-    $('recordDark').disabled = busy || !video ||
-      ($('motionMode').value !== 'normal' && !motionSupported);
-    $('recordScreenOff').disabled = busy || !video || !screenOffSupported ||
-      ($('motionMode').value !== 'normal' && !motionSupported);
+    // Never silently disable Start while the asynchronous capability check runs.
+    // An unsupported smart mode is explained by startDarkRecording instead.
+    $('recordDark').disabled = busy || !video;
+    $('recordScreenOff').disabled = busy || !video;
     $('recordStop').disabled = !recording || stopping || !video;
     $('confirmEachRecording').disabled = busy || savingConfirmation || !askPrefSupported;
     $('recordDot').className = recording || stopping ? 'dot active' : 'dot';
@@ -460,8 +464,15 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     notify('');
     try {
       const mode = $('motionMode').value;
+      if (screenOff && !screenOffSupported) {
+        throw new Error('画面OFF録画には対応する新しいChappy Player Debug本体（Android 11以降）が必要です。Debug APKを更新してください。');
+      }
       if (mode !== 'normal' && !motionSupported) {
-        throw new Error('スマート録画には更新されたChappy Player Debug本体が必要です');
+        smartExpanded = true;
+        $('smartSettingsPanel').hidden = false;
+        $('toggleSmartSettings').textContent = '設定を閉じる';
+        $('toggleSmartSettings').setAttribute('aria-expanded', 'true');
+        throw new Error('スマート録画の対応を確認できません。Chappy Player Debug本体を更新するか、この設定で「通常録画」を選んで再度開始してください。');
       }
       const options = {
         lens, quality: $('videoQuality').value,
@@ -608,7 +619,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   void loadConfirmationPreference();
   void refreshCapacity();
   if (video) void pollStatus();
-  else notify('録画・容量取得に対応した新しいChappy Player Debug APKが必要です。', true);
+  else notify('録画を開始するには対応するChappy Player Debug APKの更新が必要です。', true);
 })();
 </script>
 </body>

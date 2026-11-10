@@ -199,21 +199,21 @@ jobs:
         run: python3 tools/test_recorder_ux_contract.py
       - name: Chappy Recorder mini-app smoke test
         run: node tools/test_chappy_recorder.js
-      - name: Package compact Chappy Recorder v0.1.6 private Debug preview
+      - name: Package Chappy Recorder v0.1.7 private CAMREC-16 Debug preview
         run: |
           python3 tools/pack_html_chappy.py \
             --source sample_apps/video_recorder \
             --id local.chappy.recorder \
             --name "Chappy Recorder" \
-            --version 0.1.6 \
+            --version 0.1.7 \
             --permission camera --permission microphone \
-            --output build/chappy-recorder-compact-v0.1.6.chappy
-          python3 -c "import json,zipfile; z=zipfile.ZipFile('build/chappy-recorder-compact-v0.1.6.chappy'); m=json.loads(z.read('manifest.json')); assert m['id']=='local.chappy.recorder' and m['version']=='0.1.6' and m['permissions']==['camera','microphone']"
-      - name: Upload Recorder v0.1.6 private Debug QA preview (not public)
+            --output build/chappy-recorder-camrec16-v0.1.7.chappy
+          python3 -c "import json,zipfile; z=zipfile.ZipFile('build/chappy-recorder-camrec16-v0.1.7.chappy'); m=json.loads(z.read('manifest.json')); assert m['id']=='local.chappy.recorder' and m['version']=='0.1.7' and m['permissions']==['camera','microphone']"
+      - name: Upload Recorder v0.1.7 private Debug QA preview (not public)
         uses: actions/upload-artifact@v4
         with:
-          name: chappy-recorder-compact-v0.1.6-private-preview
-          path: build/chappy-recorder-compact-v0.1.6.chappy
+          name: chappy-recorder-camrec16-v0.1.7-private-preview
+          path: build/chappy-recorder-camrec16-v0.1.7.chappy
           if-no-files-found: error
       - name: Device Lab motion and haptics smoke test
         run: node tools/test_device_lab.js
