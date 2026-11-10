@@ -109,6 +109,8 @@ const click = async id => {
 (async()=>{
   assert.equal(get('recordDark').disabled,false,
     'Start stays tappable while capability status is still loading');
+  assert.equal(get('recordScreenOff').disabled,false,
+    'Screen-off Start stays tappable and must explain unsupported hosts on tap');
   await settle();
   assert.equal(get('freeSpace').textContent,'32.0 GB');
   assert.equal(get('totalSpace').textContent,'全容量：128.0 GB');
