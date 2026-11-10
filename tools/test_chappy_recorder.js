@@ -7,6 +7,7 @@ assert(source.includes('Chappy Recorder'));
 assert(source.includes('id="lensBack"') && source.includes('id="lensFront"'));
 assert(source.includes('id="freeSpace"') && source.includes('id="totalSpace"'));
 assert(source.includes('id="recordDark"') && source.includes('id="toggleLibrary"'));
+assert(source.includes('id="recordScreenOff"'));
 assert(source.includes('id="motionMode"') && source.includes('id="motionIdle"') &&
        source.includes('id="motionSensitivity"') && source.includes('id="motionFeedback"'));
 assert(!/<script[^>]+src=|https:\/\/.*\.js/.test(source), 'mini app must be offline');
@@ -47,16 +48,18 @@ get('libraryPanel').hidden = true;
 const docCallbacks = new Map();
 const winCallbacks = new Map();
 const log = {start:[],stop:0,dark:[],list:0,open:[],export:[],backup:0,restore:0,delete:[],storage:0};
-let current='idle', removed=false;
+let current='idle', removed=false, background=false;
 let motionStatus='monitoring';
 const video = {
   async storageInfo(){log.storage++;return {totalBytes:128000000000,availableBytes:32000000000}},
-  async start(options){log.start.push({...options});current='recording';return {state:'starting'}},
+  async start(options){log.start.push({...options});current='recording';
+    background = options.screenOff===true;return {state:'starting',background}},
   async status(){return {state:current,elapsedMs:4500,storage:'private',
     fileName:current==='idle'?'Chappy_20261106_123456_001.mp4':'',bytes:150000,
-    motionMode:'normal', motionStatus, motionScore:12}},
+    motionMode:'normal', motionStatus, motionScore:12,
+    backgroundSupported:true,background}},
   async dark(value){log.dark.push(value);return true},
-  async stop(){log.stop++;current='idle';return {state:'stopping'}},
+  async stop(){log.stop++;current='idle';background=false;return {state:'stopping'}},
   async list(){log.list++;return removed?[]:[{
     id:'Chappy_20261106_123456_001.mp4',bytes:6000000,createdMs:Date.now()}]},
   async open(id){log.open.push(id);return true},
@@ -95,7 +98,7 @@ const click = async id => {
   await click('recordDark');
   assert.deepEqual(JSON.parse(JSON.stringify(log.start[0])),
     {lens:'front',quality:'1080',storage:'gallery',audio:true,
-      motion:{mode:'normal',idleSeconds:60,sensitivity:40}});
+      motion:{mode:'normal',idleSeconds:60,sensitivity:40},screenOff:false});
   assert.deepEqual(log.dark,[true]);
   assert.equal(get('recordDark').disabled,true);
   assert.equal(get('recordStop').disabled,false);
@@ -132,7 +135,7 @@ const click = async id => {
   await click('recordDark');
   assert.deepEqual(JSON.parse(JSON.stringify(log.start[1])),
     {lens:'front',quality:'1080',storage:'private',audio:false,
-      motion:{mode:'normal',idleSeconds:60,sensitivity:40}});
+      motion:{mode:'normal',idleSeconds:60,sensitivity:40},screenOff:false});
   await winCallbacks.get('chappy-native-video-started')();
   await settle();
   assert.equal(get('recordStop').disabled,false);
@@ -157,5 +160,23 @@ const click = async id => {
   get('motionMode').callback('change')();
   await click('recordDark');
   assert.equal(log.start[3].motion.mode,'stop');
-  console.log('Chappy Recorder passed: existing recording, smart pause/stop options, status and offline controls');
+  await click('recordStop');
+  get('motionMode').value='normal';
+  get('motionMode').callback('change')();
+  assert.equal(get('recordScreenOff').disabled,false);
+  await click('recordScreenOff');
+  assert.equal(log.start[4].screenOff,true);
+  assert.equal(log.dark.length,4,'Screen-off recording should not force dark overlay');
+  const stopsBeforeBackground = log.stop;
+  docCallbacks.get('visibilitychange')();
+  await settle();
+  assert.equal(log.stop,stopsBeforeBackground,
+    'Explicit background service must not be stopped by page hide');
+  winCallbacks.get('pagehide')();
+  await settle();
+  assert.equal(log.stop,stopsBeforeBackground,
+    'Explicit background service must not be stopped by page navigation');
+  await click('recordStop');
+  assert.equal(log.stop,stopsBeforeBackground+1);
+  console.log('Chappy Recorder passed: native screen-off opt-in, notification-mode lifecycle, motion and normal capture');
 })().catch(e=>{console.error(e);process.exit(1)});
