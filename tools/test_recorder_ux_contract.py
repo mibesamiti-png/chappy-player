@@ -7,6 +7,7 @@ def read(path): return (ROOT / path).read_text(encoding="utf-8")
 html = read("sample_apps/video_recorder/index.html")
 runner = read("lib/screens/app_runner_page.dart")
 native = read("tools/android/MainActivity.kt")
+native_prefs = read("tools/android/RecorderConfirmationPreferences.kt")
 recorder = read("tools/android/NativeVideoRecorder.kt")
 service = read("tools/android/ChappyCameraService.kt")
 bridge = read("lib/core/local_app_server.dart")
@@ -32,7 +33,10 @@ assert "'readRecorderConfirmPreference'" in runner
 assert "'writeRecorderConfirmPreference'" in runner
 assert "'readRecorderConfirmPreference'" in native
 assert "'writeRecorderConfirmPreference'" in native
-assert 'getBoolean("ask_every_time", true)' in native
+assert 'getBoolean(KEY, true)' in native_prefs
+assert 'getSharedPreferences' in native_prefs
+assert 'RecorderConfirmationPreferences.askEveryTime(this)' in native
+assert 'RecorderConfirmationPreferences.save(this, ask)' in native
 assert 'widget.app.id != \'local.chappy.recorder\'' in runner
 assert "showDialog<bool>" in runner
 assert "毎回の録画確認を省略" in runner
