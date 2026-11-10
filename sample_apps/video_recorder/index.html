@@ -13,7 +13,10 @@ header{display:flex;justify-content:space-between;align-items:center;gap:8px;mar
 .brand{display:flex;align-items:center;gap:12px}
 .logo{display:grid;place-items:center;width:43px;height:43px;border-radius:15px;background:#26395a;border:1px solid #3c5275;font-size:24px}
 h1{font-size:22px;letter-spacing:-.5px;margin:0}
-.eyebrow{font-size:11px;color:#9aa9c5;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
+.eyebrow{font-size:11px;color:#9aa9c5;letter-spacing:.15em;text-transform:uppercase}
+.eyebrow-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:3px}
+button.help-toggle{padding:3px 7px;min-height:26px;font-size:11px;border-radius:8px;white-space:nowrap}
+.explanation[hidden]{display:none}
 .badge{font-size:12px;background:#1a293f;border:1px solid #344761;border-radius:99px;padding:7px 11px;color:#b6c8e5}
 .card{background:#171f30ee;border:1px solid #31405b;border-radius:19px;padding:18px;margin-bottom:14px;box-shadow:0 12px 26px #04070f2b}
 .card h2{font-size:13px;color:#b7c5db;font-weight:600;margin:0 0 12px;letter-spacing:.02em}
@@ -73,7 +76,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
 <body>
 <main>
 <header>
-  <div class="brand"><div class="logo" aria-hidden="true">●</div><div><h1>Chappy Recorder</h1><div class="eyebrow">PRIVATE VIDEO STUDIO · DEBUG</div></div></div>
+  <div class="brand"><div class="logo" aria-hidden="true">●</div><div><h1>Chappy Recorder</h1><div class="eyebrow-row"><span class="eyebrow">PRIVATE VIDEO STUDIO · DEBUG</span><button id="toggleExplanations" type="button" class="secondary help-toggle" aria-pressed="true">説明 ON</button></div></div></div>
   <span class="badge" id="hostStatus">接続確認中</span>
 </header>
 
@@ -107,10 +110,10 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
 <section class="card">
   <button id="recordDark" class="primary" type="button">● 暗転モードで録画</button>
   <button id="recordScreenOff" class="primary" type="button" style="margin-top:9px" disabled>● 画面OFFでも録画を続ける（通知から停止）</button>
-  <p class="hint" id="screenOffHint">Android 11以降の新しいプレイヤー本体と通知権限が必要です。録画開始後、電源ボタンで画面を消せます。OSのカメラ表示は無効になりません。</p>
+  <p class="hint explanation" id="screenOffHint">Android 11以降の新しいプレイヤー本体と通知権限が必要です。録画開始後、電源ボタンで画面を消せます。OSのカメラ表示は無効になりません。</p>
   <div class="status-row"><span class="dot" id="recordDot" aria-hidden="true"></span><span id="captureStatus" role="status">停止中</span><span id="timer">00:00</span></div>
   <button id="recordStop" class="secondary" type="button" disabled>録画を停止する</button>
-  <p class="hint">初回は録画の確認後、黒画面に切り替わります。暗転中は音量＋で録画再開、音量－で停止。右上の点付近をダブルタップで復帰。<strong>右スワイプで輝度最大、左スワイプで輝度最低</strong>。Androidのカメラ・マイク使用表示はそのままです。</p>
+  <p class="hint explanation" id="recordExplanation">初回は録画の確認後、黒画面に切り替わります。暗転中は音量＋で録画再開、音量－で停止。右上の点付近をダブルタップで復帰。<strong>右スワイプで輝度最大、左スワイプで輝度最低</strong>。Androidのカメラ・マイク使用表示はそのままです。</p>
   <div id="message" role="status" aria-live="polite"></div>
 </section>
 
@@ -120,13 +123,13 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     <button id="toggleLibrary" class="secondary" type="button" aria-expanded="false">一覧を表示</button>
   </div>
   <section id="libraryPanel" hidden>
-    <p class="hint">このミニアプリで非公開保存した動画のみ表示します。再生・削除に加え、Androidの保存先選択画面からMP4を書き出せます（対応プレイヤーが必要）。Media Labとは保存領域が別で、ギャラリー保存は対象外です。</p>
+    <p class="hint explanation" id="libraryExplanation">このミニアプリで非公開保存した動画のみ表示します。再生・削除に加え、Androidの保存先選択画面からMP4を書き出せます（対応プレイヤーが必要）。Media Labとは保存領域が別で、ギャラリー保存は対象外です。</p>
     <div class="row">
       <button id="refreshLibrary" class="secondary" type="button">一覧を更新</button>
       <button id="backupVideos" class="secondary" type="button">非公開動画をまとめてZIP保存</button>
       <button id="restoreVideos" class="secondary" type="button">バックアップZIPから復元</button>
     </div>
-    <p class="hint">このミニアプリ内の動画をまとめてバックアップします（最大100本・合計4GiB）。保存先は自分で選択。バックアップしても元の動画は残ります。<strong>ZIPは暗号化されないため保存先に注意してください。</strong> 復元するZIPは読み込み前に内容を検証し、既存の録画は上書きしません。 対応する新しいプレイヤー本体が必要です。</p>
+    <p class="hint explanation" id="backupExplanation">このミニアプリ内の動画をまとめてバックアップします（最大100本・合計4GiB）。保存先は自分で選択。バックアップしても元の動画は残ります。<strong>ZIPは暗号化されないため保存先に注意してください。</strong> 復元するZIPは読み込み前に内容を検証し、既存の録画は上書きしません。 対応する新しいプレイヤー本体が必要です。</p>
     <div id="libraryList"></div>
   </section>
 </section>
@@ -136,7 +139,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     <button id="toggleSmartSettings" class="secondary" type="button" aria-controls="smartSettingsPanel" aria-expanded="false">設定を表示</button>
   </div>
   <section id="smartSettingsPanel" hidden>
-  <p class="hint">標準：動き検知で保存を一時停止／5秒後／感度40%</p>
+  <p class="hint explanation" id="smartDefaultExplanation">標準：動き検知で保存を一時停止／5秒後／感度40%</p>
   <label class="field">録画モード
     <select id="motionMode">
       <option value="normal">通常録画（常に保存）</option>
@@ -160,15 +163,15 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
         <input id="motionSensitivity" type="range" min="0" max="100" step="10" value="40">
       </label>
     </div>
-    <p class="hint">明るさの一様な変化を補正して映像の変化を検知します。誤検知や見逃しの可能性があります。静止中も再検知のためカメラはONのままです。</p>
+    <p class="hint explanation" id="motionExplanation">明るさの一様な変化を補正して映像の変化を検知します。誤検知や見逃しの可能性があります。静止中も再検知のためカメラはONのままです。</p>
   </div>
-  <p id="motionHostHint" class="hint">対応するChappy Player Debug本体で利用できます。既存本体でも通常録画は使えます。</p>
+  <p id="motionHostHint" class="hint explanation">対応するChappy Player Debug本体で利用できます。既存本体でも通常録画は使えます。</p>
   <label class="audio-line"><input type="checkbox" id="confirmEachRecording" checked disabled>毎回「今回の録画を許可」を確認する</label>
-  <p class="hint" id="confirmationHint">初期設定では毎回確認します。省略に変更する際は本体側で一度だけ確認し、Androidの権限確認は引き続き行います。</p>
+  <p class="hint explanation" id="confirmationHint">初期設定では毎回確認します。省略に変更する際は本体側で一度だけ確認し、Androidの権限確認は引き続き行います。</p>
   </section>
   <p id="motionFeedback" aria-live="polite"></p>
 </section>
-<p class="hint">暗転モードでは画面ONのままです。画面OFF録画モードのみ録画中通知から停止できます。非公開動画はアプリデータ削除・アンインストールで消えるため、重要な動画に注意してください。</p>
+<p class="hint explanation" id="footerExplanation">暗転モードでは画面ONのままです。画面OFF録画モードのみ録画中通知から停止できます。非公開動画はアプリデータ削除・アンインストールで消えるため、重要な動画に注意してください。</p>
 </main>
 <script>
 (function () {
@@ -190,6 +193,15 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   let smartExpanded = false;
   let askPrefSupported = false;
   let savingConfirmation = false;
+  let showExplanations = true;
+  const explanationIds = ['screenOffHint', 'recordExplanation',
+    'libraryExplanation', 'backupExplanation', 'smartDefaultExplanation',
+    'motionExplanation', 'motionHostHint', 'confirmationHint', 'footerExplanation'];
+  function updateExplanations() {
+    explanationIds.forEach(id => { $(id).hidden = !showExplanations; });
+    $('toggleExplanations').textContent = showExplanations ? '説明 ON' : '説明 OFF';
+    $('toggleExplanations').setAttribute('aria-pressed', String(showExplanations));
+  }
   const controlIds = ['lensBack', 'lensFront', 'videoQuality', 'videoStorage', 'videoAudio',
     'motionMode', 'motionIdle', 'motionSensitivity'];
   const setText = (id, value) => { $(id).textContent = value; };
@@ -490,6 +502,10 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     finally { stopping = false; updateControls(); }
   }
 
+  $('toggleExplanations').addEventListener('click', () => {
+    showExplanations = !showExplanations;
+    updateExplanations();
+  });
   $('toggleSmartSettings').addEventListener('click', () => {
     smartExpanded = !smartExpanded;
     $('smartSettingsPanel').hidden = !smartExpanded;
@@ -587,6 +603,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     if (timer !== null) clearInterval(timer);
     if (recording && video && !screenOffSession) void video.stop().catch(() => {});
   });
+  updateExplanations();
   updateMotionOptions();
   void loadConfirmationPreference();
   void refreshCapacity();
