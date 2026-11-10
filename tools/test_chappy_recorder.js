@@ -8,6 +8,14 @@ assert(source.includes('id="lensBack"') && source.includes('id="lensFront"'));
 assert(source.includes('id="freeSpace"') && source.includes('id="totalSpace"'));
 assert(source.includes('id="recordDark"') && source.includes('id="toggleLibrary"'));
 assert(source.includes('id="recordScreenOff"'));
+assert(source.includes('id="toggleExplanations"') &&
+       source.includes('id="recordExplanation"') &&
+       source.includes('id="screenOffHint"'));
+assert(source.includes('id="toggleSmartSettings"') &&
+       source.includes('id="smartSettingsPanel"') &&
+       source.includes('id="confirmEachRecording"'));
+assert(source.indexOf('id="toggleLibrary"') < source.indexOf('id="toggleSmartSettings"'),
+  'Smart recording settings should appear after the private library');
 assert(source.includes('id="motionMode"') && source.includes('id="motionIdle"') &&
        source.includes('id="motionSensitivity"') && source.includes('id="motionFeedback"'));
 assert(!/<script[^>]+src=|https:\/\/.*\.js/.test(source), 'mini app must be offline');
@@ -41,16 +49,24 @@ const get = id => {
 get('videoQuality').value = '720';
 get('videoStorage').value = 'private';
 get('videoAudio').checked = true;
-get('motionMode').value = 'normal';
-get('motionIdle').value = '60';
+get('motionMode').value = 'pause';
+get('motionIdle').value = '5';
 get('motionSensitivity').value = '40';
 get('libraryPanel').hidden = true;
+get('smartSettingsPanel').hidden = true;
+get('confirmEachRecording').checked = true;
 const docCallbacks = new Map();
 const winCallbacks = new Map();
-const log = {start:[],stop:0,dark:[],list:0,open:[],export:[],backup:0,restore:0,delete:[],storage:0};
+const log = {start:[],stop:0,dark:[],list:0,open:[],export:[],backup:0,restore:0,
+  delete:[],storage:0,confirmReads:0,confirmWrites:[]};
+let askEveryTime = true;
 let current='idle', removed=false, background=false;
 let motionStatus='monitoring';
 const video = {
+  confirmation: {
+    async get(){log.confirmReads++;return askEveryTime},
+    async set(value){log.confirmWrites.push(value);askEveryTime=value;return value},
+  },
   async storageInfo(){log.storage++;return {totalBytes:128000000000,availableBytes:32000000000}},
   async start(options){log.start.push({...options});current='recording';
     background = options.screenOff===true;return {state:'starting',background}},
@@ -91,6 +107,29 @@ const click = async id => {
   assert.equal(get('freeSpace').textContent,'32.0 GB');
   assert.equal(get('totalSpace').textContent,'全容量：128.0 GB');
   assert.equal(get('capacityFill').style.width,'75.0%');
+  assert.equal(get('smartSettingsPanel').hidden,true);
+  assert.equal(get('motionSettings').hidden,false, 'pause is default');
+  assert.equal(get('recordExplanation').hidden,false);
+  await click('toggleExplanations');
+  assert.equal(get('recordExplanation').hidden,true);
+  assert.equal(get('screenOffHint').hidden,true);
+  assert.equal(get('toggleExplanations').getAttribute('aria-pressed'),'false');
+  await click('toggleExplanations');
+  assert.equal(get('recordExplanation').hidden,false);
+  assert.equal(get('motionMode').value,'pause');
+  assert.equal(get('motionIdle').value,'5');
+  assert.equal(get('confirmEachRecording').checked,true);
+  assert.ok(log.confirmReads>=1);
+  await click('toggleSmartSettings');
+  assert.equal(get('smartSettingsPanel').hidden,false);
+  assert.equal(get('toggleSmartSettings').getAttribute('aria-expanded'),'true');
+  get('confirmEachRecording').checked=false;
+  get('confirmEachRecording').callback('change')();
+  await settle();
+  assert.deepEqual(log.confirmWrites,[false]);
+  assert.equal(get('confirmEachRecording').checked,false);
+  await click('toggleSmartSettings');
+  assert.equal(get('smartSettingsPanel').hidden,true);
   await click('lensFront');
   assert.equal(get('lensFront').getAttribute('aria-pressed'),'true');
   get('videoQuality').value='1080';
@@ -98,7 +137,7 @@ const click = async id => {
   await click('recordDark');
   assert.deepEqual(JSON.parse(JSON.stringify(log.start[0])),
     {lens:'front',quality:'1080',storage:'gallery',audio:true,
-      motion:{mode:'normal',idleSeconds:60,sensitivity:40},screenOff:false});
+      motion:{mode:'pause',idleSeconds:5,sensitivity:40},screenOff:false});
   assert.deepEqual(log.dark,[true]);
   assert.equal(get('recordDark').disabled,true);
   assert.equal(get('recordStop').disabled,false);
@@ -135,7 +174,7 @@ const click = async id => {
   await click('recordDark');
   assert.deepEqual(JSON.parse(JSON.stringify(log.start[1])),
     {lens:'front',quality:'1080',storage:'private',audio:false,
-      motion:{mode:'normal',idleSeconds:60,sensitivity:40},screenOff:false});
+      motion:{mode:'pause',idleSeconds:5,sensitivity:40},screenOff:false});
   await winCallbacks.get('chappy-native-video-started')();
   await settle();
   assert.equal(get('recordStop').disabled,false);

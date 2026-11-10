@@ -28,6 +28,7 @@ class _ChappyCatalogPageState extends State<ChappyCatalogPage> {
   ChappyCatalog? _catalog;
   String? _error;
   String _channel = 'stable';
+  bool _showDescriptions = true;
   bool _busy = false;
   String? _downloadingId;
   int _downloaded = 0;
@@ -189,18 +190,30 @@ class _ChappyCatalogPageState extends State<ChappyCatalogPage> {
               'ZIP構造を検証し、確認後にのみ登録します。',
             ),
             const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'stable', label: Text('Stable 安定版'),
-                    icon: Icon(Icons.verified_outlined)),
-                ButtonSegment(value: 'debug', label: Text('Debug 開発版'),
-                    icon: Icon(Icons.science_outlined)),
-              ],
-              selected: {_channel},
-              onSelectionChanged: _busy ? null : (selection) {
-                setState(() => _channel = selection.first);
-              },
-            ),
+            Row(children: [
+              Expanded(child: SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'stable', label: Text('Stable 安定版'),
+                      icon: Icon(Icons.verified_outlined)),
+                  ButtonSegment(value: 'debug', label: Text('Debug 開発版'),
+                      icon: Icon(Icons.science_outlined)),
+                ],
+                selected: {_channel},
+                onSelectionChanged: _busy ? null : (selection) {
+                  setState(() => _channel = selection.first);
+                },
+              )),
+              IconButton(
+                tooltip: _showDescriptions
+                    ? '各ミニアプリの説明を非表示'
+                    : '各ミニアプリの説明を表示',
+                icon: Icon(_showDescriptions
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined),
+                onPressed: () => setState(() =>
+                    _showDescriptions = !_showDescriptions),
+              ),
+            ]),
             if (_channel == 'debug') ...[
               const SizedBox(height: 8),
               const Text('Debugは動作検証用です。正式版より不安定な場合があります。',
@@ -243,8 +256,13 @@ class _ChappyCatalogPageState extends State<ChappyCatalogPage> {
                       Text('${item.id} · v${item.version}'),
                       if (installed != null)
                         Text('インストール済み：v${installed.version}'),
-                      const SizedBox(height: 8),
-                      Text(item.description),
+                      if (_showDescriptions) ...[
+
+                        const SizedBox(height: 8),
+
+                        Text(item.description),
+
+                      ],
                       const SizedBox(height: 12),
                       Row(children: [
                         Expanded(

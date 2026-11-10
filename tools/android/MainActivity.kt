@@ -447,6 +447,21 @@ class MainActivity : FlutterActivity() {
                         nativeMic.stop()
                         result.success(true)
                     }
+                    // Recorder's host preference lives outside untrusted mini-app storage.
+                    // Flutter explicitly confirms the opt-out the first time.
+                    // Android camera/mic/notification runtime checks remain.
+                    "readRecorderConfirmPreference" -> {
+                        result.success(RecorderConfirmationPreferences.askEveryTime(this))
+                    }
+                    "writeRecorderConfirmPreference" -> {
+                        val ask = call.argument<Boolean>("askEveryTime")
+                        if (!micActivityVisible || ask == null) {
+                            result.error("RECORDER_PREFERENCE_DENIED",
+                                "Foreground player and boolean required", null)
+                        } else {
+                            result.success(RecorderConfirmationPreferences.save(this, ask))
+                        }
+                    }
                     "startNativeVideo" -> {
                         val owner = call.argument<String>("owner") ?: ""
                         val lens = call.argument<String>("lens") ?: "back"

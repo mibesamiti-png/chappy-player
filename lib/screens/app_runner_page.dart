@@ -363,7 +363,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     final motionIdleSeconds = motion?['idleSeconds'] ?? 60;
     final motionSensitivity = motion?['sensitivity'] ?? 40;
     if (!{'normal', 'pause', 'stop'}.contains(motionMode) ||
-        motionIdleSeconds is! int || motionIdleSeconds < 10 ||
+        motionIdleSeconds is! int || motionIdleSeconds < 5 ||
         motionIdleSeconds > 300 ||
         motionSensitivity is! int || motionSensitivity < 0 ||
         motionSensitivity > 100) {
@@ -392,6 +392,15 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     _videoStartPending = true;
     try {
       if (!canReuseDarkConsent) {
+        // Only the dedicated Recorder may opt out, using a preference owned
+        // by the native host (not a mini-app-provided start option).
+        final askEveryTime = widget.app.id != 'local.chappy.recorder' ||
+            (await _mediaChannel.invokeMethod<bool>(
+                'readRecorderConfirmPreference')) != false;
+        if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+          throw StateError('Recorder page no longer foreground');
+        }
+        if (askEveryTime) {
       final approved = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -418,6 +427,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           ModalRoute.of(context)?.isCurrent != true) {
         throw StateError('Video permission prompt cancelled');
       }
+        }
       }
       // Android runtime permission is checked on EVERY capture, even when the
       // one-session user confirmation is reused (revoked permissions fail).
@@ -464,6 +474,68 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     } finally {
       _videoStartPending = false;
     }
+  }
+
+  /// Host-owned user preference: mini-app storage cannot silently
+  /// modify the recording approval policy. Defaults to asking every time.
+  Future<bool> _recorderAskEveryTime() async {
+    if (widget.app.id != 'local.chappy.recorder' ||
+        !canRequestChappyMedia(widget.app.permissions, ['camera'])) {
+      throw StateError('Recorder confirmation settings unavailable');
+    }
+    final result = await _mediaChannel.invokeMethod<bool>(
+        'readRecorderConfirmPreference');
+    return result != false;
+  }
+
+  Future<bool> _setRecorderAskEveryTime(Map<String, dynamic> params) async {
+    if (!mounted || _videoStartPending || _nativeVideoActive ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        widget.app.id != 'local.chappy.recorder' ||
+        !canRequestChappyMedia(widget.app.permissions, ['camera']) ||
+        params['askEveryTime'] is! bool) {
+      throw StateError('Recorder confirmation change not permitted');
+    }
+    final requested = params['askEveryTime'] as bool;
+    final current = await _recorderAskEveryTime();
+    if (requested == current) return current;
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+      throw StateError('Recorder page no longer foreground');
+    }
+    if (!requested) {
+      // A one-time user-facing Flutter host confirmation is required to
+      // disable future repeat prompts. Never let JS opt out silently.
+      final approved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialog) => AlertDialog(
+          title: const Text('毎回の録画確認を省略'),
+          content: const Text(
+            '今後、このChappy Recorderで録画ボタンを押した際の'
+            '「今回の録画を許可」を省略します。録画開始は引き続き本人の操作が必要です。'
+            'Androidのカメラ・マイクの許可確認、使用中の緑点、画面OFF録画中の'
+            '通知と停止ボタンは維持されます。設定からいつでも元に戻せます。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('キャンセル'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('次回から省略'),
+            ),
+          ],
+        ),
+      );
+      if (approved != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        return current;
+      }
+    }
+    final saved = await _mediaChannel.invokeMethod<bool>(
+      'writeRecorderConfirmPreference', {'askEveryTime': requested});
+    if (saved != true) throw StateError('Recording confirmation setting could not be saved');
+    return requested;
   }
 
   Future<Map<String, dynamic>> _nativeVideoStatus() async {
@@ -1161,6 +1233,12 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
           break;
         case 'video.start':
           value = await _startNativeVideo(params);
+          break;
+        case 'video.confirmation.get':
+          value = await _recorderAskEveryTime();
+          break;
+        case 'video.confirmation.set':
+          value = await _setRecorderAskEveryTime(params);
           break;
         case 'video.status':
           value = await _nativeVideoStatus();

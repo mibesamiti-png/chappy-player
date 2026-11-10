@@ -203,7 +203,8 @@ print('Installed foreground CameraX video + explicit user-selected screen-off se
 # These privileged capabilities are mediated by the Flutter .chappy manifest
 # policy and first-use user approval. Motion sampling is single-shot only and
 # vibration has native rate limits. Private MP4 export requires SAF picker.
-for filename in ('NativeMiniAppDevices.kt', 'NativeVideoExport.kt',
+for filename in ('RecorderConfirmationPreferences.kt',
+                 'NativeMiniAppDevices.kt', 'NativeVideoExport.kt',
                  'NativeMiniAppDocuments.kt', 'NativeVideoZipBackup.kt',
                  'NativeVideoZipRestore.kt', 'NativeMiniAppAssets.kt',
                  'NativeNetworkDiscovery.kt', 'NativeRouterIdentity.kt',

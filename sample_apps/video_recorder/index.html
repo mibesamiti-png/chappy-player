@@ -13,18 +13,33 @@ header{display:flex;justify-content:space-between;align-items:center;gap:8px;mar
 .brand{display:flex;align-items:center;gap:12px}
 .logo{display:grid;place-items:center;width:43px;height:43px;border-radius:15px;background:#26395a;border:1px solid #3c5275;font-size:24px}
 h1{font-size:22px;letter-spacing:-.5px;margin:0}
-.eyebrow{font-size:11px;color:#9aa9c5;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
+.eyebrow{font-size:11px;color:#9aa9c5;letter-spacing:.15em;text-transform:uppercase}
+.eyebrow-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:3px}
+button.help-toggle{padding:3px 7px;min-height:26px;font-size:11px;border-radius:8px;white-space:nowrap}
+.explanation[hidden]{display:none}
 .badge{font-size:12px;background:#1a293f;border:1px solid #344761;border-radius:99px;padding:7px 11px;color:#b6c8e5}
 .card{background:#171f30ee;border:1px solid #31405b;border-radius:19px;padding:18px;margin-bottom:14px;box-shadow:0 12px 26px #04070f2b}
 .card h2{font-size:13px;color:#b7c5db;font-weight:600;margin:0 0 12px;letter-spacing:.02em}
-.capacity{display:flex;justify-content:space-between;align-items:end;gap:8px}
-.capacity strong{font-size:25px;font-variant-numeric:tabular-nums}
+.capacity-card{padding:14px 16px}
+.capacity-card h2{margin:0 0 6px}
+.capacity{display:flex;justify-content:space-between;align-items:end;gap:12px}
+.capacity strong{font-size:24px;font-variant-numeric:tabular-nums}
+.capacity .hint{font-size:11px;line-height:1.35}
+#totalSpace{white-space:nowrap;text-align:right}
+.capacity-card .meter{margin:9px 0 8px}
+.capacity-card .row{gap:8px}
+.capacity-card .row small{font-size:11px}
+.capacity-card .row button{min-height:30px}
+#smartSettingsPanel[hidden]{display:none}
+#toggleSmartSettings{min-height:38px}
+#smartHeader{align-items:center}
+#confirmationHint{margin:6px 0 0}
 small,.hint{font-size:12px;line-height:1.65;color:#95a6c1}
 .meter{height:9px;border-radius:99px;background:#303d56;overflow:hidden;margin:12px 0 8px}
 #capacityFill{width:0%;height:100%;background:linear-gradient(90deg,#6eb1f8,#82d4ca);border-radius:99px;transition:width .25s}
 button,select{font:inherit}
 button{cursor:pointer;min-height:45px;border:1px solid #455573;border-radius:12px;background:#263654;color:#f2f5ff;padding:10px 13px}
-button:focus-visible,select:focus-visible{outline:2px solid #8cbbff;outline-offset:2px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #8cbbff;outline-offset:2px}
 button:disabled{opacity:.48;cursor:not-allowed}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .lens-choice{display:grid;grid-template-columns:1fr 1fr;gap:9px}
@@ -61,15 +76,18 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
 <body>
 <main>
 <header>
-  <div class="brand"><div class="logo" aria-hidden="true">●</div><div><h1>Chappy Recorder</h1><div class="eyebrow">PRIVATE VIDEO STUDIO · DEBUG</div></div></div>
+  <div class="brand"><div class="logo" aria-hidden="true">●</div><div><h1>Chappy Recorder</h1><div class="eyebrow-row"><span class="eyebrow">PRIVATE VIDEO STUDIO · DEBUG</span><button id="toggleExplanations" type="button" class="secondary help-toggle" aria-pressed="true">説明 ON</button></div></div></div>
   <span class="badge" id="hostStatus">接続確認中</span>
 </header>
 
-<section class="card" aria-label="スマホ内部ストレージ">
+<section class="card capacity-card" aria-label="スマホ内部ストレージ">
   <h2>スマホの空き容量</h2>
-  <div class="capacity"><div><strong id="freeSpace">—</strong><div class="hint">録画に利用可能</div></div><div class="hint" id="totalSpace">全容量：—</div></div>
+  <div class="capacity">
+    <div><strong id="freeSpace">—</strong><div class="hint">録画に利用可能</div></div>
+    <small class="hint" id="totalSpace">全容量：—</small>
+  </div>
   <div class="meter" aria-label="使用中容量の割合"><div id="capacityFill"></div></div>
-  <div class="row" style="justify-content:space-between"><small>端末の内部ストレージ（プライベート保存先）</small><button class="secondary" id="refreshCapacity" type="button" style="min-height:32px;padding:4px 9px;font-size:12px">更新</button></div>
+  <div class="row" style="justify-content:space-between"><small>内部ストレージ（非公開保存先）</small><button class="secondary" id="refreshCapacity" type="button" style="padding:4px 9px;font-size:12px">更新</button></div>
 </section>
 
 <section class="card">
@@ -90,41 +108,12 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
 </section>
 
 <section class="card">
-  <h2>スマート録画（動き検知・容量節約）</h2>
-  <label class="field">録画モード
-    <select id="motionMode">
-      <option value="normal">通常録画（常に保存）</option>
-      <option value="pause">静止中は保存を一時停止・動いたら再開</option>
-      <option value="stop">静止状態が続いたら録画を終了</option>
-    </select>
-  </label>
-  <div id="motionSettings" hidden>
-    <div class="field-grid" style="margin-top:12px">
-      <label class="field">静止と判定する時間
-        <select id="motionIdle">
-          <option value="10">10秒</option>
-          <option value="30">30秒</option>
-          <option value="60" selected>1分</option>
-          <option value="120">2分</option>
-          <option value="300">5分</option>
-        </select>
-      </label>
-      <label class="field">動き検知の感度：<output id="motionSensitivityValue">40%</output>
-        <input id="motionSensitivity" type="range" min="0" max="100" step="10" value="40">
-      </label>
-    </div>
-    <p class="hint">明るさの一様な変化を補正して映像の変化を検知します。誤検知や見逃しの可能性があります。静止中も再検知のためカメラはONのままです。</p>
-  </div>
-  <p id="motionHostHint" class="hint">対応するChappy Player Debug本体で利用できます。既存本体でも通常録画は使えます。</p>
-  <p id="motionFeedback" aria-live="polite"></p>
-</section>
-<section class="card">
   <button id="recordDark" class="primary" type="button">● 暗転モードで録画</button>
   <button id="recordScreenOff" class="primary" type="button" style="margin-top:9px" disabled>● 画面OFFでも録画を続ける（通知から停止）</button>
-  <p class="hint" id="screenOffHint">Android 11以降の新しいプレイヤー本体と通知権限が必要です。録画開始後、電源ボタンで画面を消せます。OSのカメラ表示は無効になりません。</p>
+  <p class="hint explanation" id="screenOffHint">Android 11以降の新しいプレイヤー本体と通知権限が必要です。録画開始後、電源ボタンで画面を消せます。OSのカメラ表示は無効になりません。</p>
   <div class="status-row"><span class="dot" id="recordDot" aria-hidden="true"></span><span id="captureStatus" role="status">停止中</span><span id="timer">00:00</span></div>
   <button id="recordStop" class="secondary" type="button" disabled>録画を停止する</button>
-  <p class="hint">初回は録画の確認後、黒画面に切り替わります。暗転中は音量＋で録画再開、音量－で停止。右上の点付近をダブルタップで復帰。<strong>右スワイプで輝度最大、左スワイプで輝度最低</strong>。Androidのカメラ・マイク使用表示はそのままです。</p>
+  <p class="hint explanation" id="recordExplanation">初回は録画の確認後、黒画面に切り替わります。暗転中は音量＋で録画再開、音量－で停止。右上の点付近をダブルタップで復帰。<strong>右スワイプで輝度最大、左スワイプで輝度最低</strong>。Androidのカメラ・マイク使用表示はそのままです。</p>
   <div id="message" role="status" aria-live="polite"></div>
 </section>
 
@@ -134,17 +123,55 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     <button id="toggleLibrary" class="secondary" type="button" aria-expanded="false">一覧を表示</button>
   </div>
   <section id="libraryPanel" hidden>
-    <p class="hint">このミニアプリで非公開保存した動画のみ表示します。再生・削除に加え、Androidの保存先選択画面からMP4を書き出せます（対応プレイヤーが必要）。Media Labとは保存領域が別で、ギャラリー保存は対象外です。</p>
+    <p class="hint explanation" id="libraryExplanation">このミニアプリで非公開保存した動画のみ表示します。再生・削除に加え、Androidの保存先選択画面からMP4を書き出せます（対応プレイヤーが必要）。Media Labとは保存領域が別で、ギャラリー保存は対象外です。</p>
     <div class="row">
       <button id="refreshLibrary" class="secondary" type="button">一覧を更新</button>
       <button id="backupVideos" class="secondary" type="button">非公開動画をまとめてZIP保存</button>
       <button id="restoreVideos" class="secondary" type="button">バックアップZIPから復元</button>
     </div>
-    <p class="hint">このミニアプリ内の動画をまとめてバックアップします（最大100本・合計4GiB）。保存先は自分で選択。バックアップしても元の動画は残ります。<strong>ZIPは暗号化されないため保存先に注意してください。</strong> 復元するZIPは読み込み前に内容を検証し、既存の録画は上書きしません。 対応する新しいプレイヤー本体が必要です。</p>
+    <p class="hint explanation" id="backupExplanation">このミニアプリ内の動画をまとめてバックアップします（最大100本・合計4GiB）。保存先は自分で選択。バックアップしても元の動画は残ります。<strong>ZIPは暗号化されないため保存先に注意してください。</strong> 復元するZIPは読み込み前に内容を検証し、既存の録画は上書きしません。 対応する新しいプレイヤー本体が必要です。</p>
     <div id="libraryList"></div>
   </section>
 </section>
-<p class="hint">暗転中も画面の電源はONです。アプリを離れると録画を停止します。非公開動画はアプリデータ削除・アンインストールで消えるため、重要な動画に注意してください。</p>
+<section class="card" aria-label="スマート録画設定">
+  <div class="row" id="smartHeader" style="justify-content:space-between">
+    <h2 style="margin:0">スマート録画・確認設定</h2>
+    <button id="toggleSmartSettings" class="secondary" type="button" aria-controls="smartSettingsPanel" aria-expanded="false">設定を表示</button>
+  </div>
+  <section id="smartSettingsPanel" hidden>
+  <p class="hint explanation" id="smartDefaultExplanation">標準：動き検知で保存を一時停止／5秒後／感度40%</p>
+  <label class="field">録画モード
+    <select id="motionMode">
+      <option value="normal">通常録画（常に保存）</option>
+      <option value="pause" selected>静止中は保存を一時停止・動いたら再開</option>
+      <option value="stop">静止状態が続いたら録画を終了</option>
+    </select>
+  </label>
+  <div id="motionSettings" hidden>
+    <div class="field-grid" style="margin-top:12px">
+      <label class="field">静止と判定する時間
+        <select id="motionIdle">
+          <option value="5" selected>5秒</option>
+          <option value="10">10秒</option>
+          <option value="30">30秒</option>
+          <option value="60">1分</option>
+          <option value="120">2分</option>
+          <option value="300">5分</option>
+        </select>
+      </label>
+      <label class="field">動き検知の感度：<output id="motionSensitivityValue">40%</output>
+        <input id="motionSensitivity" type="range" min="0" max="100" step="10" value="40">
+      </label>
+    </div>
+    <p class="hint explanation" id="motionExplanation">明るさの一様な変化を補正して映像の変化を検知します。誤検知や見逃しの可能性があります。静止中も再検知のためカメラはONのままです。</p>
+  </div>
+  <p id="motionHostHint" class="hint explanation">対応するChappy Player Debug本体で利用できます。既存本体でも通常録画は使えます。</p>
+  <label class="audio-line"><input type="checkbox" id="confirmEachRecording" checked disabled>毎回「今回の録画を許可」を確認する</label>
+  <p class="hint explanation" id="confirmationHint">初期設定では毎回確認します。省略に変更する際は本体側で一度だけ確認し、Androidの権限確認は引き続き行います。</p>
+  </section>
+  <p id="motionFeedback" aria-live="polite"></p>
+</section>
+<p class="hint explanation" id="footerExplanation">暗転モードでは画面ONのままです。画面OFF録画モードのみ録画中通知から停止できます。非公開動画はアプリデータ削除・アンインストールで消えるため、重要な動画に注意してください。</p>
 </main>
 <script>
 (function () {
@@ -163,6 +190,18 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   let screenOffSupported = false;
   let screenOffSession = false;
   let motionErrorShown = false;
+  let smartExpanded = false;
+  let askPrefSupported = false;
+  let savingConfirmation = false;
+  let showExplanations = true;
+  const explanationIds = ['screenOffHint', 'recordExplanation',
+    'libraryExplanation', 'backupExplanation', 'smartDefaultExplanation',
+    'motionExplanation', 'motionHostHint', 'confirmationHint', 'footerExplanation'];
+  function updateExplanations() {
+    explanationIds.forEach(id => { $(id).hidden = !showExplanations; });
+    $('toggleExplanations').textContent = showExplanations ? '説明 ON' : '説明 OFF';
+    $('toggleExplanations').setAttribute('aria-pressed', String(showExplanations));
+  }
   const controlIds = ['lensBack', 'lensFront', 'videoQuality', 'videoStorage', 'videoAudio',
     'motionMode', 'motionIdle', 'motionSensitivity'];
   const setText = (id, value) => { $(id).textContent = value; };
@@ -185,6 +224,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     $('recordScreenOff').disabled = busy || !video || !screenOffSupported ||
       ($('motionMode').value !== 'normal' && !motionSupported);
     $('recordStop').disabled = !recording || stopping || !video;
+    $('confirmEachRecording').disabled = busy || savingConfirmation || !askPrefSupported;
     $('recordDot').className = recording || stopping ? 'dot active' : 'dot';
     $('hostStatus').textContent = video ? 'カメラ対応' : '本体の更新が必要';
   }
@@ -196,6 +236,44 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
       '動き検知に対応したプレイヤーです。録画中のカメラ使用表示は消えません。' :
       'スマート録画には対応する新しいChappy Player Debug本体が必要です。通常録画は引き続き使えます。');
     updateControls();
+  }
+  async function loadConfirmationPreference() {
+    const confirmation = video && video.confirmation;
+    if (!confirmation || typeof confirmation.get !== 'function' ||
+        typeof confirmation.set !== 'function') {
+      askPrefSupported = false;
+      $('confirmEachRecording').checked = true;
+      setText('confirmationHint', '確認の切り替えには新しいChappy Player Debug本体が必要です。');
+      updateControls();
+      return;
+    }
+    try {
+      const ask = await confirmation.get();
+      askPrefSupported = typeof ask === 'boolean';
+      $('confirmEachRecording').checked = ask !== false;
+      setText('confirmationHint', askPrefSupported ?
+        'OFFにする際は一度だけ本体が確認します。以後は録画ボタンから開始できます。Androidのカメラ・マイク権限と画面OFF録画の通知はそのままです。' :
+        '録画確認設定を取得できませんでした。');
+    } catch (error) {
+      askPrefSupported = false;
+      setText('confirmationHint', '本体の録画確認設定を取得できません：' +
+        String(error.message || error));
+    }
+    updateControls();
+  }
+  async function changeConfirmationPreference() {
+    if (!askPrefSupported || recording || starting || stopping || savingConfirmation) return;
+    const desired = $('confirmEachRecording').checked;
+    savingConfirmation = true; updateControls();
+    try {
+      const actual = await video.confirmation.set(desired);
+      $('confirmEachRecording').checked = actual !== false;
+    } catch (error) {
+      $('confirmEachRecording').checked = !desired;
+      notify('確認設定を変更できませんでした：' + String(error.message || error), true);
+    } finally {
+      savingConfirmation = false; updateControls();
+    }
   }
   function setLens(next) {
     if (recording || starting || stopping || !['front','back'].includes(next)) return;
@@ -424,6 +502,19 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     finally { stopping = false; updateControls(); }
   }
 
+  $('toggleExplanations').addEventListener('click', () => {
+    showExplanations = !showExplanations;
+    updateExplanations();
+  });
+  $('toggleSmartSettings').addEventListener('click', () => {
+    smartExpanded = !smartExpanded;
+    $('smartSettingsPanel').hidden = !smartExpanded;
+    $('toggleSmartSettings').textContent = smartExpanded ? '設定を閉じる' : '設定を表示';
+    $('toggleSmartSettings').setAttribute('aria-expanded', String(smartExpanded));
+  });
+  $('confirmEachRecording').addEventListener('change', () => {
+    void changeConfirmationPreference();
+  });
   $('motionMode').addEventListener('change', updateMotionOptions);
   $('motionSensitivity').addEventListener('input', updateMotionOptions);
   $('lensBack').addEventListener('click', () => setLens('back'));
@@ -512,7 +603,9 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     if (timer !== null) clearInterval(timer);
     if (recording && video && !screenOffSession) void video.stop().catch(() => {});
   });
+  updateExplanations();
   updateMotionOptions();
+  void loadConfirmationPreference();
   void refreshCapacity();
   if (video) void pollStatus();
   else notify('録画・容量取得に対応した新しいChappy Player Debug APKが必要です。', true);
