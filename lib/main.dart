@@ -108,6 +108,8 @@ class _HomePageState extends State<HomePage> {
   bool _externalQueued = false;
   static const MethodChannel _externalChannel =
       MethodChannel('dev.chappy.player/external_chappy');
+  static const MethodChannel _macroLabChannel =
+      MethodChannel('dev.chappy.player/macro_lab');
 
   @override
   void initState() {
@@ -190,6 +192,14 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     ) ?? false;
+  }
+
+  Future<void> _openMacroLab() async {
+    try {
+      await _macroLabChannel.invokeMethod<bool>('openFixture');
+    } catch (error) {
+      _notify('Macro Labを起動できません: $error');
+    }
   }
 
   Future<void> _import() async {
@@ -458,6 +468,13 @@ class _HomePageState extends State<HomePage> {
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const BrowserPage()),
           ),
+        )),
+        Card(child: ListTile(
+          key: const Key('home_macro_lab_r1'),
+          leading: const Icon(Icons.touch_app_outlined),
+          title: const Text('Chappy Macro Lab（R1実験）'),
+          subtitle: const Text('Androidユーザー補助で自作画面だけを操作・緊急停止'),
+          onTap: busy ? null : () => unawaited(_openMacroLab()),
         )),
         if (apps.isEmpty) Card(child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 32),

@@ -62,6 +62,32 @@ if not any(el.get(permission) == receiver_name for el in application.findall('re
         permission: receiver_name,
         '{%s}exported' % android_ns: 'false',
     })
+# Macro Lab R1: exported solely so Android can bind using the protected
+# accessibility-service contract. Never add a general third-party IPC handler.
+# No external app automation is exposed; Kotlin checks the active fixture.
+macro_service_name = 'dev.chappy.chappy_player.ChappyMacroAccessibilityService'
+if not any(el.get(permission) == macro_service_name for el in application.findall('service')):
+    macro_service = ET.SubElement(application, 'service', {
+        permission: macro_service_name,
+        '{%s}permission' % android_ns: 'android.permission.BIND_ACCESSIBILITY_SERVICE',
+        '{%s}exported' % android_ns: 'true',
+        '{%s}label' % android_ns: '@string/chappy_macro_service_label',
+    })
+    intent_filter = ET.SubElement(macro_service, 'intent-filter')
+    ET.SubElement(intent_filter, 'action', {
+        permission: 'android.accessibilityservice.AccessibilityService',
+    })
+    ET.SubElement(macro_service, 'meta-data', {
+        permission: 'android.accessibilityservice',
+        '{%s}resource' % android_ns: '@xml/chappy_macro_accessibility_config',
+    })
+macro_lab_name = 'dev.chappy.chappy_player.ChappyMacroLabActivity'
+if not any(el.get(permission) == macro_lab_name for el in application.findall('activity')):
+    ET.SubElement(application, 'activity', {
+        permission: macro_lab_name,
+        '{%s}exported' % android_ns: 'false',
+    })
+
 # Self-hosted/sideloaded builds only: this permission enables a user-initiated
 # Android installation confirmation; nothing is silently installed.
 if not any(el.get(permission) == 'android.permission.REQUEST_INSTALL_PACKAGES'
@@ -225,3 +251,22 @@ if not paths_src.is_file():
 paths_dst.parent.mkdir(parents=True, exist_ok=True)
 paths_dst.write_bytes(paths_src.read_bytes())
 print('Enabled user-confirmed APK update handoff via scoped FileProvider')
+
+# Install first-party-only macro fixture and system AccessibilityService.
+# This is NOT made callable via .chappy JavaScript.
+for source_name in ('ChappyMacroAccessibilityService.kt', 'ChappyMacroLabActivity.kt'):
+    source = Path('tools/android') / source_name
+    if not source.is_file():
+        raise SystemExit(f'Missing Macro Lab native class: {source_name}')
+    native_target.with_name(source_name).write_bytes(source.read_bytes())
+for source_name, destination in (
+        ('chappy_macro_accessibility_config.xml',
+         Path('android/app/src/main/res/xml/chappy_macro_accessibility_config.xml')),
+        ('chappy_macro_strings.xml',
+         Path('android/app/src/main/res/values/chappy_macro_strings.xml'))):
+    source = Path('tools/android') / source_name
+    if not source.is_file():
+        raise SystemExit(f'Missing Macro Lab resource: {source_name}')
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(source.read_bytes())
+print('Installed opt-in, self-app-only Macro Lab R1 accessibility fixture')

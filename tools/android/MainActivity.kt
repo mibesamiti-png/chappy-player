@@ -38,6 +38,7 @@ class MainActivity : FlutterActivity() {
     private val mediaChannelName = "dev.chappy.player/media_permissions"
     private val networkLabChannelName = "dev.chappy.player/network_lab"
     private val textHandoffChannelName = "dev.chappy.player/text_handoff"
+    private val macroLabChannelName = "dev.chappy.player/macro_lab"
     private val mediaPermissionRequestCode = 0x44FA
     private val nativeMic = NativeMicCapture()
     private val nativeVideo = NativeVideoRecorder(this)
@@ -221,6 +222,20 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+        // First-party Android fixture only. No untrusted mini-app JS API.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, macroLabChannelName)
+            .setMethodCallHandler { call, result ->
+                if (call.method != "openFixture") {
+                    result.notImplemented()
+                } else if (!micActivityVisible) {
+                    result.error("MACRO_NOT_FOREGROUND",
+                        "Macro Lab requires a visible Chappy Player", null)
+                } else {
+                    startActivity(Intent(this, ChappyMacroLabActivity::class.java))
+                    result.success(true)
+                }
+            }
+
         // Trusted Flutter host UI only; never exposed in the untrusted
         // .chappy JavaScript bridge. Every scan needs user confirmation in UI.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, networkLabChannelName)
