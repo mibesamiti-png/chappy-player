@@ -1,5 +1,10 @@
 # Chappy Apps 公開カタログ (Stable / Debug)
 
+## 2026-11-11：Chappy Recorder Debug v0.1.5（画面OFF録画の実機検証版）
+
+[Chappy Player PR #138](https://github.com/mibesamiti-png/chappy-player/pull/138)のAndroid camera Foreground Serviceと一致するミニアプリを[Chappy Apps PR #9](https://github.com/mibesamiti-png/chappy-apps/pull/9)で公開**Debug**に登録。v0.1.4から**v0.1.5**へ更新。公開パッケージ`debug/chappy-recorder-screenoff-v0.1.5.chappy`（SHA256 `5a9fb6821bbaa5f3e615c1b88b92ae7fc3e01a551a1090d8a2511d2ff94ec5a4`）。Stableは不変。ユーザーは新しいAndroid Debug APKが必要。画面OFF中は緑点が見えないが、録画時のAndroidカメラ使用表示と録画中通知を無効化しない。実機録画成功を断言しない。
+
+
 ## 2026-11-10：Chappy Recorder スマート録画 v0.1.4（Debug専用）
 
 Chappy Player [実装PR #136](https://github.com/mibesamiti-png/chappy-player/pull/136) でCAMREC-13-R1を実装、[Quick CI 74/74](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721111102)、[Android 3ABIビルド17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721110750)成功。公開 Chappy Apps [PR #8](https://github.com/mibesamiti-png/chappy-apps/pull/8)で `local.chappy.recorder` の**Debug**を `0.1.4` に更新、[カタログ検証7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42722599197)。公開Stableは変更なし。**Stable 2・Debug 9**のまま。
