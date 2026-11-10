@@ -1,5 +1,13 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
+## 【復旧・最新】CAMREC-14 R2：画面OFF録画コード統合済み／実機QA待ち（2026-11-11）
+
+- 途中停止したように見えた前作業を最新GitHubから再確認。**画面OFF録画PR #138は2026-11-10にmainへ既にマージ済み**（`05fba83784845e466bdd6d3d387a352a8009ff64`）。`ChappyCameraService.kt` にユーザー明示同意によるAndroid camera/mic Foreground Service、録画中のOS通知と停止アクション、`NativeVideoRecorder.kt` のCameraXサービス所有・録画確定処理がある。
+- 最新main [Quick CI #42826356725](https://github.com/mibesamiti-png/chappy-player/actions/runs/42826356725)と[Android互換APKビルド #42826356999](https://github.com/mibesamiti-png/chappy-player/actions/runs/42826356999)はともに**成功**。Android Debug成果物はARM64/ARM32/x86_64別。実機で画面OFFの撮影と通知停止が働いたことは**未検証**。結果0件、機種別確認が必要。
+- [Chappy Apps PR #9](https://github.com/mibesamiti-png/chappy-apps/pull/9)で**Chappy Recorder Debug v0.1.5**を公開ライブラリに登録済み。Stableは変更なし。本人が新版Debug APKと`Chappy Apps → Debug → 更新 → Chappy Recorder`を使用。**録画前に明示選択・許可**し、録画中は通常のAndroid通知に停止ボタンを表示。物理画面OFF中はOS緑点が視覚的に見えなくなるが、OSプライバシー監視を無効化する機能ではない。
+- 本体の古い`STATE.json`がR1/未実装を指していたため、本引き継ぎでR2のソース統合・CI・配布事実へ更新。次は`docs/camrec-14-screenoff-recorder.md`の**実機QA**（30秒〜10分/音声ON-OFF/ホーム切替/画面OFF/再点灯/通知停止/動き検知/MP4確定）を実施。**署名Stable未配布、プリ録画R3未実装**。NETLAB-06BとGame R8延期事項は保持。
+  
+
 ## 【最新】CAMREC-13-R1 スマート録画｜ソース/Androidビルド成功・実機録画未検証｜2026-11-10
 
 - ユーザー採用：「長時間録画は動きがないとき休止/終了、動いたら再開。静止時間と感度を調整」。**動き検知による録画制御R1はソース実装・CI完了**。Chappy Player [PR #136](https://github.com/mibesamiti-png/chappy-player/pull/136) → main `8c31a68e667799ef505393f621855e4a7f3d71db`。実装元HEAD `2619f911be81c8339be886439e397a17485b421c`、[Quick CI 74/74](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721111102)、[Android互換APKビルド 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721110750) **成功**（ARM64/ARM32/x86_64）。
