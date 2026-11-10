@@ -27,6 +27,10 @@ assert '#smartSettingsPanel[hidden]' in html
 assert 'id="smartSettingsPanel" hidden' in html
 assert 'id="toggleSmartSettings"' in html
 assert html.index('id="toggleLibrary"') < html.index('id="toggleSmartSettings"')
+assert 'id="toggleExplanations"' in html
+assert 'explanationIds' in html
+assert "aria-pressed" in html
+assert "'recordExplanation'" in html and "'screenOffHint'" in html
 
 # A mini-app cannot disable the host consent prompt in video.start options.
 assert "'readRecorderConfirmPreference'" in runner
