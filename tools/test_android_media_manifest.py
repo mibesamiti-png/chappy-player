@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     templates.mkdir(parents=True)
     for name in ["MainActivity.kt", "chappy_update_paths.xml",
                  "NativeMicCapture.kt", "NativeVideoRecorder.kt",
-                 "NativeMotionAnalyzer.kt",
+                 "NativeMotionAnalyzer.kt", "ChappyCameraService.kt",
                  "NativeMiniAppDevices.kt", "NativeVideoExport.kt",
                  "NativeMiniAppDocuments.kt", "NativeVideoZipBackup.kt",
                  "NativeVideoZipRestore.kt", "NativeMiniAppAssets.kt",
@@ -59,6 +59,10 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
     video_class = native_class.with_name("NativeVideoRecorder.kt")
     assert video_class.read_bytes() == (
         PROJECT / "tools/android/NativeVideoRecorder.kt"
+    ).read_bytes()
+    service_class = native_class.with_name("ChappyCameraService.kt")
+    assert service_class.read_bytes() == (
+        PROJECT / "tools/android/ChappyCameraService.kt"
     ).read_bytes()
     motion_class = native_class.with_name("NativeMotionAnalyzer.kt")
     assert motion_class.read_bytes() == (
@@ -91,10 +95,26 @@ with tempfile.TemporaryDirectory(prefix="chappy_media_manifest_") as root_name:
         "android.permission.VIBRATE",
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.CHANGE_WIFI_MULTICAST_STATE",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_CAMERA",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.POST_NOTIFICATIONS",
     ]:
         assert actual.count(permission) == 1, (permission, actual)
-    assert "android.permission.FOREGROUND_SERVICE_MICROPHONE" not in actual
-    assert "android.permission.FOREGROUND_SERVICE_CAMERA" not in actual
+    application = parsed.find("application")
+    assert application is not None
+    services = application.findall("service")
+    assert len([node for node in services
+                if node.get(ANDROID + "name") ==
+                "dev.chappy.chappy_player.ChappyCameraService" and
+                node.get(ANDROID + "exported") == "false" and
+                node.get(ANDROID + "foregroundServiceType") ==
+                "camera|microphone"]) == 1
+    receivers = application.findall("receiver")
+    assert len([node for node in receivers
+                if node.get(ANDROID + "name") ==
+                "dev.chappy.chappy_player.ChappyRecordingStopReceiver" and
+                node.get(ANDROID + "exported") == "false"]) == 1
     for name in ["android.hardware.camera.any", "android.hardware.microphone"]:
         features = [
             feature for feature in parsed.findall("uses-feature")
