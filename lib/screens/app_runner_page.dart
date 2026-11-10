@@ -363,7 +363,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     final motionIdleSeconds = motion?['idleSeconds'] ?? 60;
     final motionSensitivity = motion?['sensitivity'] ?? 40;
     if (!{'normal', 'pause', 'stop'}.contains(motionMode) ||
-        motionIdleSeconds is! int || motionIdleSeconds < 10 ||
+        motionIdleSeconds is! int || motionIdleSeconds < 5 ||
         motionIdleSeconds > 300 ||
         motionSensitivity is! int || motionSensitivity < 0 ||
         motionSensitivity > 100) {
