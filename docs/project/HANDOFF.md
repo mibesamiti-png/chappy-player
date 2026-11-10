@@ -1,5 +1,15 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
+## 【最新】CAMREC-14-R2 物理画面OFF録画｜Debug v0.1.5公開・実機カメラ未検証｜2026-11-10
+
+- ユーザーの「緑のやつ消したりするやつも続けて」要望について、**Androidのシステム緑点を消すのではなく、画面を本当にOFFにしたとき視覚的に見えなくなる画面OFF録画**を実装。画面再点灯時のAndroidプライバシー表示やカメラ履歴を無効化するコードはない。
+- ソースは[Chappy Player PR #138](https://github.com/mibesamiti-png/chappy-player/pull/138) → main `05fba83784845e466bdd6d3d387a352a8009ff64`。最終開発HEAD `0b53dacb2c7172d2c25e2230c63daefbdf598e8f` で[Quick CI 75/75](https://github.com/mibesamiti-png/chappy-player/actions/runs/42825321344)、[Android Debug 3 ABI 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42825321377) 完全成功。これは**実機で録画した証明ではない**。
+- `ChappyCameraService.kt`：ユーザーの画面前面から明示開始した時だけ `camera`（音声有効なら `microphone`）FGSを起動。Foreground ServiceのLifecycleOwnerがCameraX録画を保持。Android 13+では通知許可も要求。録画中通知には停止ボタンがあり、`VideoRecordEvent.Finalize`でMP4が確定してからFGSを終了する。非exportのサービス/Receiver、`START_NOT_STICKY`、自動起動・無断録画禁止。
+- `Chappy Recorder v0.1.5` を[公開Chappy Apps Debug PR #9](https://github.com/mibesamiti-png/chappy-apps/pull/9) → `5b814ab185dc4f7f02db7e7726eaeec2ea30e0a5` に統合。[公開カタログCI 7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42826029840)、SHA256 `5a9fb6821bbaa5f3e615c1b88b92ae7fc3e01a551a1090d8a2511d2ff94ec5a4`、27,402 bytes。**Stable 2/Debug 9本維持**。既存Debug Recorderの0.1.4を更新した。本人が Chappy Apps→Debug→更新→Chappy Recorder を選択追加し、新しいDebug APKを使う。旧本体では画面OFF録画ボタン無効。
+- 実機での**画面OFF中の映像・音声継続、録画中通知停止、MP4破損防止、Android 11〜15や機種固有省電力との相性**はまだ未検証（CAMREC-15-QA、0/9）。旧報告「アプリ起動/HTTPS通信」は今回のカメラ検証に流用しない。基本録画・動き検知R1・非公開MP4保存/復元の回帰も別途確認。
+- 詳細: [CAMREC-14設計/テスト](https://github.com/mibesamiti-png/chappy-player/blob/main/docs/camrec-14-screenoff-recorder.md)。安全な署名Stable公開は別承認。NETLAB-06BとGame R8延期の計画はSTATE内に保持する。
+
+
 ## 【最新】CAMREC-13-R1 スマート録画｜ソース/Androidビルド成功・実機録画未検証｜2026-11-10
 
 - ユーザー採用：「長時間録画は動きがないとき休止/終了、動いたら再開。静止時間と感度を調整」。**動き検知による録画制御R1はソース実装・CI完了**。Chappy Player [PR #136](https://github.com/mibesamiti-png/chappy-player/pull/136) → main `8c31a68e667799ef505393f621855e4a7f3d71db`。実装元HEAD `2619f911be81c8339be886439e397a17485b421c`、[Quick CI 74/74](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721111102)、[Android互換APKビルド 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42721110750) **成功**（ARM64/ARM32/x86_64）。
