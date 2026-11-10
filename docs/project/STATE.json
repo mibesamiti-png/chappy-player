@@ -1,29 +1,29 @@
 {
   "schemaVersion": 1,
   "project": "Chappy Player",
-  "capturedDate": "2026-11-10",
-  "sourceMainAtCapture": "a4f94b2239ce3eb3d29cc2edc26429fbaf8deb35",
+  "capturedDate": "2026-11-11",
+  "sourceMainAtCapture": "27131a0dfe0031b0803ae310d12f4bdd954b55ff",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
     "id": "CAMREC-14-R2",
-    "name": "Chappy Recorder UX v0.1.6はコード/Debug配布/CI完了。次はスマホ実機で画面OFF録画・通知停止・動き検知5秒・権限省略設定のQA",
+    "name": "CAMREC-16録画UX/通知とDebug v0.1.7は公開済み。次は実機で開始成功/5秒pause・resume/Android通知・MP4保存と権限省略を確認",
     "status": "awaiting_physical_camera_qa",
     "entry": "docs/camrec-14-screenoff-recorder.md"
   },
   "lastCompletedBatch": {
-    "id": "CAMREC-15-UX",
-    "pr": 140,
-    "mergedCommit": "a4f94b2239ce3eb3d29cc2edc26429fbaf8deb35",
-    "sourceStatus": "merged_recording_ux_defaults_preferences_debug_catalog_verified_physical_not_run",
+    "id": "CAMREC-16",
+    "pr": 142,
+    "mergedCommit": "27131a0dfe0031b0803ae310d12f4bdd954b55ff",
+    "sourceStatus": "merged_recorder_help_settings_start_feedback_and_motion_pause_notification_ci_success_physical_qa_pending",
     "quickCi": {
       "status": "success",
-      "run": 42872432652,
+      "run": 42876978962,
       "successfulSteps": 76
     },
     "androidCompatibilityCi": {
       "status": "success",
-      "run": 42872432385,
+      "run": 42876978926,
       "successfulSteps": 17,
       "abi": [
         "arm64-v8a",
@@ -34,15 +34,15 @@
     },
     "debugCatalog": {
       "repo": "mibesamiti-png/chappy-apps",
-      "pr": 10,
-      "mergedCommit": "104c1fd1f8e336a52aebd4c8faca2d64b169686e",
+      "pr": 11,
+      "mergedCommit": "1dd3736f7eb0e19bee47438bb757bafe0f708d31",
       "status": "success",
-      "validationRun": 42872700793,
+      "validationRun": 42878670602,
       "validationSteps": 7,
       "channel": "debug",
-      "recorderVersion": "0.1.6",
-      "sha256": "cae89142d613af8fbf7118749ccdc924af1951902663452797f238bb9e06dc1e",
-      "bytes": 32525,
+      "recorderVersion": "0.1.7",
+      "sha256": "5a18b751848a09fbfc5cbadda7d7ff795b6b2635616d8f621f97e30c57a9440d",
+      "bytes": 33228,
       "stableCount": 2,
       "debugCount": 9
     },
@@ -50,7 +50,7 @@
       "status": "not_run",
       "casesPassed": 0
     },
-    "qualification": "Recorder UX revision: default motion pause/resume with 5s threshold; compact capacity card; smart settings moved below private video library and collapsed; confirmation askEveryTime host-owned persistent preference default true, user can opt out with one explicit host confirmation. Android camera/mic/notification runtime permission checks, camera privacy indicator and foreground service stop notification remain. Recorder DEBUG header help toggle, Chappy Apps Debug/Stable descriptions toggle. Source Quick CI 76/76 and Android 3 ABI build 17/17 pass. Public Debug Recorder v0.1.6 catalog validator 7/7. Android physical motion/screen-off and saved media QA NOT RUN. Signed Stable untouched."
+    "qualification": "Moved Recorder explanations toggle into collapsible bottom smart recording/confirmation settings. Chappy Apps catalog toggle unchanged. Start buttons are no longer silently disabled during capability probing; unsupported host shows actionable error. Motion pause/resume transitions update explicit Android screen-off camera notification title, preserving stop action and OS privacy indicator. Quick76/76 Android17/17 Catalog7/7 pass, real camera recording start and pause/resume NOT confirmed on device, Stable unchanged."
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -824,6 +824,27 @@
         "Chappy Apps Debug/Stable catalog"
       ],
       "physicalDeviceStatus": "not_run",
+      "stableRelease": "unchanged"
+    },
+    "camrec16": {
+      "status": "source_and_public_debug_catalog_merged_ci_pass_physical_qa_not_run",
+      "sourcePullRequest": 142,
+      "sourceMergedCommit": "27131a0dfe0031b0803ae310d12f4bdd954b55ff",
+      "quickCiRun": 42876978962,
+      "quickCiPassedSteps": 76,
+      "androidBuildRun": 42876978926,
+      "androidPassedSteps": 17,
+      "catalogPullRequest": 11,
+      "catalogMergedCommit": "1dd3736f7eb0e19bee47438bb757bafe0f708d31",
+      "catalogValidationRun": 42878670602,
+      "recorderDebugVersion": "0.1.7",
+      "explanationToggle": "inside_collapsed_recorder_smart_settings",
+      "appCatalogExplanationToggle": "unchanged",
+      "startButton": "tappable_but_not_guaranteed_recording; actionable_unsupported_host_error",
+      "screenOffNotification": "motion-paused_title_then_recording_on_resume",
+      "permissions": "OS_mandatory_and_host_consent_user_selectable",
+      "knownUserFailure": "User reported pressing Start did not start recording before CAMREC-16; actual Android camera failure cause unconfirmed",
+      "physicalRecorderQA": "not_run",
       "stableRelease": "unchanged"
     }
   },

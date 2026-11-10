@@ -1,5 +1,16 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
+## 【最新】CAMREC-16 Debug v0.1.7（2026-11-11）— ソース/公開Debug統合、実機録画は未検証
+
+- **再引き継ぎで検証**：Chappy Player [PR #142](https://github.com/mibesamiti-png/chappy-player/pull/142) は main `27131a0dfe0031b0803ae310d12f4bdd954b55ff` に統合済み。最終実装HEAD `c7eb663d65ce91f590e13419919786f59a4badc3` に対し [Quick CI 76/76](https://github.com/mibesamiti-png/chappy-player/actions/runs/42876978962) と [Android ARM64/ARM32/x86-64 APK 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42876978926) 成功。
+- **録画画面の説明ON/OFF**：DEBUGヘッダーから外して最下部の「スマート録画・確認設定」折りたたみ内へ移動。Chappy Apps一覧のDebug/Stable横にある別の説明表示切り替えは変更なし。
+- **開始不具合の改善**：録画本体の対応確認が非同期で未完了でも開始ボタンを無言で無効化しない。対応未確認時は、明示的に設定を開き、Debug本体更新または「通常録画」選択を案内する。**実機で開始できない根本原因が解消したと確定したわけではない**。ユーザーは前版で「開始を押しても開始されなかった」と報告。
+- **通知状態**：明示開始した画面OFF録画のForeground Service通知は、実際にCameraXが静止でpauseしたとき「一時停止中」、動作検出でresumeしたとき「録画中」に切り替える。通知の「録画を停止」操作、Androidカメラ/マイク使用中表示、通知・権限チェックは維持。通常録画中・暗転録画の表示全般を同じ通知として扱わない。
+- **公開Debug**：Chappy Apps [PR #11](https://github.com/mibesamiti-png/chappy-apps/pull/11) → main `1dd3736f7eb0e19bee47438bb757bafe0f708d31`。 [カタログCI 7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42878670602) 成功。 `local.chappy.recorder` Debug **v0.1.7**。Stable版変更なし。利用は新しいDebug APKを導入し、Chappy Apps→Debug→更新→Recorder v0.1.7。
+- **次の確認（未実施）**：実機で「通常録画」を短時間試し、開始失敗文言・カメラ/マイク許可・MP4保存を確認。その後、標準スマート録画の静止5秒→一時停止→動作再開→Android通知同期→通知から停止・ファイル確定・保存を検証。確認省略設定OFF/ONとアプリ再起動後の維持も確認。古いDebug APKや署名不一致を考慮し、データを削除せず更新する。**実機QA 0件。Stable公開禁止。**
+- 短期優先度は実機録画の原因特定と停止・保存の保証。プリ録画R3やAI R4は延期。GitHub main/PR/CIが正本で、Notionは確認後手動ミラーする。
+
+
 ## 【最新】CAMREC-15 Recorder UX v0.1.6（2026-11-11）— Debugで登録済み／実機未検証
 
 - **ユーザー要望を実装済み**：スマート録画の標準を「静止時pause・動けばresume」、静止判定の標準を**5秒**に変更。Android CameraX・画面OFF録画サービス・Flutterのバリデーションとも5秒に対応。空き容量カードをコンパクトに再配置。
