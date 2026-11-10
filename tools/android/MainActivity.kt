@@ -418,6 +418,7 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "startNativeMic" -> {
                         if (!micActivityVisible || nativeVideo.isRecording() ||
+                            ChappyCameraService.isActive() ||
                             ContextCompat.checkSelfPermission(this,
                                 Manifest.permission.RECORD_AUDIO) !=
                                 PackageManager.PERMISSION_GRANTED) {
@@ -455,16 +456,38 @@ class MainActivity : FlutterActivity() {
                         val motionMode = call.argument<String>("motionMode") ?: "normal"
                         val idleSeconds = call.argument<Int>("motionIdleSeconds") ?: 60
                         val sensitivity = call.argument<Int>("motionSensitivity") ?: 40
+                        val screenOff = call.argument<Boolean>("screenOff") == true
                         if (!micActivityVisible) {
                             result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
+                        } else if (ChappyCameraService.isActive() || nativeVideo.isRecording()) {
+                            result.error("VIDEO_BUSY", "Another camera recording is active", null)
                         } else {
                             nativeMic.stop()
-                            nativeVideo.start(owner, lens, quality, sound, visibility, result,
-                                motionMode, idleSeconds, sensitivity)
+                            if (screenOff) {
+                                try {
+                                    result.success(ChappyCameraService.beginVisible(
+                                        this, owner, lens, quality, sound, visibility,
+                                        motionMode, idleSeconds, sensitivity))
+                                } catch (failure: Exception) {
+                                    result.error("SCREEN_OFF_START_FAILED",
+                                        failure.message ?: failure.javaClass.simpleName, null)
+                                }
+                            } else {
+                                ChappyCameraService.clearFinishedStatus()
+                                nativeVideo.start(owner, lens, quality, sound, visibility, result,
+                                    motionMode, idleSeconds, sensitivity)
+                            }
                         }
                     }
-                    "stopNativeVideo" -> result.success(nativeVideo.stop())
-                    "readNativeVideo" -> result.success(nativeVideo.status())
+                    "stopNativeVideo" -> result.success(
+                        if (ChappyCameraService.isActive())
+                            ChappyCameraService.requestStop() else nativeVideo.stop())
+                    "readNativeVideo" -> result.success(
+                        if (ChappyCameraService.hasReport())
+                            ChappyCameraService.readStatus()
+                        else nativeVideo.status() + mapOf(
+                            "backgroundSupported" to (Build.VERSION.SDK_INT >= 30),
+                            "background" to false))
                     "listPrivateVideos" -> {
                         if (!micActivityVisible) {
                             result.error("VIDEO_NOT_ALLOWED", "App must be visible", null)
@@ -701,16 +724,21 @@ class MainActivity : FlutterActivity() {
                     "requestMediaPermissions" -> {
                         val names = call.argument<List<String>>("types")
                         if (names.isNullOrEmpty() || names.size != names.toSet().size ||
-                            names.any { it != "camera" && it != "microphone" }) {
+                            names.any { it != "camera" && it != "microphone" && it != "notifications" }) {
                             result.error("MEDIA_TYPES_UNSUPPORTED",
                                 "Camera/microphone are the only supported media resources", null)
                         } else if (mediaPermissionCallback != null) {
                             result.error("MEDIA_PERMISSION_BUSY",
                                 "A media permission prompt is already open", null)
                         } else {
-                            val requested = names.map {
-                                if (it == "camera") Manifest.permission.CAMERA
-                                else Manifest.permission.RECORD_AUDIO
+                            val requested = names.mapNotNull {
+                                when (it) {
+                                    "camera" -> Manifest.permission.CAMERA
+                                    "microphone" -> Manifest.permission.RECORD_AUDIO
+                                    "notifications" -> if (Build.VERSION.SDK_INT >= 33)
+                                        Manifest.permission.POST_NOTIFICATIONS else null
+                                    else -> null
+                                }
                             }
                             if (requested.all {
                                     ContextCompat.checkSelfPermission(this, it) ==
