@@ -4,7 +4,7 @@
 
 Chappy Recorderのスマート録画を標準「静止5秒でpause→再検知resume」に変更。5秒判定はCameraX本体/画面OFF用サービス/Flutterすべてで受け入れる。空き容量カードを縮小し、最下部の折りたたみ式「スマート録画・確認設定」にする。RecorderのDEBUG横とChappy AppsのDebug/Stable横に「説明表示・非表示」を追加。毎回のホスト録画確認は、本人が設定からOFFを選んだ時に限り一度説明・確認して省略可能。Androidの実行時CAMERA/RECORD_AUDIO/通知権限とシステム緑点・録画中通知は維持。
 
-[ソースPR #140](https://github.com/mibesamiti-png/chappy-player/pull/140)は [Quick76/76](https://github.com/mibesamiti-png/chappy-player/actions/runs/42872432652)＋[Android 3 ABI17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42872432385)成功。 [公開Debug PR #10](https://github.com/mibesamiti-png/chappy-apps/pull/10)は[カタログ7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42872700793)成功、Recorder v0.1.6を登録。既存Stableは無変更。次は**実機で画面OFF録画・5秒静止pause・resume・ファイル確定と確認省略設定**のQA。画像では残容量約1GBなので、長時間録画は余裕ある空き容量を確保。プリ録画R3/AI R4は未実装のまま。
+[ソースPR #140](https://github.com/mibesamiti-png/chappy-player/pull/140)は [Quick76/76](https://github.com/mibesamiti-png/chappy-player/actions/runs/42872432652)＋[Android 3 ABI17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42872432385)成功。 [公開Debug PR #10](https://github.com/mibesamiti-png/chappy-apps/pull/10)は[カタログ7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42872700793)成功、Recorder v0.1.6を登録。既存Stableは無変更。次は**実機で画面OFF録画・5秒静止pause・resume・ファイル確定と確認省略設定**のQA。長時間録画は端末の空き容量に十分な余裕を確保。プリ録画R3/AI R4は未実装のまま。
 
 
 ## 2026-11-11：CAMREC-14 R2画面OFF録画 — コード完了、実機QA待ち
