@@ -33,9 +33,11 @@ class ChappyCameraService : Service() {
 
         @Volatile private var instance: ChappyCameraService? = null
         @Volatile private var pending = false
+        @Volatile private var stopPending = false
         @Volatile private var lastStatus: Map<String, Any>? = null
 
         fun isActive(): Boolean = pending || instance != null
+        fun hasReport(): Boolean = isActive() || lastStatus != null
 
         fun clearFinishedStatus() {
             if (!isActive()) lastStatus = null
@@ -44,7 +46,8 @@ class ChappyCameraService : Service() {
         fun readStatus(): Map<String, Any> {
             val service = instance
             val report = service?.recorder?.status() ?: lastStatus
-            return (report ?: mapOf("state" to (if (pending) "starting" else "idle"))) +
+            return (report ?: mapOf("state" to
+                (if (pending || service != null) "starting" else "idle"))) +
                 mapOf("backgroundSupported" to true,
                     "background" to (pending || service != null))
         }
@@ -90,6 +93,7 @@ class ChappyCameraService : Service() {
                 .putExtra("idleSeconds", idleSeconds)
                 .putExtra("sensitivity", sensitivity)
             lastStatus = null
+            stopPending = false
             pending = true
             try {
                 ContextCompat.startForegroundService(activity, intent)
@@ -107,8 +111,8 @@ class ChappyCameraService : Service() {
             val service = instance
             if (service != null) service.stopRecording()
             else if (pending) {
-                // Ordered explicit stop request, queued after the start intent.
-                // The process stays under Android's service-start rules.
+                // Cancel before the service starts; never open a camera.
+                stopPending = true
                 lastStatus = mapOf("state" to "stopping")
             }
             return readStatus()
@@ -137,6 +141,14 @@ class ChappyCameraService : Service() {
         if (intent?.action != ACTION_START || started) {
             // Never allow Android to restore a camera capture automatically.
             if (!started) stopSelf()
+            return START_NOT_STICKY
+        }
+        if (stopPending) {
+            stopPending = false
+            pending = false
+            lastStatus = mapOf("state" to "idle",
+                "error" to "SCREEN_OFF_CANCELLED_BEFORE_START")
+            stopSelf()
             return START_NOT_STICKY
         }
         started = true
@@ -243,6 +255,7 @@ class ChappyCameraService : Service() {
         recorder = null
         if (instance === this) instance = null
         pending = false
+        stopPending = false
         super.onDestroy()
     }
 }
