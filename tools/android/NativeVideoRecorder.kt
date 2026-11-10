@@ -201,7 +201,7 @@ class NativeVideoRecorder(
             quality !in listOf("720", "1080") ||
             visibility !in listOf("private", "gallery") ||
             requestedMotionMode !in listOf("normal", "pause", "stop") ||
-            requestedIdleSeconds !in 10..300 ||
+            requestedIdleSeconds !in 5..300 ||
             requestedSensitivity !in 0..100) {
             result.error("VIDEO_SETTINGS", "Unsupported recording options", null)
             return
