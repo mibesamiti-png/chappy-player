@@ -346,7 +346,8 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     if (!mounted || _videoStartPending || _nativeVideoActive ||
         _nativeMicPending ||
         ModalRoute.of(context)?.isCurrent != true ||
-        !canRequestChappyMedia(widget.app.permissions, needed)) {
+        !canRequestChappyMedia(widget.app.permissions,
+            ['camera', if (audio) 'microphone'])) {
       throw StateError('Video camera not permitted or already recording');
     }
     final lens = options['lens'];
