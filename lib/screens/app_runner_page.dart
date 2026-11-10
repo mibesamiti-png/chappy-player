@@ -45,6 +45,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   bool _nativeMicActive = false;
   bool _videoStartPending = false;
   bool _nativeVideoActive = false;
+  bool _screenOffVideo = false; // Explicit camera FGS session only.
   bool _videoDark = false;
   double _darkHorizontalDrag = 0;
 
@@ -200,7 +201,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     _gameNetwork.pause();
     _lastVideoOptions = null;
     _nativeMicActive = false;
-    _nativeVideoActive = false;
+    // Only an explicit, user-consented foreground service may survive pause.
+    final keepRecording = _screenOffVideo;
+    _nativeVideoActive = keepRecording;
     if (_videoDark && mounted) {
       setState(() => _videoDark = false);
     } else {
@@ -208,7 +211,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     }
     try {
       await _mediaChannel.invokeMethod<bool>('stopNativeMic');
-      await _mediaChannel.invokeMethod<dynamic>('stopNativeVideo');
+      if (!keepRecording) {
+        await _mediaChannel.invokeMethod<dynamic>('stopNativeVideo');
+      }
       await _mediaChannel.invokeMethod<bool>(
           'setVideoDark', {'enabled': false});
     } catch (_) {
@@ -233,6 +238,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _gameNetwork.resume();
+      if (_screenOffVideo) {
+        unawaited(_nativeVideoStatus().catchError((Object _) => <String, dynamic>{}));
+      }
     } else {
       unawaited(_stopMedia());
     }
@@ -328,7 +336,13 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
   Future<Map<String, dynamic>> _startNativeVideo(
       Map<String, dynamic> options, {bool reuseDarkSessionConsent = false}) async {
     final audio = options['audio'] == true;
-    final needed = <String>['camera', if (audio) 'microphone'];
+    final screenOff = options['screenOff'] == true;
+    if (options['screenOff'] != null && options['screenOff'] is! bool) {
+      throw const FormatException('Invalid screen-off recording option');
+    }
+    final needed = <String>[
+      'camera', if (audio) 'microphone', if (screenOff) 'notifications'
+    ];
     if (!mounted || _videoStartPending || _nativeVideoActive ||
         _nativeMicPending ||
         ModalRoute.of(context)?.isCurrent != true ||
@@ -366,7 +380,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
          previousMotion['mode'] == motionMode &&
          previousMotion['idleSeconds'] == motionIdleSeconds &&
          previousMotion['sensitivity'] == motionSensitivity);
-    final canReuseDarkConsent = reuseDarkSessionConsent &&
+    final canReuseDarkConsent = reuseDarkSessionConsent && !screenOff &&
         _darkSessionArmed && _videoDark && previous != null &&
         previous['lens'] == lens && previous['quality'] == quality &&
         previous['storage'] == storage && previous['audio'] == audio &&
@@ -387,7 +401,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
               '${storage == 'private' ? '動画はChappy Playerの非公開領域に保存します。'
                   'アンインストールすると動画は消えます。' : '動画はギャラリーに公開保存します。'}'
               '${motionMode == 'pause' ? '静止中は録画を一時停止し、動きが戻ると再開します。カメラは休止中も使用されます。' : motionMode == 'stop' ? '静止時間を超えると録画を自動終了します。' : ''}'
-               'この段階ではアプリを離れると録画を停止します。録画中はAndroidの'
+               '${screenOff ? '画面OFFや他アプリ中も録画が続きます。録画中通知の停止ボタンから終了できます。'
+                  : 'この段階ではアプリを離れると録画を停止します。'}'
+               '録画中はAndroidの'
               'カメラ使用表示が有効になります。'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialog, false),
@@ -424,6 +440,7 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
            'motionMode': motionMode,
            'motionIdleSeconds': motionIdleSeconds,
            'motionSensitivity': motionSensitivity,
+           'screenOff': screenOff,
         });
       if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
         await _mediaChannel.invokeMethod<dynamic>('stopNativeVideo');
@@ -434,6 +451,11 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         throw StateError('CameraX video recorder did not start');
       }
       if (mounted) setState(() => _nativeVideoActive = true);
+      _screenOffVideo = screenOff && result['background'] == true;
+      if (screenOff && !_screenOffVideo) {
+        await _mediaChannel.invokeMethod<dynamic>('stopNativeVideo');
+        throw StateError('Android camera foreground service did not start');
+      }
       _lastVideoOptions = Map<String, dynamic>.from(options);
       unawaited(widget.logs.add(widget.app.id, 'info', 'native-video',
           'CameraX foreground recording initiated; storage=$storage audio=$audio'));
@@ -451,8 +473,9 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
         'readNativeVideo');
     final current = Map<String, dynamic>.from(data ?? {'state': 'idle'});
     // Keep the red dot until the MP4 has actually finalized; then turn green.
-    if (current['state'] == 'idle' && _nativeVideoActive) {
-      if (mounted) setState(() => _nativeVideoActive = false);
+    if (current['state'] == 'idle') {
+      _screenOffVideo = false;
+      if (_nativeVideoActive && mounted) setState(() => _nativeVideoActive = false);
     } else if ((current['state'] == 'recording' ||
         current['state'] == 'starting') && !_nativeVideoActive) {
       if (mounted) setState(() => _nativeVideoActive = true);
