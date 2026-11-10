@@ -451,8 +451,7 @@ class MainActivity : FlutterActivity() {
                     // Flutter explicitly confirms the opt-out the first time.
                     // Android camera/mic/notification runtime checks remain.
                     "readRecorderConfirmPreference" -> {
-                        result.success(getSharedPreferences("chappy_recorder_host", MODE_PRIVATE)
-                            .getBoolean("ask_every_time", true))
+                        result.success(RecorderConfirmationPreferences.askEveryTime(this))
                     }
                     "writeRecorderConfirmPreference" -> {
                         val ask = call.argument<Boolean>("askEveryTime")
@@ -460,8 +459,7 @@ class MainActivity : FlutterActivity() {
                             result.error("RECORDER_PREFERENCE_DENIED",
                                 "Foreground player and boolean required", null)
                         } else {
-                            result.success(getSharedPreferences("chappy_recorder_host", MODE_PRIVATE)
-                                .edit().putBoolean("ask_every_time", ask).commit())
+                            result.success(RecorderConfirmationPreferences.save(this, ask))
                         }
                     }
                     "startNativeVideo" -> {
