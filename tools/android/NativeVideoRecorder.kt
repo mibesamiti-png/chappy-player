@@ -52,7 +52,9 @@ import java.util.concurrent.Executors
 class NativeVideoRecorder(
     private val context: Context,
     private val activity: Activity? = context as? Activity,
-    private val onFinalized: (() -> Unit)? = null
+    private val onFinalized: (() -> Unit)? = null,
+    // Only called on actual CameraX motion pause/resume transitions.
+    private val onMotionPausedChanged: ((Boolean) -> Unit)? = null
 ) : LifecycleOwner {
     private val mainHandler = Handler(Looper.getMainLooper())
     private fun onMain(action: () -> Unit) {
@@ -120,6 +122,7 @@ class NativeVideoRecorder(
                     recording?.resume()
                     motionPaused = false
                     motionStatus = "recording"
+                    onMotionPausedChanged?.invoke(false)
                 } catch (_: Exception) {
                     motionFailed = true
                     motionStatus = "error"
@@ -138,6 +141,7 @@ class NativeVideoRecorder(
                 recording?.pause()
                 motionPaused = true
                 motionStatus = "paused"
+                onMotionPausedChanged?.invoke(true)
             } catch (_: Exception) {
                 motionFailed = true
                 motionStatus = "error"
