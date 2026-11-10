@@ -27,7 +27,7 @@ for forbidden in ("HttpURLConnection", "Socket(", "FileOutputStream", "Base64",
     assert forbidden not in analyzer, forbidden
 for fragment in [
     "motionMode", "motionIdleSeconds", "motionSensitivity",
-    "requestedMotionMode !in listOf", "requestedIdleSeconds !in 10..300",
+    "requestedMotionMode !in listOf", "requestedIdleSeconds !in 5..300",
     "requestedSensitivity !in 0..100", "motionStreak >= 2",
     "motionLastMovementMs", "motionFrames < 3",
     "motionAnalysis", "releaseMotionAnalysis()", "setAnalyzer(",
