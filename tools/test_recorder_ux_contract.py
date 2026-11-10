@@ -31,8 +31,8 @@ assert html.index('id="toggleLibrary"') < html.index('id="toggleSmartSettings"')
 # A mini-app cannot disable the host consent prompt in video.start options.
 assert "'readRecorderConfirmPreference'" in runner
 assert "'writeRecorderConfirmPreference'" in runner
-assert "'readRecorderConfirmPreference'" in native
-assert "'writeRecorderConfirmPreference'" in native
+assert '"readRecorderConfirmPreference"' in native
+assert '"writeRecorderConfirmPreference"' in native
 assert 'getBoolean(KEY, true)' in native_prefs
 assert 'getSharedPreferences' in native_prefs
 assert 'RecorderConfirmationPreferences.askEveryTime(this)' in native
