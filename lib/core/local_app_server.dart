@@ -171,6 +171,7 @@ const _bootScript = r'''
       // Do not time out while the user is deciding: Android/Flutter will
       // reject a cancelled request and always stop capture on background.
       const timer = (method === 'microphone.start' || method === 'video.start' ||
+                     method === 'video.confirmation.set' ||
                      method === 'video.delete' || method === 'video.export' ||
                       method === 'video.backupZip' || method === 'video.restoreZip' ||
                       method === 'files.importAsset' ||
@@ -215,6 +216,11 @@ const _bootScript = r'''
       }),
       video: Object.freeze({
         start: (options) => call('video.start', options || {}),
+        confirmation: Object.freeze({
+          get: () => call('video.confirmation.get', {}),
+          set: (askEveryTime) =>
+            call('video.confirmation.set', {askEveryTime: askEveryTime === true})
+        }),
         status: () => call('video.status', {}),
         storageInfo: () => call('video.storageInfo', {}),
         stop: () => call('video.stop', {}),
