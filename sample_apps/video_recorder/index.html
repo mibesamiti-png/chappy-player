@@ -120,6 +120,8 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
 </section>
 <section class="card">
   <button id="recordDark" class="primary" type="button">● 暗転モードで録画</button>
+  <button id="recordScreenOff" class="primary" type="button" style="margin-top:9px" disabled>● 画面OFFでも録画を続ける（通知から停止）</button>
+  <p class="hint" id="screenOffHint">Android 11以降の新しいプレイヤー本体と通知権限が必要です。録画開始後、電源ボタンで画面を消せます。OSのカメラ表示は無効になりません。</p>
   <div class="status-row"><span class="dot" id="recordDot" aria-hidden="true"></span><span id="captureStatus" role="status">停止中</span><span id="timer">00:00</span></div>
   <button id="recordStop" class="secondary" type="button" disabled>録画を停止する</button>
   <p class="hint">初回は録画の確認後、黒画面に切り替わります。暗転中は音量＋で録画再開、音量－で停止。右上の点付近をダブルタップで復帰。<strong>右スワイプで輝度最大、左スワイプで輝度最低</strong>。Androidのカメラ・マイク使用表示はそのままです。</p>
@@ -158,6 +160,8 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   let lastSavedName = '';
   let libraryExpanded = false;
   let motionSupported = false;
+  let screenOffSupported = false;
+  let screenOffSession = false;
   let motionErrorShown = false;
   const controlIds = ['lensBack', 'lensFront', 'videoQuality', 'videoStorage', 'videoAudio',
     'motionMode', 'motionIdle', 'motionSensitivity'];
@@ -177,6 +181,8 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     const busy = recording || starting || stopping;
     controlIds.forEach(id => { $(id).disabled = busy; });
     $('recordDark').disabled = busy || !video ||
+      ($('motionMode').value !== 'normal' && !motionSupported);
+    $('recordScreenOff').disabled = busy || !video || !screenOffSupported ||
       ($('motionMode').value !== 'normal' && !motionSupported);
     $('recordStop').disabled = !recording || stopping || !video;
     $('recordDot').className = recording || stopping ? 'dot active' : 'dot';
@@ -314,6 +320,11 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     recording = state !== 'idle';
     stopping = state === 'stopping';
     if (info && typeof info.motionMode === 'string') motionSupported = true;
+    if (info && info.backgroundSupported === true) screenOffSupported = true;
+    screenOffSession = info && info.background === true;
+    setText('screenOffHint', screenOffSupported ?
+      '録画開始後に電源ボタンで画面を消せます。録画中通知から停止。画面が点灯するとAndroidのカメラ使用表示が出る場合があります。' :
+      '画面OFF録画には対応する新しいChappy Player Debug本体と通知権限が必要です。');
     updateMotionOptions();
     const motionState = info && info.motionStatus || 'off';
     if (motionState === 'error' && !motionErrorShown) {
@@ -363,7 +374,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     if (timer !== null) clearInterval(timer);
     timer = setInterval(() => { void pollStatus(); }, 450);
   }
-  async function startDarkRecording() {
+  async function startDarkRecording(screenOff = false) {
     if (!video || recording || starting || stopping) return;
     starting = true; updateControls();
     motionErrorShown = false;
@@ -377,6 +388,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
       const options = {
         lens, quality: $('videoQuality').value,
         storage: $('videoStorage').value, audio: $('videoAudio').checked,
+        screenOff,
         motion: {
           mode, idleSeconds: Number($('motionIdle').value),
           sensitivity: Number($('motionSensitivity').value)
@@ -387,11 +399,16 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
         throw new Error('カメラ録画が開始されませんでした');
       }
       recording = true;
+      screenOffSession = screenOff;
       lastSavedName = '';
       beginPolling();
       renderStatus(await video.status());
-      const dark = await video.dark(true);
-      if (dark !== true) notify('録画開始しましたが、暗転できませんでした。', true);
+      if (!screenOff) {
+        const dark = await video.dark(true);
+        if (dark !== true) notify('録画開始しましたが、暗転できませんでした。', true);
+      } else {
+        notify('画面OFF録画を開始しました。電源ボタンで画面を消せます。停止はAndroid通知またはこの画面から。');
+      }
     } catch (error) {
       notify('録画を開始できませんでした：' + String(error.message || error), true);
       await pollStatus();
@@ -412,7 +429,8 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
   $('lensBack').addEventListener('click', () => setLens('back'));
   $('lensFront').addEventListener('click', () => setLens('front'));
   $('refreshCapacity').addEventListener('click', () => { void refreshCapacity(); });
-  $('recordDark').addEventListener('click', () => { void startDarkRecording(); });
+  $('recordDark').addEventListener('click', () => { void startDarkRecording(false); });
+  $('recordScreenOff').addEventListener('click', () => { void startDarkRecording(true); });
   $('recordStop').addEventListener('click', () => { void stopRecording(); });
   $('toggleLibrary').addEventListener('click', () => {
     libraryExpanded = !libraryExpanded;
@@ -481,15 +499,18 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     if (document.hidden) {
       if (timer !== null) clearInterval(timer);
       timer = null;
-      if (recording && video) void video.stop().catch(() => {});
-      recording = false; stopping = false; starting = false; updateControls();
+      if (recording && video && !screenOffSession) void video.stop().catch(() => {});
+      if (!screenOffSession) {
+        recording = false; stopping = false; starting = false;
+      }
+      updateControls();
     } else {
       void pollStatus(); void refreshCapacity();
     }
   });
   window.addEventListener('pagehide', () => {
     if (timer !== null) clearInterval(timer);
-    if (recording && video) void video.stop().catch(() => {});
+    if (recording && video && !screenOffSession) void video.stop().catch(() => {});
   });
   updateMotionOptions();
   void refreshCapacity();
