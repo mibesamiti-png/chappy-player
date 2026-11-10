@@ -178,6 +178,9 @@ const _bootScript = r'''
                       method === 'files.exportAsset' || method === 'files.exportCompressedZip' || method === 'network.request' || method === 'network.connect' ||
                       method === 'files.deleteAsset' ||
                        method === 'files.pickText' || method === 'files.saveText' ||
+                      method === 'handoff.copyPrompt' ||
+                      method === 'handoff.sharePrompt' ||
+                      method === 'handoff.openChatGPT' ||
                       method === 'motion.sample' || method === 'haptics.play')
         ? null : setTimeout(() => {
         pending.delete(requestId);
@@ -203,6 +206,11 @@ const _bootScript = r'''
   Object.defineProperty(window, 'Chappy', {
     configurable: false, writable: false,
     value: Object.freeze({
+      handoff: Object.freeze({
+        copyPrompt: text => call('handoff.copyPrompt', {text: String(text)}),
+        sharePrompt: text => call('handoff.sharePrompt', {text: String(text)}),
+        openChatGPT: () => call('handoff.openChatGPT', {})
+      }),
       storage: Object.freeze({
         get: key => call('storage.get', {key}),
         set: (key, value) => call('storage.set', {key, value}),

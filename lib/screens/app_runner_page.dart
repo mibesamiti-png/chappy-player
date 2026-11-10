@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:chappy_player/core/local_app_server.dart';
 import 'package:chappy_player/core/log_store.dart';
 import 'package:chappy_player/core/media_permission_policy.dart';
+import 'package:chappy_player/core/miniapp_handoff_policy.dart';
 import 'package:chappy_player/core/miniapp_game_network.dart';
 import 'package:chappy_player/core/package_model.dart';
 import 'package:chappy_player/core/package_repository.dart';
@@ -32,6 +33,9 @@ class AppRunnerPage extends StatefulWidget {
 class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserver {
   static const MethodChannel _mediaChannel =
       MethodChannel('dev.chappy.player/media_permissions');
+  static const MethodChannel _handoffChannel =
+      MethodChannel('dev.chappy.player/text_handoff');
+  bool _handoffPending = false;
   bool _mediaPermissionPending = false;
   bool _nativeCapabilityPromptPending = false;
   final Set<String> _approvedNativeCapabilities = <String>{};
@@ -1192,6 +1196,76 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
     }
   }
 
+
+  /// Explicit handoff only: user reviews the exact prompt, and Android opens
+  /// its chooser or a browser. This never submits a ChatGPT message or reads
+  /// another application's UI/output. Not available to generic mini-app IDs.
+  Future<Map<String, String>> _handleTextHandoff(
+      String method, Map<String, dynamic> params) async {
+    if (!MiniAppHandoffPolicy.isAllowed(widget.app.id)) {
+      throw const FormatException('このミニアプリには指示受け渡し権限がありません');
+    }
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) {
+      throw StateError('画面が前面にないため実行できません');
+    }
+    if (_handoffPending) {
+      throw StateError('別の操作確認が進行中です');
+    }
+    final text = method == 'handoff.openChatGPT'
+        ? null : MiniAppHandoffPolicy.requirePrompt(params['text']);
+    _handoffPending = true;
+    try {
+      final action = switch (method) {
+        'handoff.copyPrompt' => '指示をコピー',
+        'handoff.sharePrompt' => 'Androidの共有画面に渡す',
+        'handoff.openChatGPT' => 'ChatGPTをブラウザで開く',
+        _ => throw const FormatException('未対応の受け渡し操作です'),
+      };
+      final approved = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text(action),
+          content: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('本人が選択・送信を行う操作です。自動送信や回答取得は行いません。'),
+              if (text != null) ...[
+                const SizedBox(height: 12),
+                Text(text, maxLines: 12, overflow: TextOverflow.ellipsis),
+              ],
+            ],
+          )),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('キャンセル'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('続行'),
+            ),
+          ],
+        ),
+      );
+      if (approved != true || !mounted ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        return {'status': 'cancelled'};
+      }
+      if (method == 'handoff.copyPrompt') {
+        await Clipboard.setData(ClipboardData(text: text!));
+        return {'status': 'copied'};
+      }
+      final String? result = await _handoffChannel.invokeMethod<String>(
+        method == 'handoff.sharePrompt' ? 'shareText' : 'openChatGPT',
+        method == 'handoff.sharePrompt' ? {'text': text} : <String, dynamic>{},
+      );
+      return {'status': result ?? 'unknown'};
+    } finally {
+      _handoffPending = false;
+    }
+  }
+
   Future<void> _handleMessage(String input) async {
     if (input.length > 256 * 1024) {
       await widget.logs.add(widget.app.id, 'warning', 'bridge', 'Message too large');
@@ -1208,6 +1282,11 @@ class _AppRunnerPageState extends State<AppRunnerPage> with WidgetsBindingObserv
       }
       dynamic value;
       switch (method) {
+        case 'handoff.copyPrompt':
+        case 'handoff.sharePrompt':
+        case 'handoff.openChatGPT':
+          value = await _handleTextHandoff(method, params);
+          break;
         case 'storage.get':
           value = await _storage.get(widget.app.id, _key(params));
           break;
