@@ -226,7 +226,7 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     // Never silently disable Start while the asynchronous capability check runs.
     // An unsupported smart mode is explained by startDarkRecording instead.
     $('recordDark').disabled = busy || !video;
-    $('recordScreenOff').disabled = busy || !video || !screenOffSupported;
+    $('recordScreenOff').disabled = busy || !video;
     $('recordStop').disabled = !recording || stopping || !video;
     $('confirmEachRecording').disabled = busy || savingConfirmation || !askPrefSupported;
     $('recordDot').className = recording || stopping ? 'dot active' : 'dot';
@@ -464,6 +464,9 @@ button.danger{border-color:#974d62;color:#ffbdca;background:#44202d}
     notify('');
     try {
       const mode = $('motionMode').value;
+      if (screenOff && !screenOffSupported) {
+        throw new Error('画面OFF録画には対応する新しいChappy Player Debug本体（Android 11以降）が必要です。Debug APKを更新してください。');
+      }
       if (mode !== 'normal' && !motionSupported) {
         smartExpanded = true;
         $('smartSettingsPanel').hidden = false;
