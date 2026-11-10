@@ -8,6 +8,9 @@ assert(source.includes('id="lensBack"') && source.includes('id="lensFront"'));
 assert(source.includes('id="freeSpace"') && source.includes('id="totalSpace"'));
 assert(source.includes('id="recordDark"') && source.includes('id="toggleLibrary"'));
 assert(source.includes('id="recordScreenOff"'));
+assert(source.includes('id="toggleExplanations"') &&
+       source.includes('id="recordExplanation"') &&
+       source.includes('id="screenOffHint"'));
 assert(source.includes('id="toggleSmartSettings"') &&
        source.includes('id="smartSettingsPanel"') &&
        source.includes('id="confirmEachRecording"'));
@@ -106,6 +109,13 @@ const click = async id => {
   assert.equal(get('capacityFill').style.width,'75.0%');
   assert.equal(get('smartSettingsPanel').hidden,true);
   assert.equal(get('motionSettings').hidden,false, 'pause is default');
+  assert.equal(get('recordExplanation').hidden,false);
+  await click('toggleExplanations');
+  assert.equal(get('recordExplanation').hidden,true);
+  assert.equal(get('screenOffHint').hidden,true);
+  assert.equal(get('toggleExplanations').getAttribute('aria-pressed'),'false');
+  await click('toggleExplanations');
+  assert.equal(get('recordExplanation').hidden,false);
   assert.equal(get('motionMode').value,'pause');
   assert.equal(get('motionIdle').value,'5');
   assert.equal(get('confirmEachRecording').checked,true);
