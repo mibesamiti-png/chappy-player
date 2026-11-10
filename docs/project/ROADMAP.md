@@ -1,5 +1,12 @@
 # Chappy Player — 次に実装するロードマップ
 
+## 2026-11-11：CAMREC-16 v0.1.7（ソース＋Debug公開完了、実機開始未確認）
+
+[ソースPR #142](https://github.com/mibesamiti-png/chappy-player/pull/142)統合：説明表示切替を最下部のスマート録画・確認設定へ移設。開始ボタンの非同期対応判定中の無反応を軽減し、非対応時には明示エラー表示。画面OFF録画通知はCameraXの静止pauseで「一時停止中」、動作resumeで「録画中」。OS権限・プライバシー表示・通知の停止アクションを維持。
+
+[Quick76/76](https://github.com/mibesamiti-png/chappy-player/actions/runs/42876978962)＋[Android17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42876978926)＋[Chappy Apps PR #11カタログ7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42878670602) 成功。Debug Recorder v0.1.7登録済み、Stableは不変。**次は実機で開始失敗の原因特定 → 通常録画MP4 → スマート録画5秒pause/resume → 画面OFF通知切替・停止 → 保存確定 → 同意省略の持続を確認。物理QA 0件のため動作成功と宣言しない。** NETLAB/PC Link/Gameの延期事項は維持。
+
+
 ## 2026-11-11：CAMREC-15 UX v0.1.6（完了：ソース/Debug公開、実機は未検証）
 
 Chappy Recorderのスマート録画を標準「静止5秒でpause→再検知resume」に変更。5秒判定はCameraX本体/画面OFF用サービス/Flutterすべてで受け入れる。空き容量カードを縮小し、最下部の折りたたみ式「スマート録画・確認設定」にする。RecorderのDEBUG横とChappy AppsのDebug/Stable横に「説明表示・非表示」を追加。毎回のホスト録画確認は、本人が設定からOFFを選んだ時に限り一度説明・確認して省略可能。Androidの実行時CAMERA/RECORD_AUDIO/通知権限とシステム緑点・録画中通知は維持。
