@@ -26,7 +26,7 @@ for name in ("video.start", "video.status", "video.stop", "video.dark",
     assert f"'{name}'" in dart, name
     assert f"'{name}'" in bridge, name
 
-for item in ("canRequestChappyMedia(widget.app.permissions, needed)",
+for item in ("canRequestChappyMedia(widget.app.permissions,",
              "showDialog<bool>", "requestMediaPermissions",
              "stopNativeMic", "videoStartPending", "setVideoDark"):
     if item == "videoStartPending":
@@ -34,7 +34,7 @@ for item in ("canRequestChappyMedia(widget.app.permissions, needed)",
     else:
         assert item in dart, item
 
-assert "ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA)" in native
+assert "ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)" in native
 assert "Manifest.permission.RECORD_AUDIO" in native
 assert "registry.currentState != Lifecycle.State.RESUMED" in native
 assert "override val lifecycle: Lifecycle get() = registry" in native
@@ -51,8 +51,12 @@ for needed in ("ProcessCameraProvider", "VideoCapture.withOutput",
                "player.setVideoPath(file.absolutePath)"):
     assert needed in native, needed
 
-assert "FOREGROUND_SERVICE_CAMERA" not in patch
-assert "FOREGROUND_SERVICE_MICROPHONE" not in patch
+assert "FOREGROUND_SERVICE_CAMERA" in patch
+assert "FOREGROUND_SERVICE_MICROPHONE" in patch
+assert "ChappyCameraService.kt" in patch
+assert "ChappyRecordingStopReceiver" in patch
+assert "'screenOff': screenOff" in dart
+assert "ChappyCameraService.beginVisible" in activity
 assert "androidx.camera:camera-video:1.5.3" in patch
 assert "NativeVideoRecorder.kt" in patch
 assert 'id="videoStorage"' in html
