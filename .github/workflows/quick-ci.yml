@@ -195,23 +195,25 @@ jobs:
         run: python3 tools/test_motion_recorder_contract.py
       - name: CAMREC-14 screen-off camera FGS consent and privacy checks
         run: python3 tools/test_screenoff_recorder_contract.py
+      - name: CAMREC-15 Recorder UX and host-owned recording confirmation contract
+        run: python3 tools/test_recorder_ux_contract.py
       - name: Chappy Recorder mini-app smoke test
         run: node tools/test_chappy_recorder.js
-      - name: Package screen-off Chappy Recorder v0.1.5 private Debug preview
+      - name: Package compact Chappy Recorder v0.1.6 private Debug preview
         run: |
           python3 tools/pack_html_chappy.py \
             --source sample_apps/video_recorder \
             --id local.chappy.recorder \
             --name "Chappy Recorder" \
-            --version 0.1.5 \
+            --version 0.1.6 \
             --permission camera --permission microphone \
-            --output build/chappy-recorder-screenoff-v0.1.5.chappy
-          python3 -c "import json,zipfile; z=zipfile.ZipFile('build/chappy-recorder-screenoff-v0.1.5.chappy'); m=json.loads(z.read('manifest.json')); assert m['id']=='local.chappy.recorder' and m['version']=='0.1.5' and m['permissions']==['camera','microphone']"
-      - name: Upload Recorder v0.1.5 private Debug QA preview (not public)
+            --output build/chappy-recorder-compact-v0.1.6.chappy
+          python3 -c "import json,zipfile; z=zipfile.ZipFile('build/chappy-recorder-compact-v0.1.6.chappy'); m=json.loads(z.read('manifest.json')); assert m['id']=='local.chappy.recorder' and m['version']=='0.1.6' and m['permissions']==['camera','microphone']"
+      - name: Upload Recorder v0.1.6 private Debug QA preview (not public)
         uses: actions/upload-artifact@v4
         with:
-          name: chappy-recorder-screenoff-v0.1.5-private-preview
-          path: build/chappy-recorder-screenoff-v0.1.5.chappy
+          name: chappy-recorder-compact-v0.1.6-private-preview
+          path: build/chappy-recorder-compact-v0.1.6.chappy
           if-no-files-found: error
       - name: Device Lab motion and haptics smoke test
         run: node tools/test_device_lab.js
