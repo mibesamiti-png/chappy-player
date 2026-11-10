@@ -123,6 +123,7 @@ class ChappyCameraService : Service() {
     private var recorder: NativeVideoRecorder? = null
     private var finished = false
     private var started = false
+    private var notificationPaused = false
 
     override fun onCreate() {
         super.onCreate()
@@ -180,7 +181,11 @@ class ChappyCameraService : Service() {
                 startForeground(NOTICE_ID, ongoingNotification())
             }
             // User has opted in and the system's recording notification is live.
-            val video = NativeVideoRecorder(this, onFinalized = { finishRecording() })
+            val video = NativeVideoRecorder(
+                this,
+                onFinalized = { finishRecording() },
+                onMotionPausedChanged = { paused -> updateMotionNotification(paused) }
+            )
             recorder = video
             video.onCreate()
             video.onResume()
@@ -197,7 +202,21 @@ class ChappyCameraService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun ongoingNotification(): Notification {
+    private fun updateMotionNotification(paused: Boolean) {
+        // The motion analyzer calls this only when recording actually changes
+        // between active and paused. Retain the same explicit Stop action.
+        if (finished || !started || notificationPaused == paused) return
+        notificationPaused = paused
+        try {
+            getSystemService(NotificationManager::class.java)
+                .notify(NOTICE_ID, ongoingNotification(paused))
+        } catch (_: SecurityException) {
+            // A permission revoked mid-session must not crash the recorder.
+            // The existing foreground-service notification/OS privacy rules remain.
+        }
+    }
+
+    private fun ongoingNotification(paused: Boolean = false): Notification {
         val stopIntent = Intent(this, ChappyRecordingStopReceiver::class.java)
             .setAction(ACTION_STOP)
         val stopAction = PendingIntent.getBroadcast(
@@ -207,8 +226,11 @@ class ChappyCameraService : Service() {
                       else Notification.Builder(this)
         return builder
             .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setContentTitle("Chappy Recorder — 録画中")
-            .setContentText("画面OFFでもカメラを使用中。停止するにはここをタップ")
+            .setContentTitle(if (paused) "Chappy Recorder — 一時停止中"
+                             else "Chappy Recorder — 録画中")
+            .setContentText(if (paused)
+                "静止中：動画保存を一時停止。動くと自動再開します。通知から停止できます"
+                else "画面OFFでもカメラを使用中。停止するにはここをタップ")
             .setOngoing(true)
             .setCategory(Notification.CATEGORY_SERVICE)
             .addAction(Notification.Action.Builder(
