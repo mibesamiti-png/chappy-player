@@ -25,6 +25,11 @@ if not any(el.get(permission) == 'android.permission.INTERNET' for el in root.fi
 # never expose raw AudioManager controls to untrusted mini-app JavaScript.
 for name in ('android.permission.CAMERA', 'android.permission.RECORD_AUDIO',
              'android.permission.MODIFY_AUDIO_SETTINGS', 'android.permission.VIBRATE',
+             # Explicit user-selected screen-off recordings use camera FGS.
+             'android.permission.FOREGROUND_SERVICE',
+             'android.permission.FOREGROUND_SERVICE_CAMERA',
+             'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+             'android.permission.POST_NOTIFICATIONS',
              # Normal permissions; NSD runs only after the user starts a scan.
              'android.permission.ACCESS_NETWORK_STATE',
              'android.permission.CHANGE_WIFI_MULTICAST_STATE'):
@@ -40,6 +45,23 @@ application = root.find('application')
 if application is None:
     raise SystemExit('Missing application node')
 application.set('{%s}usesCleartextTraffic' % android_ns, 'true')
+# The foreground service is NOT exported. It is started only via visible
+# activity after first-use consent; the separate non-exported receiver handles
+# the always-visible notification's stop action.
+service_name = 'dev.chappy.chappy_player.ChappyCameraService'
+if not any(el.get(permission) == service_name for el in application.findall('service')):
+    ET.SubElement(application, 'service', {
+        permission: service_name,
+        '{%s}exported' % android_ns: 'false',
+        '{%s}foregroundServiceType' % android_ns: 'camera|microphone',
+        '{%s}stopWithTask' % android_ns: 'false',
+    })
+receiver_name = 'dev.chappy.chappy_player.ChappyRecordingStopReceiver'
+if not any(el.get(permission) == receiver_name for el in application.findall('receiver')):
+    ET.SubElement(application, 'receiver', {
+        permission: receiver_name,
+        '{%s}exported' % android_ns: 'false',
+    })
 # Self-hosted/sideloaded builds only: this permission enables a user-initiated
 # Android installation confirmation; nothing is silently installed.
 if not any(el.get(permission) == 'android.permission.REQUEST_INSTALL_PACKAGES'
@@ -168,11 +190,15 @@ video_target = native_target.with_name('NativeVideoRecorder.kt')
 if not video_source.is_file():
     raise SystemExit('Missing native CameraX video recorder')
 video_target.write_bytes(video_source.read_bytes())
+service_source = Path('tools/android/ChappyCameraService.kt')
+if not service_source.is_file():
+    raise SystemExit('Missing user-visible foreground camera service source')
+native_target.with_name('ChappyCameraService.kt').write_bytes(service_source.read_bytes())
 motion_source = Path('tools/android/NativeMotionAnalyzer.kt')
 if not motion_source.is_file():
     raise SystemExit('Missing offline CameraX motion analyzer source')
 native_target.with_name('NativeMotionAnalyzer.kt').write_bytes(motion_source.read_bytes())
-print('Installed foreground-only native video recorder and offline motion analyzer')
+print('Installed foreground CameraX video + explicit user-selected screen-off service and offline motion analyzer')
 
 # These privileged capabilities are mediated by the Flutter .chappy manifest
 # policy and first-use user approval. Motion sampling is single-shot only and
