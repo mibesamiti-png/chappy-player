@@ -1,0 +1,141 @@
+name: Publish Fixed-Signature Debug APK
+
+# Separate from the formal signing/release workflow; never run for PRs.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Debug player semantic version (e.g. 0.2.5)'
+        type: string
+        required: true
+      release_notes:
+        description: 'Debug build changes and QA notes (public)'
+        type: string
+        required: true
+        default: 'Chappy Player Debug の検証版'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-chappy-debug-apk
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      CHAPPY_DEBUG_VERSION: ${{ inputs.version }}
+      CHAPPY_DEBUG_RELEASE_NOTES: ${{ inputs.release_notes }}
+      CHAPPY_DEBUG_CERT_SHA256: ${{ vars.CHAPPY_DEBUG_CERT_SHA256 }}
+      CHAPPY_DIST_REPO: mibesamiti-png/chappy-player-updates
+    steps:
+      - name: Refuse non-main, missing fixed Debug identity, and unsafe build numbers
+        env:
+          CHAPPY_DEBUG_KEYSTORE_B64: ${{ secrets.CHAPPY_DEBUG_KEYSTORE_B64 }}
+          CHAPPY_DEBUG_STORE_PASSWORD: ${{ secrets.CHAPPY_DEBUG_STORE_PASSWORD }}
+          CHAPPY_DEBUG_KEY_PASSWORD: ${{ secrets.CHAPPY_DEBUG_KEY_PASSWORD }}
+          CHAPPY_DEBUG_KEY_ALIAS: ${{ secrets.CHAPPY_DEBUG_KEY_ALIAS }}
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main" || { echo "Debug releases require main"; exit 1; }
+          python3 - <<'PY'
+          import os, re
+          required = [
+              'CHAPPY_DEBUG_KEYSTORE_B64', 'CHAPPY_DEBUG_STORE_PASSWORD',
+              'CHAPPY_DEBUG_KEY_PASSWORD', 'CHAPPY_DEBUG_KEY_ALIAS',
+              'CHAPPY_DEBUG_CERT_SHA256',
+          ]
+          missing = [x for x in required if not os.getenv(x)]
+          if missing:
+              raise SystemExit('Configure dedicated Debug signing secrets/variable: ' +
+                               ', '.join(missing))
+          if not re.fullmatch(r'\d+\.\d+\.\d+', os.environ['CHAPPY_DEBUG_VERSION']):
+              raise SystemExit('Debug version must be X.Y.Z')
+          if len(os.environ['CHAPPY_DEBUG_RELEASE_NOTES']) > 3000:
+              raise SystemExit('Debug release notes are too long')
+          if not re.fullmatch(r'[0-9a-fA-F]{64}', os.environ['CHAPPY_DEBUG_CERT_SHA256']):
+              raise SystemExit('Debug certificate SHA-256 pin is invalid')
+          PY
+          CODE=$((100000 + GITHUB_RUN_NUMBER))
+          test "$CODE" -lt 2147483647 || { echo "Debug versionCode overflow"; exit 1; }
+          echo "CHAPPY_DEBUG_BUILD_NUMBER=$CODE" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Prepare isolated Debug app and fixed dedicated certificate
+        env:
+          CHAPPY_DEBUG_KEYSTORE_B64: ${{ secrets.CHAPPY_DEBUG_KEYSTORE_B64 }}
+          CHAPPY_DEBUG_STORE_PASSWORD: ${{ secrets.CHAPPY_DEBUG_STORE_PASSWORD }}
+          CHAPPY_DEBUG_KEY_PASSWORD: ${{ secrets.CHAPPY_DEBUG_KEY_PASSWORD }}
+          CHAPPY_DEBUG_KEY_ALIAS: ${{ secrets.CHAPPY_DEBUG_KEY_ALIAS }}
+        run: |
+          flutter create --platforms=android --org dev.chappy .
+          python3 tools/patch_android.py
+          python3 tools/prepare_debug_variant.py
+          python3 tools/configure_debug_release_signing.py
+      - name: Install Flutter dependencies and run QA
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+          python3 tools/test_native_video_contract.py
+          python3 tools/test_debug_release_flow.py
+          node tools/test_media_lab_video.js
+      - name: Build isolated fixed-signature universal Debug APK
+        run: |
+          flutter build apk --debug \
+            --build-name "$CHAPPY_DEBUG_VERSION" \
+            --build-number "$CHAPPY_DEBUG_BUILD_NUMBER"
+      - name: Verify actual APK identity, versionCode, and pinned signature
+        run: python3 tools/verify_debug_release.py
+      - name: Stage public Debug APK and generate SHA-256 feed
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-debug.apk dist/ChappyPlayerDebug.apk
+          TAG="debug-v${CHAPPY_DEBUG_VERSION}-b${CHAPPY_DEBUG_BUILD_NUMBER}"
+          URL="https://github.com/${CHAPPY_DIST_REPO}/releases/download/${TAG}/ChappyPlayerDebug.apk"
+          python3 tools/generate_debug_feed.py \
+            --apk dist/ChappyPlayerDebug.apk \
+            --version "$CHAPPY_DEBUG_VERSION" \
+            --build-number "$CHAPPY_DEBUG_BUILD_NUMBER" \
+            --url "$URL" \
+            --release-notes "$CHAPPY_DEBUG_RELEASE_NOTES" \
+            --output dist/debug-update.json
+          printf '%s\n' "$CHAPPY_DEBUG_RELEASE_NOTES" > dist/debug-notes.txt
+      - name: Publish separate GitHub Debug prerelease (requires scoped token)
+        env:
+          GH_TOKEN: ${{ secrets.CHAPPY_PUBLISH_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "CHAPPY_PUBLISH_TOKEN is missing"; exit 1; }
+          test "$(gh api "repos/$CHAPPY_DIST_REPO" --jq '.private')" = false
+          TAG="debug-v${CHAPPY_DEBUG_VERSION}-b${CHAPPY_DEBUG_BUILD_NUMBER}"
+          if gh release view "$TAG" --repo "$CHAPPY_DIST_REPO" >/dev/null 2>&1; then
+            echo "Refusing to replace existing Debug release"
+            exit 1
+          fi
+          gh release create "$TAG" dist/ChappyPlayerDebug.apk \
+            --repo "$CHAPPY_DIST_REPO" --target main --prerelease \
+            --title "Chappy Player Debug $CHAPPY_DEBUG_VERSION (build $CHAPPY_DEBUG_BUILD_NUMBER)" \
+            --notes-file dist/debug-notes.txt
+      - name: Publish Debug-only update feed without changing signed production update.json
+        env:
+          CHAPPY_PUBLISH_TOKEN: ${{ secrets.CHAPPY_PUBLISH_TOKEN }}
+        run: |
+          TAG="debug-v${CHAPPY_DEBUG_VERSION}-b${CHAPPY_DEBUG_BUILD_NUMBER}"
+          python3 tools/publish_debug_feed.py --file dist/debug-update.json --tag "$TAG"
+      - name: Retain Debug APK and manifest as private action artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chappy-fixed-debug-${{ github.run_number }}
+          path: |
+            dist/ChappyPlayerDebug.apk
+            dist/debug-update.json
+          if-no-files-found: error
+          retention-days: 30

@@ -9,7 +9,8 @@ const chappyApkHistoryApi =
     'chappy-player-updates/releases?per_page=12';
 
 class ApkReleaseHistoryService {
-  const ApkReleaseHistoryService();
+  final bool debug;
+  const ApkReleaseHistoryService({this.debug = false});
 
   /// Parse GitHub's public Release API, not arbitrary third-party feeds.
   /// A selectable APK must have a GitHub-published SHA-256 and exact download
@@ -21,14 +22,16 @@ class ApkReleaseHistoryService {
     }
     final releases = <UpdateRelease>[];
     final seen = <String>{};
-    final tagPattern = RegExp(r'^v(\d+\.\d+\.\d+)-b(\d+)$');
+    final tagPattern = RegExp(debug
+        ? r'^debug-v(\d+\.\d+\.\d+)-b(\d+)$'
+        : r'^v(\d+\.\d+\.\d+)-b(\d+)$');
     const offsets = {
       'armeabi-v7a': 1000, 'arm64-v8a': 2000, 'x86_64': 4000,
     };
     for (final release in raw) {
       if (release is! Map<String, dynamic> ||
           release['draft'] != false ||
-          release['prerelease'] != false) {
+          release['prerelease'] != debug) {
         continue;
       }
       final tag = release['tag_name'];
@@ -36,7 +39,10 @@ class ApkReleaseHistoryService {
       final match = tagPattern.firstMatch(tag);
       if (match == null) continue;
       final build = int.tryParse(match.group(2)!);
-      if (build == null || build <= 0 || build >= 1000) continue;
+      if (build == null || build <= 0 ||
+          (debug ? build < 100000 || build >= 2147483647 : build >= 1000)) {
+        continue;
+      }
       final files = release['assets'];
       if (files is! List) continue;
       final artifacts = <UpdateArtifact>[];
@@ -53,32 +59,35 @@ class ApkReleaseHistoryService {
             size is! int || url is! String) {
           continue;
         }
-        final abiMatch = RegExp(
+        final abiMatch = debug ? null : RegExp(
             r'^ChappyPlayer-(arm64-v8a|armeabi-v7a|x86_64)\.apk$')
             .firstMatch(name);
-        if (abiMatch == null || !digest.startsWith('sha256:') ||
+        if ((!debug && abiMatch == null) ||
+            (debug && name != 'ChappyPlayerDebug.apk') ||
+            !digest.startsWith('sha256:') ||
             !RegExp(r'^sha256:[a-fA-F0-9]{64}$').hasMatch(digest) ||
             size < 1024 || size > UpdateService.maxApkBytes ||
             url != '$allowedBase$name') {
           continue;
         }
-        final abi = abiMatch.group(1)!;
+        final abi = debug ? 'universal' : abiMatch!.group(1)!;
         if (!assetAbis.add(abi)) {
           continue;
         }
         artifacts.add(UpdateArtifact(
           abi, Uri.parse(url), digest.substring(7).toLowerCase(), size,
-          androidVersionCode: build + offsets[abi]!,
+          androidVersionCode: debug ? build : build + offsets[abi]!,
         ));
       }
-      if (assetAbis.length != 3) {
+      if (debug ? assetAbis.length != 1 || !assetAbis.contains('universal')
+                : assetAbis.length != 3) {
         continue;
       }
       final notes = release['body'];
       releases.add(UpdateRelease(
-        packageId: 'dev.chappy.chappy_player',
+        packageId: debug ? chappyDebugPackageId : chappyProductionPackageId,
         version: match.group(1)!,
-        buildNumber: 4000 + build,
+        buildNumber: debug ? build : 4000 + build,
         releaseNotes: notes is String ? notes.substring(
             0, notes.length > 3000 ? 3000 : notes.length) : '',
         artifacts: List.unmodifiable(artifacts),

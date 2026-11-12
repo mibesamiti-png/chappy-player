@@ -209,4 +209,24 @@ void main() {
       await server.close(force: true);
     }
   });
+  test('accepts only matching Debug channel package ID', () {
+    final debugFeed = feed(build: 21,
+        packageId: chappyDebugPackageId,
+        artifacts: [{
+          'abi': 'universal',
+          'url': 'https://github.com/mibesamiti-png/chappy-player-updates/releases/download/debug-v0.1.0-b21/ChappyPlayerDebug.apk',
+          'sha256': repeat64('a'), 'sizeBytes': 4000,
+          'androidVersionCode': 21,
+        }]);
+    expect(() => UpdateRelease.parse(debugFeed), throwsFormatException);
+    final debug = UpdateRelease.parse(debugFeed,
+        expectedPackageId: chappyDebugPackageId);
+    expect(debug.forAbi('arm64-v8a')!.abi, 'universal');
+    expect(debug.newerThan(20, abi: 'arm64-v8a'), true);
+    expect(debug.newerThan(21, abi: 'arm64-v8a'), false);
+    expect(() => UpdateRelease.parse(feed(),
+        expectedPackageId: chappyDebugPackageId), throwsFormatException);
+  });
+
+
 }
