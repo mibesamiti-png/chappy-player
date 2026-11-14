@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "Chappy Player",
   "capturedDate": "2026-11-14",
-  "sourceMainAtCapture": "7b90c485a5f49634ce5847bdee388072b2617dbf",
+  "sourceMainAtCapture": "27131a0dfe0031b0803ae310d12f4bdd954b55ff",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
@@ -865,48 +865,82 @@
         "debugCatalogSha256": "5a18b751848a09fbfc5cbadda7d7ff795b6b2635616d8f621f97e30c57a9440d",
         "signedHostLatestPublishedAtAcceptance": "0.3.0 build 11 (2026-11-06)",
         "publishedStableRecorderAtAcceptance": "0.1.0"
+      },
+      "historicalNextBatchBeforeAcceptance": {
+        "id": "CAMREC-14-R2",
+        "priorTaskStatuses": [
+          {
+            "id": "CAMREC-14-01",
+            "status": "done"
+          },
+          {
+            "id": "CAMREC-14-02",
+            "status": "done"
+          },
+          {
+            "id": "CAMREC-14-03",
+            "status": "done"
+          },
+          {
+            "id": "CAMREC-14-04",
+            "status": "in_progress"
+          },
+          {
+            "id": "CAMREC-14-05",
+            "status": "done"
+          },
+          {
+            "id": "CAMREC-14-06",
+            "status": "blocked"
+          },
+          {
+            "id": "CAMREC-14-07",
+            "status": "done"
+          }
+        ],
+        "note": "2026-11-11 checkpoint before user-reported Recorder QA completion; retain without rewriting past per-case QA"
       }
     }
   },
   "nextBatch": {
-    "id": "CAMREC-14-R2",
+    "id": "CAMREC-17-RELEASE-READINESS",
     "targetTasks": 7,
-    "implementationScope": "CAMREC-14-R2のcamera foreground service、録画通知/停止ボタン、Android画面OFF録画のソースはPR #138でmainへ統合、Quick CIと3ABI Androidビルド成功、公開Debug Recorder v0.1.5もPR #9で統合。Android実機テストは未実施。残作業は実機で画面OFF時のMP4継続、通知停止とfinalize、既存スマート録画、音声有無・端末特有のバッテリー制限を確認し、問題があれば修正する。Stable配布は別承認。プリ録画R3は未着手。NETLAB-06B 8タスクはobservations.deferredNetlab06Bに保存。 2026-11-11 CAMREC-15-UXを完了：Recorder UI縮小、スマート録画デフォルトpause/5秒、最下部折りたたみ、ホスト承認の毎回確認設定、DEBUG横説明ON/OFF、Chappy Apps説明ON/OFF、Debug v0.1.6。PR #140 Quick76/Android17成功、Chappy Apps PR #10検証7成功。録画実機テストは未実施。",
+    "implementationScope": "現行Recorder v0.1.7ソース・UIはユーザー受け入れ済み。既存機能/UIの再設計はせず、Stableとして使用可能な新しい署名Androidホストとの互換確認・版数/証明書/データ保存チェック、Stableパッケージとカタログの別PR・公開判断を行う。署名APK公開にはユーザーの明示指示が必要。旧CAMREC-14の実装履歴はobservations.camrec16.historicalNextBatchBeforeAcceptanceを参照。",
     "tasks": [
       {
-        "id": "CAMREC-14-01",
-        "name": "Android 14+ camera/microphone FGSの権限・while-in-use制限・通知要件のManifest/サービス設計",
+        "id": "CAMREC-17-01",
+        "name": "Recorder v0.1.7の現行HTML・Nativeサービス・Debug配布のソース同一性を確認",
         "status": "done"
       },
       {
-        "id": "CAMREC-14-02",
-        "name": "CameraX録画所有権をActivity LifecycleOwnerからサービスへ安全に移し、二重起動/競合を禁止",
+        "id": "CAMREC-17-02",
+        "name": "本人からのデバッグ完了報告・UI正式採用を事実として記録し、個別QAの未収集と区別",
         "status": "done"
       },
       {
-        "id": "CAMREC-14-03",
-        "name": "常駐通知に録画中状態・停止ボタン・終了時MP4確定/エラー表示を実装し、OSカメラ表示を隠さない",
-        "status": "done"
+        "id": "CAMREC-17-03",
+        "name": "必要な場合のみ、本人が実施済みの実機QA項目を取得してリリース記録と照合（再デバッグは要求しない）",
+        "status": "todo"
       },
       {
-        "id": "CAMREC-14-04",
-        "name": "スマート録画の動き検知・静止一時停止を画面OFFセッションにも統合し、誤検知と電池/発熱を評価",
+        "id": "CAMREC-17-04",
+        "name": "最新mainと公開署名Android 0.3.0-b11のCameraX/Foreground Service API差分・互換性を整理",
         "status": "in_progress"
       },
       {
-        "id": "CAMREC-14-05",
-        "name": "Flutter/Chappy Recorder UIの明示選択、再起動禁止、ロック/復帰時ステータス同期を実装",
-        "status": "done"
+        "id": "CAMREC-17-05",
+        "name": "既存UIの操作感を維持したStable用.chappy不変パッケージとcatalog.jsonのリリース候補を作り、CI検証",
+        "status": "todo"
       },
       {
-        "id": "CAMREC-14-06",
-        "name": "実機でR1通常/一時停止/静止終了の動画を検証し、画面OFF/他アプリ/着信/権限解除/容量不足の安全性を確認",
+        "id": "CAMREC-17-06",
+        "name": "固定署名・versionCode・更新フィード・既存録画/データ保持を検証し、署名APK公開はユーザーの別途明示指示まで停止",
         "status": "blocked"
       },
       {
-        "id": "CAMREC-14-07",
-        "name": "Quick CI/Android Debug/実機QAを区別してSTATE/HANDOFF/ROADMAP/Notion更新、公開Debugのみ検証しStableは別承認",
-        "status": "done"
+        "id": "CAMREC-17-07",
+        "name": "対応Androidホストのリリース後にRecorder Stableカタログを公開し、ソース・CI・実機・公開状況を分けて引継ぎ",
+        "status": "blocked"
       }
     ],
     "stopBefore": [
