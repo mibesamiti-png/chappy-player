@@ -1,5 +1,15 @@
 # Chappy Player — 単一チャット高速開発 v2 最新引き継ぎ
 
+## 【更新】2026-11-14 Recorder正式採用判断（本人報告／配布は未実施）
+
+- **本人の判断**：「Recorderのやつは現状デバッグ完了していてUIもいい感じだから、今あるソースを確認して正式採用でいいよ」。現行Recorder **Debug v0.1.7の動作・UIをユーザーが受け入れ、ソース正式採用を承認**。既存のUI、説明トグル、5秒静止pause/resume、画面OFF通知、録画確認設定を維持し、不要なデザイン変更をしない。
+- **ソースと品質ゲート**：Recorderの実装はすでにChappy Player [PR #142](https://github.com/mibesamiti-png/chappy-player/pull/142) でmain統合済み。2026-11-14照合時main `7b90c485a5f49634ce5847bdee388072b2617dbf`、Recorder HTML blob `d9ea3f7d25b5d2b85350f524450b18b3ec4598c2`、[Quick 76/76](https://github.com/mibesamiti-png/chappy-player/actions/runs/42876978962)、[Android 3 ABI 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42876978926)、[公開Debugカタログ7/7](https://github.com/mibesamiti-png/chappy-apps/actions/runs/42878670602) に実績あり。最新mainの[Quick CI](https://github.com/mibesamiti-png/chappy-player/actions/runs/42927246397)と[Android互換ビルド](https://github.com/mibesamiti-png/chappy-player/actions/runs/42927246364)も成功。
+- **QAの正確な区別**：ユーザーはデバッグ完了を報告したが、個別端末操作の項目別結果・動画・端末情報は今回提供していない。従来の「実機QA 0件／未実施」という記載は2026-11-11時点の履歴であり、今は「本人がデバッグ完了と報告、項目別記録は未収集」とする。個別ケースのPASS件数は捏造しない。
+- **公開の区別**：2026-11-14時点、[Chappy Apps](https://github.com/mibesamiti-png/chappy-apps)のRecorderはDebug v0.1.7、Stable v0.1.0。署名付きAndroid本体の直近公開は[0.3.0 build 11](https://github.com/mibesamiti-png/chappy-player-updates/releases/tag/v0.3.0-b11)（2026-11-06）で、11月10日のCameraX/通知機能更新より前。したがって現行Recorderの新機能が既存署名APKで動くと約束しない。**ソース正式採用は、Stableカタログ公開／署名APK発行を自動的に意味しない。**
+- **次のリリース準備**：対応Android本体を含む署名APKの明示的な公開判断、署名・版数・各ABI・状態保存のゲート、Recorder Stable用パッケージ／カタログ整合性、Debug表示・ホスト案内のチャンネル差、既存録画データの保護を確認する。署名鍵変更・既存アプリ削除・旧Stableバイナリ上書き・権限変更はしない。
+
+詳細：[Recorder採用記録](CAMREC_ACCEPTANCE_2026-11-14.md)。
+
 ## 【最新】CAMREC-16 Debug v0.1.7（2026-11-11）— ソース/公開Debug統合、実機録画は未検証
 
 - **再引き継ぎで検証**：Chappy Player [PR #142](https://github.com/mibesamiti-png/chappy-player/pull/142) は main `27131a0dfe0031b0803ae310d12f4bdd954b55ff` に統合済み。最終実装HEAD `c7eb663d65ce91f590e13419919786f59a4badc3` に対し [Quick CI 76/76](https://github.com/mibesamiti-png/chappy-player/actions/runs/42876978962) と [Android ARM64/ARM32/x86-64 APK 17/17](https://github.com/mibesamiti-png/chappy-player/actions/runs/42876978926) 成功。
