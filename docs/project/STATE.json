@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
   "project": "Chappy Player",
-  "capturedDate": "2026-11-11",
-  "sourceMainAtCapture": "27131a0dfe0031b0803ae310d12f4bdd954b55ff",
+  "capturedDate": "2026-11-14",
+  "sourceMainAtCapture": "7b90c485a5f49634ce5847bdee388072b2617dbf",
   "important": "This is a historical checkpoint, not a live HEAD. Always fetch main, PRs and CI again.",
   "workingMode": "single-chat-fast-v2",
   "focus": {
-    "id": "CAMREC-14-R2",
-    "name": "CAMREC-16録画UX/通知とDebug v0.1.7は公開済み。次は実機で開始成功/5秒pause・resume/Android通知・MP4保存と権限省略を確認",
-    "status": "awaiting_physical_camera_qa",
-    "entry": "docs/camrec-14-screenoff-recorder.md"
+    "id": "CAMREC-17-RELEASE-READINESS",
+    "name": "Recorder Debug v0.1.7の現行ソースとUIを本人が正式採用。署名StableホストとStableミニアプリの互換性・公開ゲートを確認",
+    "status": "user_accepted_source_release_pending",
+    "entry": "docs/project/CAMREC_ACCEPTANCE_2026-11-14.md"
   },
   "lastCompletedBatch": {
     "id": "CAMREC-16",
     "pr": 142,
     "mergedCommit": "27131a0dfe0031b0803ae310d12f4bdd954b55ff",
-    "sourceStatus": "merged_recorder_help_settings_start_feedback_and_motion_pause_notification_ci_success_physical_qa_pending",
+    "sourceStatus": "merged_ci_passed_user_accepted_recorder_debug_v0.1.7_release_pending",
     "quickCi": {
       "status": "success",
       "run": 42876978962,
@@ -47,10 +47,13 @@
       "debugCount": 9
     },
     "physicalQA": {
-      "status": "not_run",
-      "casesPassed": 0
+      "status": "user_reported_debug_complete_cases_not_itemized",
+      "casesPassed": 0,
+      "casesPassedQualification": "0 means no individual device QA case independently recorded in the repository; not a denial of the user's overall debug completion report",
+      "userReportedDate": "2026-11-14",
+      "userAcceptedUi": true
     },
-    "qualification": "Moved Recorder explanations toggle into collapsible bottom smart recording/confirmation settings. Chappy Apps catalog toggle unchanged. Start buttons are no longer silently disabled during capability probing; unsupported host shows actionable error. Motion pause/resume transitions update explicit Android screen-off camera notification title, preserving stop action and OS privacy indicator. Quick76/76 Android17/17 Catalog7/7 pass, real camera recording start and pause/resume NOT confirmed on device, Stable unchanged."
+    "qualification": "Moved Recorder explanations toggle into collapsible bottom smart recording/confirmation settings. Chappy Apps catalog toggle unchanged. Start buttons are no longer silently disabled during capability probing; unsupported host shows actionable error. Motion pause/resume transitions update explicit Android screen-off camera notification title, preserving stop action and OS privacy indicator. Quick76/76 Android17/17 Catalog7/7 pass, real camera recording start and pause/resume NOT confirmed on device, Stable unchanged. User on 2026-11-14 reported debugging complete, approved current UI/source for formal adoption; per-case device details are not itemized. This is acceptance of current Recorder behavior, not proof of a published Stable package or signed compatible APK."
   },
   "observations": {
     "debugAndroidColdLaunch": {
@@ -827,7 +830,7 @@
       "stableRelease": "unchanged"
     },
     "camrec16": {
-      "status": "source_and_public_debug_catalog_merged_ci_pass_physical_qa_not_run",
+      "status": "source_ci_verified_user_acceptance_recorded_stable_release_pending",
       "sourcePullRequest": 142,
       "sourceMergedCommit": "27131a0dfe0031b0803ae310d12f4bdd954b55ff",
       "quickCiRun": 42876978962,
@@ -844,8 +847,25 @@
       "screenOffNotification": "motion-paused_title_then_recording_on_resume",
       "permissions": "OS_mandatory_and_host_consent_user_selectable",
       "knownUserFailure": "User reported pressing Start did not start recording before CAMREC-16; actual Android camera failure cause unconfirmed",
-      "physicalRecorderQA": "not_run",
-      "stableRelease": "unchanged"
+      "physicalRecorderQA": "user_reported_debug_complete_cases_not_itemized",
+      "stableRelease": "not_published_compatibility_and_signed_host_gate_pending",
+      "userAcceptance": {
+        "date": "2026-11-14",
+        "source": "direct_user_message",
+        "debuggingReportedComplete": true,
+        "uiApproved": true,
+        "existingSourceApprovedForFormalAdoption": true,
+        "individualQaCases": "not_itemized",
+        "noNewUiRedesign": true
+      },
+      "sourceReference": {
+        "playerMainAtAcceptance": "7b90c485a5f49634ce5847bdee388072b2617dbf",
+        "recorderHtmlBlob": "d9ea3f7d25b5d2b85350f524450b18b3ec4598c2",
+        "debugVersion": "0.1.7",
+        "debugCatalogSha256": "5a18b751848a09fbfc5cbadda7d7ff795b6b2635616d8f621f97e30c57a9440d",
+        "signedHostLatestPublishedAtAcceptance": "0.3.0 build 11 (2026-11-06)",
+        "publishedStableRecorderAtAcceptance": "0.1.0"
+      }
     }
   },
   "nextBatch": {
